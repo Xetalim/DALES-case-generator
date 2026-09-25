@@ -16,3 +16,4 @@ xarray==2025.10.1
 dales_tile_combiner
 LS2D
 cdsapi
+dask[distributed]

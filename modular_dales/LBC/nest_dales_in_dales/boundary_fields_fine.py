@@ -8,6 +8,7 @@ import numpy as np
 import xarray as xr
 
 from modular_dales.Geometry import GridDalesOpenBC
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.logging_wrapper import logwrap
 
 from modular_dales.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
@@ -23,7 +24,7 @@ logger.debug("Entered module: %s", __name__)
 
 @logwrap
 def boundary_fields_fine(
-    input_json,
+    input_json: OpenBoundaryConfig,
     grid: GridDalesOpenBC,
     output_path,
     grid_indices: "NestingIndices",
@@ -36,7 +37,7 @@ def boundary_fields_fine(
     openboundaries = get_all_dales_boundaries(
         input_json, grid, grid_indices, chunks=chunks
     )
-    if input_json.get("lsynturb", False):
+    if input_json.lsynturb:
         openboundaries = add_synthetic_turbulence(
             input_json, openboundaries, chunks=chunks
         )
@@ -45,8 +46,8 @@ def boundary_fields_fine(
     openboundaries = openboundaries.assign_attrs(
         {
             "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
-            "author": input_json["author"],
-            "time0": input_json["time0"],
+            "author": input_json.author,
+            "time0": input_json.time0,
         }
     )
     return openboundaries
@@ -94,21 +95,21 @@ def _project_zero_into_interval(lower: xr.DataArray, upper: xr.DataArray):
 
 
 def _load_synturb_profiles(
-    input_json,
+    input_json: OpenBoundaryConfig,
     target_time: xr.DataArray,
     target_zt: xr.DataArray,
     chunks=None,
 ):
-    profile_files = _find_profiles_file(input_json["outpath_coarse"])
+    profile_files = _find_profiles_file(input_json.outpath_coarse)
     if len(profile_files) == 0:
         raise FileNotFoundError(
             "Synthetic turbulence needs parent profiles.*.nc output from modgenstat, "
-            f"but none was found in '{input_json['outpath_coarse']}'. Enable parent "
+            f"but none was found in '{input_json.outpath_coarse}'. Enable parent "
             "StatsModule (namgenstat:lstat=.true.) and re-run the parent case."
         )
 
     if chunks is None:
-        tchunk = input_json.get("tchunk")
+        tchunk = input_json.tchunk
         chunks = {"time": int(tchunk)} if tchunk is not None else {"time": 1}
 
     with xr.open_mfdataset(
@@ -182,7 +183,7 @@ def _load_synturb_profiles(
 
 @logwrap
 def add_synthetic_turbulence(
-    input_json, openboundaries: xr.Dataset, chunks=None
+    input_json: OpenBoundaryConfig, openboundaries: xr.Dataset, chunks=None
 ) -> xr.Dataset:
     synturb_profiles = _load_synturb_profiles(
         input_json,
@@ -210,21 +211,21 @@ def add_synthetic_turbulence(
 
 
 @logwrap
-def set_openboundary_attrs(input_json, openboundaries):
+def set_openboundary_attrs(input_json: OpenBoundaryConfig, openboundaries):
     dts = (
         openboundaries.time.values.astype("datetime64[s]")
-        - np.datetime64(input_json["time0"], "s")
+        - np.datetime64(input_json.time0, "s")
     ) / np.timedelta64(1, "s")
     openboundaries = openboundaries.assign_coords({"time": ("time", dts)})
     # # Adjust time variable to seconds since initial field
     # ts = openboundaries['time'].values.astype('datetime64[s]')
-    # dts = (ts-np.datetime64(input_json['time0'],'s'))/np.timedelta64(1, 's')
+    # dts = (ts-np.datetime64(time0,'s'))/np.timedelta64(1, 's')
     # openboundaries = openboundaries.assign_coords({'time':('time', dts)})
     # Add variable attributes
     openboundaries["time"] = openboundaries["time"].assign_attrs(
         {"longname": "Time"}
-    )  # , 'units': f"seconds since {input_json['time0']}"})
-    openboundaries.time.encoding["units"] = f"seconds since {input_json['time0']}"
+    )  # , 'units': f"seconds since {time0}"})
+    openboundaries.time.encoding["units"] = f"seconds since {input_json.time0}"
     openboundaries["xt"] = openboundaries["xt"].assign_attrs(
         {"longname": "West-East displacement of cell centers", "units": "m"}
     )
@@ -244,13 +245,13 @@ def set_openboundary_attrs(input_json, openboundaries):
         {"longname": "Vertical displacement of cell edges", "units": "m"}
     )
     variables = ["u", "v", "w", "thl", "qt", "e12"]
-    if len(input_json["tracernames"]) > 0:
-        for tracername in input_json["tracernames"]:
+    if len(input_json.tracernames) > 0:
+        for tracername in input_json.tracernames:
             variables.append(tracername)
     units = ["m/s", "m/s", "m/s", "K", "kg/kg", "m/s"]
-    if len(input_json["tracernames"]) > 0:
-        for tracername in input_json["tracernames"]:
-            if len(input_json["tracernames"]) > 2:
+    if len(input_json.tracernames) > 0:
+        for tracername in input_json.tracernames:
+            if len(input_json.tracernames) > 2:
                 logger.warning(
                     "Unit applied to tracer %s might not be correct!", tracername
                 )
@@ -263,8 +264,8 @@ def set_openboundary_attrs(input_json, openboundaries):
         "Total water specific humidity at ",
         "Square root of turbulent kinetic energy at ",
     ]
-    if len(input_json["tracernames"]) > 0:
-        for tracername in input_json["tracernames"]:
+    if len(input_json.tracernames) > 0:
+        for tracername in input_json.tracernames:
             long_names.append(f"scalar field {tracername} at ")
     for ivar, var in enumerate(variables):
         unit = units[ivar]
@@ -276,7 +277,7 @@ def set_openboundary_attrs(input_json, openboundaries):
                 {"longname": long_name + boundary + " boundary", "units": unit}
             )
 
-    if input_json.get("lsynturb", False):
+    if input_json.lsynturb:
         turb_variables = [
             "u2",
             "v2",

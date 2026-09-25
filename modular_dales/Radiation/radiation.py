@@ -7,8 +7,8 @@ from typing import Optional
 
 from modular_dales.IO_helpers.external_data_cache import (
     cache_root,
-    resolve_rrtmg_data_paths,
 )
+from modular_dales.IO_helpers.dales_external_data import resolve_rrtmg_data_paths
 from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.Radiation.backrad_profile import (
@@ -208,7 +208,7 @@ class RadiationModule(simulation_module):
         if selected_profile is None:
             selected_profile = default_profile()
 
-        backrad_cache = cache_root(self.sim) / "backrad"
+        backrad_cache = cache_root("backrad", self.sim)
         backrad_cache.mkdir(parents=True, exist_ok=True)
 
         if iradiation == 4:

@@ -59,6 +59,7 @@ from .sim_builders.test_runtime_special_cases import (
     radiation_type_5_case,
     spraying_runtime_case,
 )
+from .sim_builders.test_knmi_download_workflow import knmi_download_workflow_case
 
 
 @pytest.fixture(
@@ -145,6 +146,11 @@ def sim_builder(request):
         pytest.param(
             (spraying_runtime_case, assert_sprayed_salt_in_fielddump),
             id="spraying_runtime_case",
+        ),
+        pytest.param(
+            knmi_download_workflow_case,
+            id="knmi_download_workflow_case",
+            marks=[pytest.mark.slow, pytest.mark.serial],
         ),
     ]
 )

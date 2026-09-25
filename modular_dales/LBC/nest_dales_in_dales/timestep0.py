@@ -8,6 +8,7 @@ import glob
 
 
 from modular_dales.Geometry.GridDales import GridDalesOpenBC
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.LBC.nest_dales_in_dales.load_any_boundary_var import (
     load_any_boundary_var,
 )
@@ -25,7 +26,7 @@ logger.debug("Entered module: %s", __name__)
 
 @logwrap
 def boundaries_timestep0(
-    input_json,
+    input_json: OpenBoundaryConfig,
     grid: GridDalesOpenBC,
     indices: "NestingIndices",
     chunks=None,
@@ -38,15 +39,15 @@ def boundaries_timestep0(
     ``init.*.nc`` where ``zh == zt`` and construct horizontally uniform
     boundary fields for all variables and boundaries from that profile.
     """
-    inpath_coarse = Path(input_json["inpath_coarse"])
+    inpath_coarse = Path(input_json.inpath_coarse)
     crosssection_chunks = chunks
     if crosssection_chunks is None:
-        tchunk = input_json.get("tchunk")
+        tchunk = input_json.tchunk
         crosssection_chunks = (
             {"time": int(tchunk)} if tchunk is not None else {"time": 1}
         )
 
-    if input_json["time0"] == input_json["start"]:
+    if input_json.time0 == input_json.start:
         # Prefer initfields.inp.*.nc if available
         try:
             all_ls = []
@@ -65,13 +66,13 @@ def boundaries_timestep0(
                                 indices,
                                 isel=True,
                                 expand_dims=True,
-                                expand_dims_time0=input_json["time0"],
+                                expand_dims_time0=input_json.time0,
                                 var_postfix="0",
                             )
                         )
-                    if len(input_json["tracernames"]) > 0:
+                    if len(input_json.tracernames) > 0:
                         sv_boundary = []
-                        for tracername in input_json["tracernames"]:
+                        for tracername in input_json.tracernames:
                             sv_boundary.append(
                                 xr.zeros_like(all_ls[-1]).rename(
                                     f"{tracername}{boundary}"
@@ -196,15 +197,13 @@ def boundaries_timestep0(
                 coords = {d: assign_grid_dic[d] for d in dims}
                 da = xr.DataArray(data, coords=coords, dims=dims)
                 # Add time dimension at time0
-                da = da.expand_dims(
-                    {"time": [np.datetime64(input_json["time0"])]}, axis=0
-                )
+                da = da.expand_dims({"time": [np.datetime64(input_json.time0)]}, axis=0)
                 da.name = f"{var}{boundary}"
                 return da
 
             all_ls = []
             base_vars = ["u", "v", "w", "thl", "qt", "e12"]
-            tracers = list(input_json["tracernames"])
+            tracers = list(input_json.tracernames)
 
             for var in base_vars + tracers:
                 profile_zt = _get_profile(var)
@@ -217,9 +216,7 @@ def boundaries_timestep0(
     # the last time step in the output of the previous simulation
     else:
 
-        boundary_dict = get_boundary_dict(
-            input_json["outpath_coarse_old"], grid, indices
-        )
+        boundary_dict = get_boundary_dict(input_json.outpath_coarse_old, grid, indices)
 
         all_ls = []
         for boundary, (boundaryfile, sel_index) in boundary_dict.items():
@@ -235,7 +232,7 @@ def boundaries_timestep0(
                     "thl",
                     "qt",
                     "e12",
-                    *input_json["tracernames"],
+                    *input_json.tracernames,
                 ]:
                     if var == "e12":
                         var_postfix = "0"
@@ -250,7 +247,7 @@ def boundaries_timestep0(
                             indices=indices,
                             isel={"time": -1},
                             expand_dims=True,
-                            expand_dims_time0=input_json["start"],
+                            expand_dims_time0=input_json.start,
                             var_postfix=var_postfix,
                         )
                     )

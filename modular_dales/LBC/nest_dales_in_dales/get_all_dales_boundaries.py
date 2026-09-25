@@ -7,6 +7,7 @@ import numpy as np
 import xarray as xr
 
 from modular_dales.Geometry import GridDalesOpenBC
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.logging_wrapper import logwrap
 
 
@@ -92,7 +93,9 @@ def _file_matches_boundary_selection(file_path: str, sel_index: dict) -> bool:
                 if coord_vals.size == 0:
                     return False
 
-                if not np.any(np.isclose(coord_vals, float(target_value), rtol=0.0, atol=1e-8)):
+                if not np.any(
+                    np.isclose(coord_vals, float(target_value), rtol=0.0, atol=1e-8)
+                ):
                     return False
     except Exception:
         return False
@@ -100,7 +103,9 @@ def _file_matches_boundary_selection(file_path: str, sel_index: dict) -> bool:
     return True
 
 
-def _select_boundary_files(boundary_files: list[str], sel_index: dict, boundary: str) -> list[str]:
+def _select_boundary_files(
+    boundary_files: list[str], sel_index: dict, boundary: str
+) -> list[str]:
     """Keep only files that match requested section coordinates for this boundary."""
 
     selected_files = [
@@ -120,7 +125,9 @@ def _select_boundary_files(boundary_files: list[str], sel_index: dict, boundary:
     return selected_files
 
 
-def _warn_if_suspicious_time_axis(boundaries: xr.Dataset, input_json) -> None:
+def _warn_if_suspicious_time_axis(
+    boundaries: xr.Dataset, input_json: OpenBoundaryConfig
+) -> None:
     """Warn when the concatenated boundary time axis looks inconsistent.
 
     This is intentionally non-invasive: it only emits warnings and does not
@@ -153,8 +160,8 @@ def _warn_if_suspicious_time_axis(boundaries: xr.Dataset, input_json) -> None:
                 f"{times}"
             )
 
-    start = input_json.get("start")
-    time0 = input_json.get("time0")
+    start = input_json.start
+    time0 = input_json.time0
     if start is None or time0 is None:
         return
 
@@ -174,7 +181,7 @@ def _warn_if_suspicious_time_axis(boundaries: xr.Dataset, input_json) -> None:
 
 @logwrap
 def get_all_dales_boundaries(
-    input_json,
+    input_json: OpenBoundaryConfig,
     grid: GridDalesOpenBC,
     indices: "NestingIndices",
     chunks=None,
@@ -192,11 +199,11 @@ def get_all_dales_boundaries(
         input_json, grid, indices, chunks=chunks
     )
     # Get later time steps from corresponding coarse simulation output
-    boundary_dict = get_boundary_dict(input_json["outpath_coarse"], grid, indices)
+    boundary_dict = get_boundary_dict(input_json.outpath_coarse, grid, indices)
     all_ls = []
     crosssection_chunks = chunks
     if crosssection_chunks is None:
-        tchunk = input_json.get("tchunk")
+        tchunk = input_json.tchunk
         crosssection_chunks = (
             {"time": int(tchunk)} if tchunk is not None else {"time": 1}
         )
@@ -218,7 +225,7 @@ def get_all_dales_boundaries(
                 "thl",
                 "qt",
                 "e12",
-                *input_json["tracernames"],
+                *input_json.tracernames,
             ]:
                 if var == "e12":
                     var_postfix = "0"

@@ -6,9 +6,14 @@ import numpy as np
 import xarray as xr
 
 from modular_dales.Atmosphere.ls2d_atmosphere import LS2DAtmosphereModule
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.LBC.nest_dales_in_HARMONIE import prep_harmonie
 from modular_dales.LBC.nest_dales_in_HARMONIE.nest_dales_in_KNMI import (
     KNMIPrepper,
+)
+from modular_dales.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
+    KNMIHarmonieForecastDownloadModule,
+    resolve_knmi_harmonie_download_module,
 )
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -92,6 +97,14 @@ class HarmonieAtmosphereModule(LS2DAtmosphereModule):
                 "HarmonieAtmosphereModule requires a GridDales grid (sim.grid) to be set"
             )
 
+        knmi_download_module = None
+        if self.sim is not None and self.sim.module_exists(
+            KNMIHarmonieForecastDownloadModule
+        ):
+            knmi_download_module = self.sim.retrieve_module(
+                KNMIHarmonieForecastDownloadModule
+            )
+
         missing = []
         for name in (
             "harmonie_ml_glob",
@@ -103,7 +116,7 @@ class HarmonieAtmosphereModule(LS2DAtmosphereModule):
             if getattr(self, name) in (None, ""):
                 missing.append(name)
 
-        if missing:
+        if missing and knmi_download_module is None:
             raise ValueError(
                 "HarmonieAtmosphereModule missing required settings: "
                 + ", ".join(missing)
@@ -120,20 +133,28 @@ class HarmonieAtmosphereModule(LS2DAtmosphereModule):
                 "HarmonieAtmosphereModule requires grid to be initialized before prepare_calculation"
             )
 
+        knmi_download_module = None
+        if self.sim is not None:
+            knmi_download_module = resolve_knmi_harmonie_download_module(self.sim)
+
+        if knmi_download_module is not None:
+            if not self.harmonie_ml_glob:
+                self.harmonie_ml_glob = knmi_download_module.ml_glob
+            if not self.harmonie_sfc_glob:
+                self.harmonie_sfc_glob = knmi_download_module.sfc_glob
+
         openbc_grid = (
             self.grid.as_openbc() if hasattr(self.grid, "as_openbc") else self.grid
         )
 
-        config = {
-            "start": str(self.harmonie_start),
-            "time0": str(self.harmonie_time0),
-            "end": str(self.harmonie_end),
-            # "HARMONIE_ml_glob": str(self.harmonie_ml_glob),
-            # "HARMONIE_sfc_glob": str(self.harmonie_sfc_glob),
-            "KNMI_ml_glob": str(self.harmonie_ml_glob),
-            "KNMI_sfc_glob": str(self.harmonie_sfc_glob),
-            "tchunk": int(self.harmonie_tchunk),
-        }
+        config = OpenBoundaryConfig(
+            start=str(self.harmonie_start),
+            time0=str(self.harmonie_time0),
+            end=str(self.harmonie_end),
+            KNMI_ml_glob=str(self.harmonie_ml_glob),
+            KNMI_sfc_glob=str(self.harmonie_sfc_glob),
+            tchunk=int(self.harmonie_tchunk),
+        )
 
         logger.info(
             "HarmonieAtmosphereModule: preprocessing KNMI NetCDF via KNMIPrepper"

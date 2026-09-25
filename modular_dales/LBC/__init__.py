@@ -10,6 +10,10 @@ from .openbc import (
     Nest_in_AtmosphereProfiles,
     Nest_in_KNMI,
 )
+from .openboundary_config import OpenBoundaryConfig
+from .nest_dales_in_HARMONIE.knmi_harmonie_download import (
+    KNMIHarmonieForecastDownloadModule,
+)
 from .periodic_precursor_crosssections import PeriodicPrecursorCrossSections
 
 __all__ = [
@@ -21,5 +25,7 @@ __all__ = [
     "Periodic_Dales_Turbulence_Perturbations",
     "Nest_in_AtmosphereProfiles",
     "Nest_in_KNMI",
+    "OpenBoundaryConfig",
+    "KNMIHarmonieForecastDownloadModule",
     "PeriodicPrecursorCrossSections",
 ]

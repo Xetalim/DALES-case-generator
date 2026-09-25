@@ -1,9 +1,11 @@
 """Additional non-output settings modules for DALES namelist configuration."""
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
+
 import numpy as np
 
+from modular_dales.Configuration.output_modules import _HorizontalPointOutputMixin
 from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
@@ -11,7 +13,7 @@ from modular_dales.modular.simulation_module import simulation_module
 
 @register_module
 @dataclass
-class SprayingModule(simulation_module):
+class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
     """Settings module for sea-spray and water-spray source terms.
 
     Supports both index-based and coordinate-based source placement.
@@ -21,6 +23,39 @@ class SprayingModule(simulation_module):
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
+    x_idx: Optional[Union[int, list[int]]] = field(
+        default=None,
+        metadata={
+            "nml": "namspraying",
+            "key": "i_glob_spray",
+            "doc": "Global i-index location for spray source.",
+        },
+    )
+    y_idx: Optional[Union[int, list[int]]] = field(
+        default=None,
+        metadata={
+            "nml": "namspraying",
+            "key": "j_glob_spray",
+            "doc": "Global j-index location for spray source.",
+        },
+    )
+    z_idx: Optional[Union[int, list[int]]] = field(
+        default=None,
+        metadata={
+            "nml": "namspraying",
+            "key": "k_glob_spray",
+            "doc": "Vertical level index for spray source.",
+        },
+    )
+    x: Optional[Union[float, list[float]]] = field(
+        default=None, metadata={"serialize": False}
+    )
+    y: Optional[Union[float, list[float]]] = field(
+        default=None, metadata={"serialize": False}
+    )
+    z: Optional[Union[float, list[float]]] = field(
+        default=None, metadata={"serialize": False}
+    )
     lwater_spraying: bool = field(
         default=False,
         metadata={
@@ -35,48 +70,6 @@ class SprayingModule(simulation_module):
             "nml": "namspraying",
             "key": "lsalt_spraying",
             "doc": "Enable prescribed salt spraying source.",
-        },
-    )
-    i_glob_spray: int = field(
-        default=1,
-        metadata={
-            "nml": "namspraying",
-            "key": "i_glob_spray",
-            "doc": "Global i-index location for spray source.",
-        },
-    )
-    j_glob_spray: int = field(
-        default=1,
-        metadata={
-            "nml": "namspraying",
-            "key": "j_glob_spray",
-            "doc": "Global j-index location for spray source.",
-        },
-    )
-    k_glob_spray: int = field(
-        default=1,
-        metadata={
-            "nml": "namspraying",
-            "key": "k_glob_spray",
-            "doc": "Vertical level index for spray source.",
-        },
-    )
-    x_spray: Optional[float] = field(
-        default=None,
-        metadata={
-            "doc": "Physical x-coordinate [m] of spray source; converted to i_glob_spray using GridModule xt centers."
-        },
-    )
-    y_spray: Optional[float] = field(
-        default=None,
-        metadata={
-            "doc": "Physical y-coordinate [m] of spray source; converted to j_glob_spray using GridModule yt centers."
-        },
-    )
-    z_spray: Optional[float] = field(
-        default=None,
-        metadata={
-            "doc": "Physical z-coordinate [m] of spray source; converted to k_glob_spray using GridModule zt centers."
         },
     )
     water_spray_rate: float = field(
@@ -144,52 +137,7 @@ class SprayingModule(simulation_module):
         return None
 
     def prepare_calculation(self):
-        provided_coord_count = sum(
-            v is not None for v in (self.x_spray, self.y_spray, self.z_spray)
-        )
-        if provided_coord_count == 0:
-            return None
-
-        if provided_coord_count != 3:
-            raise ValueError(
-                "SprayingModule: provide either all of x_spray/y_spray/z_spray or none."
-            )
-
-        if self.grid is None:
-            raise ValueError(
-                "SprayingModule: x_spray/y_spray/z_spray require GridModule to be configured first."
-            )
-
-        if self.x_spray is not None:
-            x_centers = np.asarray(self.grid.xt)
-            if self.x_spray < float(x_centers[0]) or self.x_spray > float(
-                x_centers[-1]
-            ):
-                raise ValueError(
-                    f"SprayingModule: x_spray={self.x_spray} m is outside domain center range [{float(x_centers[0])}, {float(x_centers[-1])}] m."
-                )
-            self.i_glob_spray = int(np.argmin(np.abs(x_centers - self.x_spray))) + 1
-
-        if self.y_spray is not None:
-            y_centers = np.asarray(self.grid.yt)
-            if self.y_spray < float(y_centers[0]) or self.y_spray > float(
-                y_centers[-1]
-            ):
-                raise ValueError(
-                    f"SprayingModule: y_spray={self.y_spray} m is outside domain center range [{float(y_centers[0])}, {float(y_centers[-1])}] m."
-                )
-            self.j_glob_spray = int(np.argmin(np.abs(y_centers - self.y_spray))) + 1
-
-        if self.z_spray is not None:
-            z_centers = np.asarray(self.grid.zt)
-            if self.z_spray < float(z_centers[0]) or self.z_spray > float(
-                z_centers[-1]
-            ):
-                raise ValueError(
-                    f"SprayingModule: z_spray={self.z_spray} m is outside domain center range [{float(z_centers[0])}, {float(z_centers[-1])}] m."
-                )
-            self.k_glob_spray = int(np.argmin(np.abs(z_centers - self.z_spray))) + 1
-
+        self._prepare_point_indices("SprayingModule")
         return None
 
     def check_settings(self):

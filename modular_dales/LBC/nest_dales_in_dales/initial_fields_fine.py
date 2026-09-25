@@ -6,6 +6,7 @@ import numpy as np
 import xarray as xr
 
 from modular_dales.Geometry import GridDalesOpenBC
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,9 @@ logger.debug("Entered module: %s", __name__)
 
 
 @logwrap
-def initial_fields_fine(input_json, grid: GridDalesOpenBC, output_path):
+def initial_fields_fine(
+    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, output_path
+):
     """
     Docstring for initial_fields_fine
 
@@ -27,7 +30,7 @@ def initial_fields_fine(input_json, grid: GridDalesOpenBC, output_path):
     vertical-profile file ``init.*.nc`` (where zh == zt) and build a
     horizontally uniform 3D initial field from those profiles.
     """
-    inpath = Path(input_json["inpath"])
+    inpath = Path(input_json.inpath)
 
     # Load data: prefer initfields.inp.*.nc, fall back to init.*.nc
     try:
@@ -106,7 +109,7 @@ def initial_fields_fine(input_json, grid: GridDalesOpenBC, output_path):
         data_vars = {}
 
         base_vars = ["u", "v", "w", "thl", "qt", "e12"]
-        tracers = list(input_json.get("tracernames", []))
+        tracers = list(input_json.tracernames)
 
         def _make_uniform_field(
             profile: np.ndarray, dims: tuple[str, ...]
@@ -166,7 +169,7 @@ def initial_fields_fine(input_json, grid: GridDalesOpenBC, output_path):
                 "time": (
                     "time",
                     [
-                        np.datetime64(input_json["time0"]),
+                        np.datetime64(input_json.time0),
                     ],
                 )
             }
@@ -176,8 +179,8 @@ def initial_fields_fine(input_json, grid: GridDalesOpenBC, output_path):
     initfields_fine = initfields_fine.assign_attrs(
         {
             "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
-            "author": input_json["author"],
-            "time0": input_json["time0"],
+            "author": input_json.author,
+            "time0": input_json.time0,
         }
     )
 

@@ -7,13 +7,16 @@ from modular_dales.Geometry.GridDales import GridDalesOpenBC
 import logging
 from modular_dales.logging_wrapper import logwrap
 import dask
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
 @logwrap
-def boundary_fields(input_json, grid: GridDalesOpenBC, data, output_path):
+def boundary_fields(
+    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data, output_path
+):
     # data = data.drop(["lat", "lon"])
     # West boundary
     openboundaries = get_boundaries(input_json, grid, data)
@@ -24,10 +27,10 @@ def boundary_fields(input_json, grid: GridDalesOpenBC, data, output_path):
     # Add global attributes
     openboundaries = openboundaries.assign_attrs(
         {
-            # "title": f"openboundaries.inp.{input_json['iexpnr']:03d}.nc",
+            # "title": "openboundaries.inp.XXX.nc",
             "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
-            "author": input_json["author"],
-            "time0": input_json["time0"],
+            "author": input_json.author,
+            "time0": input_json.time0,
         }
     )
 
@@ -35,9 +38,9 @@ def boundary_fields(input_json, grid: GridDalesOpenBC, data, output_path):
 
 
 @logwrap
-def set_variable_attributes(input_json, openboundaries):
+def set_variable_attributes(input_json: OpenBoundaryConfig, openboundaries):
     openboundaries["time"] = openboundaries["time"].assign_attrs(
-        {"longname": "Time", "units": f"seconds since {input_json['time0']}"}
+        {"longname": "Time", "units": f"seconds since {input_json.time0}"}
     )
     openboundaries["xt"] = openboundaries["xt"].assign_attrs(
         {"longname": "West-East displacement of cell centers", "units": "m"}
@@ -79,16 +82,16 @@ def set_variable_attributes(input_json, openboundaries):
 
 
 @logwrap
-def set_time_attrs(input_json, openboundaries):
+def set_time_attrs(input_json: OpenBoundaryConfig, openboundaries):
     ts = openboundaries["time"].values.astype("datetime64[s]")
-    dts = (ts - np.datetime64(input_json["time0"], "s")) / np.timedelta64(1, "s")
+    dts = (ts - np.datetime64(input_json.time0, "s")) / np.timedelta64(1, "s")
     openboundaries = openboundaries.assign_coords({"time": ("time", dts)})
     openboundaries["time"].attrs.clear()
     return openboundaries
 
 
 @logwrap
-def get_boundaries(input_json, grid: GridDalesOpenBC, data):
+def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
     north = data.sel(
         y=slice(grid.yt[-1] - grid.dy * 16, grid.yt[-1] + grid.dy * 16),
         x=slice(grid.xt[0] - grid.dx * 16, grid.xt[-1] + grid.dx * 16),
@@ -157,7 +160,7 @@ def get_boundaries(input_json, grid: GridDalesOpenBC, data):
         .rename("qtwest")
         .drop(["x"])
     )
-    e12west = (xr.ones_like(thlwest) * input_json["e12"]).rename("e12west")
+    e12west = (xr.ones_like(thlwest) * input_json.e12).rename("e12west")
     uwest.attrs.clear()
     vwest.attrs.clear()
     wwest.attrs.clear()
@@ -209,7 +212,7 @@ def get_boundaries(input_json, grid: GridDalesOpenBC, data):
         .rename("qteast")
         .drop(["x"])
     )
-    e12east = (xr.ones_like(thleast) * input_json["e12"]).rename("e12east")
+    e12east = (xr.ones_like(thleast) * input_json.e12).rename("e12east")
     ueast.attrs.clear()
     veast.attrs.clear()
     weast.attrs.clear()
@@ -261,7 +264,7 @@ def get_boundaries(input_json, grid: GridDalesOpenBC, data):
         .rename("qtsouth")
         .drop(["y"])
     )
-    e12south = (xr.ones_like(thlsouth) * input_json["e12"]).rename("e12south")
+    e12south = (xr.ones_like(thlsouth) * input_json.e12).rename("e12south")
     usouth.attrs.clear()
     vsouth.attrs.clear()
     wsouth.attrs.clear()
@@ -313,7 +316,7 @@ def get_boundaries(input_json, grid: GridDalesOpenBC, data):
         .rename("qtnorth")
         .drop(["y"])
     )
-    e12north = (xr.ones_like(thlnorth) * input_json["e12"]).rename("e12north")
+    e12north = (xr.ones_like(thlnorth) * input_json.e12).rename("e12north")
     unorth.attrs.clear()
     vnorth.attrs.clear()
     wnorth.attrs.clear()
@@ -365,7 +368,7 @@ def get_boundaries(input_json, grid: GridDalesOpenBC, data):
         .rename("qttop")
         .drop(["z"])
     )
-    e12top = (xr.ones_like(thltop) * input_json["e12"]).rename("e12top")
+    e12top = (xr.ones_like(thltop) * input_json.e12).rename("e12top")
     utop.attrs.clear()
     vtop.attrs.clear()
     wtop.attrs.clear()

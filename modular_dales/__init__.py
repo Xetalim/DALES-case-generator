@@ -40,8 +40,10 @@ from .LBC import (
     Nest_in_Periodic_Dales_And_Atmosphere,
     Periodic_Dales_Turbulence_Perturbations,
     Nest_in_AtmosphereProfiles,
+    OpenBoundaryConfig,
     NestingTopology,
     PeriodicPrecursorCrossSections,
+    KNMIHarmonieForecastDownloadModule,
 )
 
 from .Atmosphere import (
@@ -49,6 +51,7 @@ from .Atmosphere import (
     AtmosphericProfile,
     InterpolatedProfile,
     HarmonieAtmosphereModule,
+    LS2DAtmosphereModule,
 )
 
 from .Configuration.defaultnamelist import DefaultNamelistModule
@@ -174,6 +177,7 @@ __all__ = [
     "AtmosphericProfile",
     "InterpolatedProfile",
     "HarmonieAtmosphereModule",
+    "LS2DAtmosphereModule",
     # Surface and LSM
     "SurfaceModule",
     "ConstantFluxesModule",
@@ -204,8 +208,10 @@ __all__ = [
     "Nest_in_Periodic_Dales_And_Atmosphere",
     "Periodic_Dales_Turbulence_Perturbations",
     "Nest_in_AtmosphereProfiles",
+    "OpenBoundaryConfig",
     "NestingTopology",
     "PeriodicPrecursorCrossSections",
+    "KNMIHarmonieForecastDownloadModule",
     # Emissions
     "EmissionModule",
     "EmissionTracer",

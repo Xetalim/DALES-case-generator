@@ -16,6 +16,7 @@ from shapely.geometry import box
 
 from modular_dales.Geometry import GridDales
 from modular_dales.IO_helpers import (
+    cache_root,
     ensure_sorted,
     raster_to_xarray,
     get_reproject,
@@ -146,7 +147,7 @@ def get_ahn(grid: GridDales, out_file):
     """
 
     mosaic, out_transform, mosaic_crs, mosaic_profile = get_cached_AHN(
-        "COG_CACHE", grid
+        cache_root("ahn"), grid
     )
     logger.warning("Do we really want to use mode?")
     get_reproject(

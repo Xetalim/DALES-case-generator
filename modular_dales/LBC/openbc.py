@@ -17,6 +17,7 @@ from .openbc_periodic_dales_atmosphere_worker import (
     OpenBCPeriodicDalesAtmosphereWorker,
 )
 from modular_dales.LBC.openbc_knmi_worker import OpenBCKNMIWorker
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 
 from modular_dales.LBC.nest_dales_in_dales import (
     boundary_fields_fine,
@@ -108,6 +109,9 @@ class Nest_in_KNMI:
     )
     w_from_continuity: bool = field(
         default=False, repr=True, metadata={"serialize": True}, init=True
+    )
+    use_grib: Optional[bool] = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
     )
     noise_std: Optional[float] = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
@@ -683,27 +687,22 @@ class do_openboundary(simulation_module):
             raise ValueError("Unknown source for open boundary conditions")
 
     def _prepare_from_harmonie(self) -> None:
-        config = {
-            "openboundary": {
-                "e12": self.e12,
-                "tracernames": self.tracernames,
-                "tchunk": self.tchunk,
-                # "iexpnr": self.exp_id,
-                "start": self.start,
-                "author": "author",
-                "time0": self.time0,
-                "end": self.end,
-                "HARMONIE_ml_glob": self.nest_in_harmonie.ml_glob,
-                "HARMONIE_sfc_glob": self.nest_in_harmonie.sfc_glob,
-            }
-        }
-        self.harmonieprepper = prep_harmonie.harmoniePrepper(
-            config["openboundary"], self.openBCgrid
+        config = OpenBoundaryConfig(
+            e12=self.e12,
+            tracernames=list(self.tracernames or []),
+            tchunk=self.tchunk,
+            start=self.start,
+            author="author",
+            time0=self.time0,
+            end=self.end,
+            HARMONIE_ml_glob=self.nest_in_harmonie.ml_glob,
+            HARMONIE_sfc_glob=self.nest_in_harmonie.sfc_glob,
         )
+        self.harmonieprepper = prep_harmonie.harmoniePrepper(config, self.openBCgrid)
         self.harmonieprepper.load_data()
         data, transform = self.harmonieprepper.prep_harmonie()
         backrad_path = self.harmonieprepper.write_backrad_file(
-            cache_root(self.sim) / "backrad", self.exp_id
+            cache_root("backrad", self.sim), self.exp_id
         )
         self.sim.required_files[f"backrad.inp.{self.exp_id:03d}.nc"] = (
             backrad_path.as_posix()
@@ -727,14 +726,14 @@ class do_openboundary(simulation_module):
 
         logger.debug("Setting up boundary fields")
         self.boundaries = harmonie_boundary.boundary_fields(
-            config["openboundary"],
+            config,
             self.openBCgrid,
             data,
             output_path=self.output_path,
         )
         logger.debug("Setting up initial fields")
         self.initfields = initfields.initial_fields(
-            config["openboundary"],
+            config,
             self.openBCgrid,
             data,
             transform,
@@ -753,37 +752,27 @@ class do_openboundary(simulation_module):
         self._apply_periodic_turbulence_if_configured()
 
     def _prepare_from_dales(self) -> None:
-        config = {
-            "openboundary": {
-                "e12": self.e12,
-                "tracernames": self.tracernames,
-                "tchunk": self.tchunk,
-                "lsynturb": self.lsynturb,
-                "start": self.start,
-                "time0": self.time0,
-                "author": "author",
-                # "iexpnr": self.exp_id,
-                "end": self.end,
-                # source of boundary fields for everything but t=0
-                "outpath_coarse": self.nest_in_dales.outpath_coarse,
-                # Source of initial boundary fields from a previous simulation, specifically,
-                # the last time step in the output of the previous simulation
-                "outpath_coarse_old": self.nest_in_dales.outpath_coarse_old,
-                # source of initial boundary fields from a previous simulation,
-                # specifically, t=0 of the previous simulation
-                "inpath_coarse": self.nest_in_dales.inpath_coarse,
-                # Source of initial fields for the current simulation, specifically
-                # the initfields.nc input of the previous simulation
-                "inpath": self.nest_in_dales.inpath,
-            }
-        }
+        config = OpenBoundaryConfig(
+            e12=self.e12,
+            tracernames=list(self.tracernames or []),
+            tchunk=self.tchunk,
+            lsynturb=self.lsynturb,
+            start=self.start,
+            time0=self.time0,
+            author="author",
+            end=self.end,
+            outpath_coarse=self.nest_in_dales.outpath_coarse,
+            outpath_coarse_old=self.nest_in_dales.outpath_coarse_old,
+            inpath_coarse=self.nest_in_dales.inpath_coarse,
+            inpath=self.nest_in_dales.inpath,
+        )
         crosssection_chunks = None
         if self.tchunk is not None:
             crosssection_chunks = {"time": int(self.tchunk)}
 
         if self.nest_in_dales.inpath is not None:
             self.initfields = initial_fields_fine.initial_fields_fine(
-                config["openboundary"],
+                config,
                 grid=self.openBCgrid,
                 output_path=self.output_path,
             )
@@ -797,7 +786,7 @@ class do_openboundary(simulation_module):
             self.initfields = xr.Dataset(coords={"time": [0]})
 
         self.boundaries = boundary_fields_fine.boundary_fields_fine(
-            config["openboundary"],
+            config,
             grid=self.openBCgrid,
             output_path=self.output_path,
             grid_indices=self.indices,

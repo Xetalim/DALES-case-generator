@@ -12,6 +12,7 @@ import xarray as xr
 from modular_dales.Atmosphere import AtmosphereModule
 from modular_dales.Atmosphere.ls2d_atmosphere import LS2DAtmosphereModule
 from modular_dales.LBC.nest_dales_in_dales import boundary_fields_fine
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.vars import get_var_by_name
 
 if TYPE_CHECKING:
@@ -63,21 +64,19 @@ class OpenBCAtmosphereWorker:
         )
         ds = self._apply_atmosphere_boundary_noise(ds, boundaries, base_vars)
 
-        config = {
-            "openboundary": {
-                "e12": self.module.e12,
-                "tracernames": self.module.tracernames,
-                "tchunk": self.module.tchunk,
-                "start": self.module.start,
-                "time0": self.module.time0,
-                "author": "author",
-                "end": self.module.end,
-            }
-        }
+        config = OpenBoundaryConfig(
+            e12=self.module.e12,
+            tracernames=list(self.module.tracernames or []),
+            tchunk=self.module.tchunk,
+            start=self.module.start,
+            time0=self.module.time0,
+            author="author",
+            end=self.module.end,
+        )
 
         initfields = self._build_initfields_dataset(init_profiles_1d)
         boundaries_ds = boundary_fields_fine.set_openboundary_attrs(
-            config["openboundary"],
+            config,
             ds,
         )
         return boundaries_ds, initfields

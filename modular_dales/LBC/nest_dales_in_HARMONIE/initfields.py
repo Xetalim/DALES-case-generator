@@ -4,16 +4,26 @@ import numpy as np
 import xarray as xr
 from datetime import datetime
 import pandas as pd
+from typing import TYPE_CHECKING
 from modular_dales.Geometry.GridDales import GridDalesOpenBC
 from modular_dales.logging_wrapper import logwrap
 import logging
+
+if TYPE_CHECKING:
+    from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
 @logwrap
-def initial_fields(input_json, grid: GridDalesOpenBC, data, transform, output_path):
+def initial_fields(
+    input_json: "OpenBoundaryConfig",
+    grid: GridDalesOpenBC,
+    data,
+    transform,
+    output_path,
+):
     data = data.isel({"time": 0}, drop=True).transpose(
         "z", "y", "x", ..., missing_dims="warn"
     )
@@ -48,7 +58,7 @@ def initial_fields(input_json, grid: GridDalesOpenBC, data, transform, output_pa
         .rename({"z": "zt", "y": "yt", "x": "xt"})
         .rename("qt0")
     )
-    e120 = (xr.ones_like(thl0) * input_json["e12"]).rename("e120")
+    e120 = (xr.ones_like(thl0) * input_json.e12).rename("e120")
     u0.attrs.clear()
     v0.attrs.clear()
     w0.attrs.clear()
@@ -79,10 +89,10 @@ def initial_fields(input_json, grid: GridDalesOpenBC, data, transform, output_pa
     # Add global attributes
     initfields = initfields.assign_attrs(
         {
-            # "title": f"initfields.inp.{input_json['iexpnr']:03d}.nc",
+            # "title": "initfields.inp.XXX.nc",
             "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
-            "author": input_json["author"],
-            "time0": input_json["time0"],
+            "author": input_json.author,
+            "time0": input_json.time0,
         }
     )
     return initfields

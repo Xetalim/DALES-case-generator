@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from modular_dales.Configuration import (
     ColumnStatisticsOutputModule,
+    SprayingModule,
     VirtualMeasurementOutputModule,
 )
 
@@ -43,3 +44,35 @@ def test_colstat_preserves_explicit_indices(machine_conf):
     assert sim.nml["NAMCOLSTAT"]["npoints"] == 2
     assert sim.nml["NAMCOLSTAT"]["x_idx"] == [2, 5]
     assert sim.nml["NAMCOLSTAT"]["y_idx"] == [3, 4]
+
+
+def test_spraying_sources_are_routed_from_shared_point_fields(machine_conf):
+    sim = _build_basic_sim(machine_conf("spraying_shared_points"))
+    sim += SprayingModule(
+        x_idx=[3],
+        y_idx=[4],
+        z_idx=[2],
+        lwater_spraying=True,
+    )
+
+    _configure_sim(sim)
+
+    assert sim.nml["namspraying"]["i_glob_spray"] == 3
+    assert sim.nml["namspraying"]["j_glob_spray"] == 4
+    assert sim.nml["namspraying"]["k_glob_spray"] == 2
+
+
+def test_spraying_sources_resolve_real_coordinates(machine_conf):
+    sim = _build_basic_sim(machine_conf("spraying_real_coords"))
+    sim += SprayingModule(
+        x_spray=14.0,
+        y_spray=25.0,
+        z_spray=5.0,
+        lwater_spraying=True,
+    )
+
+    _configure_sim(sim)
+
+    assert sim.nml["namspraying"]["i_glob_spray"] == 2
+    assert sim.nml["namspraying"]["j_glob_spray"] == 3
+    assert sim.nml["namspraying"]["k_glob_spray"] == 1

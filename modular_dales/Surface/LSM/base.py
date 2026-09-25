@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import logging
 from typing import List, Optional
 
-from modular_dales.IO_helpers.external_data_cache import resolve_van_genuchten_path
+from modular_dales.IO_helpers.dales_external_data import resolve_van_genuchten_path
 from modular_dales.Surface.surface import SurfaceModule
 
 logger = logging.getLogger(__name__)

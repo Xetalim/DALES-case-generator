@@ -18,6 +18,7 @@ from modular_dales.LBC.nest_dales_in_HARMONIE.helper import (
     differentiate,
 )
 from modular_dales.IO_helpers.raster import fix_lambert_offsets
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -44,7 +45,8 @@ class harmoniePrepper:
     including loading, interpolation, thermodynamic calculations, and optional synthetic
     turbulence generation.
     Attributes:
-        input_json (dict): Configuration dictionary containing input parameters and settings.
+        input_json (OpenBoundaryConfig | Mapping[str, Any]):
+            Configuration object containing input parameters and settings.
         grid (GridDalesOpenBC): DALES grid object defining the target domain.
         ps (float): Surface pressure value used for base profile calculations.
         thls (float): Liquid potential temperature at surface.
@@ -66,7 +68,11 @@ class harmoniePrepper:
             and coordinate transformation parameters.
     """
 
-    def __init__(self, input_json, grid: GridDalesOpenBC):
+    def __init__(
+        self,
+        input_json: OpenBoundaryConfig,
+        grid: GridDalesOpenBC,
+    ):
         self.input_json = input_json
         self.grid = grid
         self.ps = None
@@ -83,7 +89,7 @@ class harmoniePrepper:
 
     def load_data(self):
         variables = ["ua", "va", "wa", "ta", "hus", "clw", "ps", "tas", "huss"]
-        if "synturb" in self.input_json:
+        if self.input_json.synturb is not None:
             variables = variables + ["tke", "tauu", "tauv", "cb", "hfss"]
         self.data, self.transform, x_sw, y_sw = create_xarray_dataset(
             self.input_json, self.grid, variables
@@ -103,13 +109,13 @@ class harmoniePrepper:
 
         # Add missing surface fields to 3d fields
         variables = ["uas", "vas", "was", "clws"]
-        if "synturb" in self.input_json:
+        if self.input_json.synturb is not None:
             variables.append("tkes")
         self.data = self.data.assign(
             {var: xr.zeros_like(self.data["ps"]) for var in variables}
         )
 
-        if "synturb" in self.input_json:
+        if self.input_json.synturb is not None:
             turbulence_data_dic = {
                 "tauu": self.data["tauu"],
                 "tauv": self.data["tauv"],
@@ -119,7 +125,7 @@ class harmoniePrepper:
 
         # Concatenate surface and 3D fields
         variables = ["ua", "va", "wa", "ta", "hus", "clw", "p"]
-        if "synturb" in self.input_json:
+        if self.input_json.synturb is not None:
             variables.append("tke")
         self.data = merge_steps(self.data, variables)
         # Calculate 3D height levels
@@ -174,7 +180,7 @@ class harmoniePrepper:
 
         logger.debug("Calculating synthetic turbulence parameters")
         # Calculate turbulence parameters
-        if "synturb" in self.input_json:
+        if self.input_json.synturb is not None:
             calculate_turbulence_vars(
                 self.grid,
                 self.data,
@@ -253,7 +259,7 @@ def _build_backrad_profile_from_harmonie(data: xr.Dataset) -> xr.Dataset:
 @logwrap
 def calculate_pressure(data):
     # right now this function uses 90 hybrid model levels.
-    # hybrid_coeff = np.loadtxt(f"{input_json['inpath']}H43_65lev.txt")
+    # hybrid_coeff = np.loadtxt("<inpath>/H43_65lev.txt")
     hybrid_A = xr.DataArray(
         hybrid_levels.ahalf, dims=["lev"], coords={"lev": np.arange(1, 92)}
     )
@@ -287,7 +293,7 @@ def merge_steps(data, variables):
 
 @logwrap
 def get_ref_height_crop(input_json, grid: GridDalesOpenBC, data):
-    if input_json["start"] == input_json["time0"]:  # Define reference height levels
+    if input_json.start == input_json.time0:  # Define reference height levels
         z_int = (
             data["z3d"]
             .isel({"time": 0}, drop=True)
@@ -296,7 +302,7 @@ def get_ref_height_crop(input_json, grid: GridDalesOpenBC, data):
         )
     else:  # Take reference height levels from exnr.inp.xxx
         try:
-            exnr = np.loadtxt(input_json["exnr_file"], skiprows=1)
+            exnr = np.loadtxt(input_json.exnr_file, skiprows=1)
         except FileNotFoundError as e:
             logger.critical(
                 "No reference height levels found in exnr_file in configuration. This is required as the simulation start is not the same as the HARMONIE start."
@@ -358,7 +364,7 @@ def calculate_turbulence_vars(
 
 @logwrap
 def calc_base_exner(input_json, grid: GridDalesOpenBC, data, z_int):
-    if input_json["start"] == input_json["time0"]:  # Calculate exnr function
+    if input_json.start == input_json.time0:  # Calculate exnr function
         z_min = data.z.argmin(dim="z")
 
         logger.debug("Calculating profile means")
@@ -391,7 +397,7 @@ def calc_base_exner(input_json, grid: GridDalesOpenBC, data, z_int):
         exnr = (p_exnr / p0) ** (Rd / cp)
     else:  # Read exnr.inp.xxx
         try:
-            with open(input_json["exnr_file"], "r") as file:
+            with open(input_json.exnr_file, "r") as file:
                 line0 = file.readline()
         except FileNotFoundError as e:
             logger.critical(
@@ -400,7 +406,7 @@ def calc_base_exner(input_json, grid: GridDalesOpenBC, data, z_int):
             raise e
         thls_exnr = float(line0.split(",")[1].split("thls = ")[-1])
         ps_exnr = float(line0.split(",")[2].split("ps = ")[-1])
-        exnr = np.loadtxt(input_json["exnr_file"], skiprows=1)
+        exnr = np.loadtxt(input_json.exnr_file, skiprows=1)
         exnrs = exnr[0, 1]
         exnr = exnr[1:, 1]
     return ps_exnr, exnrs, thls_exnr, exnr
@@ -483,7 +489,7 @@ def interpolate_ref_height(input_json, data, z_int):
         "huss": "2sh",
         "p": "p",
     }
-    if "synturb" in input_json:
+    if input_json.synturb is not None:
         variables.append("tke")
     logger.debug("Checking if data is ascending..")
     z_col = data["z3d"].isel(time=0, x=0, y=0, lev=slice(0, 2))
@@ -530,7 +536,7 @@ def calculate_3d_height_levels(input_json, data):
 # @logwrap
 # def calculate_pressure(input_json, data):
 #     # right now this function uses 90 hybrid model levels.
-#     # hybrid_coeff = np.loadtxt(f"{input_json['inpath']}H43_65lev.txt")
+#     # hybrid_coeff = np.loadtxt("<inpath>/H43_65lev.txt")
 #     hybrid_A = xr.DataArray(
 #         hybrid_levels.ahalf, dims=["lev"], coords={"lev": np.arange(1, 92)}
 #     )
@@ -578,11 +584,11 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
     var = variables[0]
     ds_ml = fix_lambert_offsets(
         xr.open_mfdataset(
-            input_json["HARMONIE_ml_glob"],
+            input_json.HARMONIE_ml_glob,
             decode_coords="all",
             engine="netcdf4",
             # parallel=False,
-            chunks={"time": input_json["tchunk"], "lev": -1},
+            chunks={"time": input_json.tchunk, "lev": -1},
             # chunks={"x": "auto", "y": "auto", "time": "auto", "lev": -1},
         )
     )
@@ -590,11 +596,11 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
 
     ds_sfc = fix_lambert_offsets(
         xr.open_mfdataset(
-            input_json["HARMONIE_sfc_glob"],
+            input_json.HARMONIE_sfc_glob,
             decode_coords="all",
             # parallel=False,
             engine="netcdf4",
-            chunks={"time": input_json["tchunk"]},
+            chunks={"time": input_json.tchunk},
         )
     )
 
@@ -628,8 +634,10 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
             dx = ds_ml["x"][1] - ds_ml["x"][0]
             dy = ds_ml["y"][1] - ds_ml["y"][0]
 
-            if "filter" in input_json:  # add some extra width for gaussian filtering
-                buffer = 4 * input_json["filter"]["sigma"]
+            if (
+                input_json.filter is not None
+            ):  # add some extra width for gaussian filtering
+                buffer = 4 * input_json.filter["sigma"]
             else:
                 buffer = dx
 
@@ -638,7 +646,7 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
                 data.append(
                     ds_sfc[var].sel(
                         time=time.sortby("time").sel(
-                            time=slice(input_json["start"], input_json["end"])
+                            time=slice(input_json.start, input_json.end)
                         ),
                         x=slice(int(x_sw - buffer), int(x_sw + grid.xsize + buffer)),
                         y=slice(
@@ -650,7 +658,7 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
                 data.append(
                     ds_ml[var].sel(
                         time=time.sortby("time").sel(
-                            time=slice(input_json["start"], input_json["end"])
+                            time=slice(input_json.start, input_json.end)
                         ),
                         x=slice(int(x_sw - buffer), int(x_sw + grid.xsize + buffer)),
                         y=slice(
@@ -671,7 +679,7 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
         data = xr.open_dataset(
             "/ec/res4/scratch/nld4411/dales_nest_harmonie/netcdfs_newnew4/data.nc",
             engine="netcdf4",
-            chunks={"time": input_json["tchunk"], "lev": -1},
+            chunks={"time": input_json.tchunk, "lev": -1},
         )
         ds_ml.close()
         ds_sfc.close()
@@ -686,7 +694,7 @@ def get_transform_time(input_json, var, ds):
     # Read transform information and transform lat/lon of southwest corner to harmonie x/y
     proj = ds.rio.crs.to_proj4()
     transform = Transform({"proj4": proj})
-    # x_sw, y_sw = transform.latlon_to_xy(input_json["lat_sw"], input_json["lon_sw"])
+    # x_sw, y_sw = transform.latlon_to_xy(lat_sw, lon_sw)
     # Round to 5 meters to avoid numerical error in coordinates
     # x_sw = np.round(x_sw, 0)
     # y_sw = np.round(y_sw, 0)

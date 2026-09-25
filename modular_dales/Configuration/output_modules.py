@@ -1,5 +1,6 @@
 from typing import List, Optional, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
+from numbers import Number
 
 import numpy as np
 
@@ -8,12 +9,14 @@ from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
 
 
-def _normalize_horizontal_points(values):
+def _normalize_horizontal_points(
+    values: Union[Number, list[Number], None],
+) -> Optional[list[Number]]:
     if values is None:
         return None
-    if isinstance(values, (list, tuple, np.ndarray)):
-        return list(values)
-    return [values]
+    if isinstance(values, Number):
+        return [values]
+    return values
 
 
 def _resolve_nearest_indices(grid_axis, coordinates, axis_name: str) -> list[int]:
@@ -27,11 +30,13 @@ def _resolve_nearest_indices(grid_axis, coordinates, axis_name: str) -> list[int
 
 
 class _HorizontalPointOutputMixin:
-    def _prepare_horizontal_point_indices(self, module_label: str) -> None:
+    def _prepare_point_indices(self, module_label: str) -> None:
         x_idx = _normalize_horizontal_points(self.x_idx)
         y_idx = _normalize_horizontal_points(self.y_idx)
+        z_idx = _normalize_horizontal_points(getattr(self, "z_idx", default=None))
         x = _normalize_horizontal_points(self.x)
         y = _normalize_horizontal_points(self.y)
+        z = _normalize_horizontal_points(getattr(self, "z", default=None))
 
         if x_idx is None:
             if x is None:
@@ -55,14 +60,48 @@ class _HorizontalPointOutputMixin:
             raise ValueError(f"{module_label} requires at least one sampling point")
 
         resolved_npoints = len(x_idx)
-        if self.npoints is not None and int(self.npoints) != resolved_npoints:
+        if (
+            hasattr(self, "npoints")
+            and self.npoints is not None
+            and int(self.npoints) != resolved_npoints
+        ):
             raise ValueError(
                 f"{module_label} npoints={self.npoints} does not match resolved point count {resolved_npoints}"
             )
+        if not any(
+            field.type is list and field.name == "x_idx" for field in fields(self)
+        ):
+            self.x_idx = x_idx[0]
+            self.y_idx = y_idx[0]
+        if hasattr(self, "npoints"):
+            self.npoints = resolved_npoints
 
-        self.x_idx = x_idx
-        self.y_idx = y_idx
-        self.npoints = resolved_npoints
+        if z_idx is not None or z is not None:
+            z_idx = _normalize_horizontal_points(z_idx)
+            z = _normalize_horizontal_points(z)
+
+            if z_idx is None:
+                if z is None:
+                    raise ValueError(
+                        f"{module_label} requires z_idx or real z coordinates"
+                    )
+                z_idx = _resolve_nearest_indices(self.grid.zt, z, "z")
+            else:
+                z_idx = [int(idx) for idx in z_idx]
+
+            if len(z_idx) != len(x_idx):
+                raise ValueError(
+                    f"{module_label} requires z point definitions with matching lengths to x/y"
+                )
+
+            self.z_idx = z_idx
+        if not any(
+            field.type is list and field.name == "z_idx" for field in fields(self)
+        ):
+            self.z_idx = z_idx[0]
+
+    def _prepare_horizontal_point_indices(self, module_label: str) -> None:
+        self._prepare_point_indices(module_label)
 
 
 @register_module

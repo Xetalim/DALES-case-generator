@@ -15,6 +15,7 @@ from shapely.geometry import box
 
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.IO_helpers import get_reproject
+from modular_dales.IO_helpers.external_data_cache import cache_root
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -97,12 +98,8 @@ def get_cog(grid: GridDales, out_file):
 
     cog_url = "https://lcz-generator.rub.de/cogs/lcz_filter_v3_cog.tif"
 
-    # raster = query_zip_virtual_mosaic(
-    #     "/Users/andrevanginkel/Downloads/ecosg_plus.zip", grid, pad=10
-    # )
-
     subset, src_transform, src_crs, profile = cached_cog_subset_from_url(
-        cog_url, grid, "COG_CACHE", pad=10
+        cog_url, grid, cache_root("cog"), pad=10
     )
     get_reproject(
         grid,
@@ -198,7 +195,7 @@ def get_cached_esa(cache_dir, grid: GridDales):
 
 def get_esa(grid: GridDales, out_file):
     mosaic, out_transform, mosaic_crs, mosaic_profile = get_cached_esa(
-        "COG_CACHE", grid
+        cache_root("esa_worldcover"), grid
     )
     get_reproject(
         grid,

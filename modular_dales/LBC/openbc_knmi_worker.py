@@ -14,6 +14,10 @@ from modular_dales.LBC.nest_dales_in_HARMONIE import (
     initfields,
     nest_dales_in_KNMI,
 )
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
+from modular_dales.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
+    resolve_knmi_harmonie_download_module,
+)
 
 if TYPE_CHECKING:
     from modular_dales.LBC.openbc import do_openboundary
@@ -31,7 +35,7 @@ class OpenBCKNMIWorker:
     def prepare(self) -> Tuple[xr.Dataset, xr.Dataset]:
         config = self._build_config()
         prepper = nest_dales_in_KNMI.KNMIPrepper(
-            config["openboundary"],
+            config,
             self.module.openBCgrid,
         )
         prepper.load_data()
@@ -47,14 +51,14 @@ class OpenBCKNMIWorker:
 
         logger.debug("Setting up boundary fields (KNMI source)")
         boundaries = harmonie_boundary.boundary_fields(
-            config["openboundary"],
+            config,
             self.module.openBCgrid,
             data,
             output_path=self.module.output_path,
         )
         logger.debug("Setting up initial fields (KNMI source)")
         initfields_ds = initfields.initial_fields(
-            config["openboundary"],
+            config,
             self.module.openBCgrid,
             data,
             transform,
@@ -65,21 +69,35 @@ class OpenBCKNMIWorker:
         boundaries, initfields_ds = dask.optimize(boundaries, initfields_ds)
         return boundaries, initfields_ds
 
-    def _build_config(self) -> dict:
-        return {
-            "openboundary": {
-                "e12": self.module.e12,
-                "tracernames": self.module.tracernames,
-                "tchunk": self.module.tchunk,
-                "start": self.module.start,
-                "author": "author",
-                "time0": self.module.time0,
-                "end": self.module.end,
-                "KNMI_ml_glob": self.module.nest_in_knmi.ml_glob,
-                "KNMI_sfc_glob": self.module.nest_in_knmi.sfc_glob,
-                "w_from_continuity": self.module.nest_in_knmi.w_from_continuity,
-            }
-        }
+    def _build_config(self) -> OpenBoundaryConfig:
+        download_module = resolve_knmi_harmonie_download_module(self.module)
+        ml_glob = self.module.nest_in_knmi.ml_glob
+        sfc_glob = self.module.nest_in_knmi.sfc_glob
+        use_grib = self.module.nest_in_knmi.use_grib
+        if download_module is not None:
+            if ml_glob in (None, ""):
+                ml_glob = download_module.ml_glob
+            if sfc_glob in (None, ""):
+                sfc_glob = download_module.sfc_glob
+            if use_grib is None and (
+                getattr(download_module, "skip_cdo", False)
+                or not getattr(download_module, "convert_to_netcdf", True)
+            ):
+                use_grib = True
+
+        return OpenBoundaryConfig(
+            e12=self.module.e12,
+            tracernames=list(self.module.tracernames or []),
+            tchunk=self.module.tchunk,
+            start=self.module.start,
+            author="author",
+            time0=self.module.time0,
+            end=self.module.end,
+            KNMI_ml_glob=ml_glob,
+            KNMI_sfc_glob=sfc_glob,
+            w_from_continuity=self.module.nest_in_knmi.w_from_continuity,
+            use_grib=use_grib,
+        )
 
     def _resolve_noise_window(
         self,
