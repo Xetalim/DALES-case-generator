@@ -105,22 +105,6 @@ _GRID64_MID = dict(
     dz0=10.0,
 )
 
-_GRID64_INNER = dict(
-    itot=64,
-    jtot=64,
-    kmax=40,
-    xsize=400.0 * 1.5,
-    ysize=400.0 * 1.5,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=136173.0 - ((6400.0 * 1.5) / 2.0) + (3000.0 * 1.5),
-    y0=455912.0 - ((6400.0 * 1.5) / 2.0) + (3000.0 * 1.5),
-    proj4="EPSG:28992",
-    alpha=1,
-    dz0=10.0,
-)
-
 
 def _new_grid(spec: dict) -> GridDales:
     grid = GridDales(**spec)
@@ -219,7 +203,7 @@ def _attach_common_physics(
                 "era5_path",
                 "/Users/andrevanginkel/Documents/20_Code/28_dales_input/28.01_Dales_LSM_generator/jupyter_tests/era5_data",
             ),
-            start_date=datetime.datetime(2026, 5, 7, hour=0),
+            start_date=datetime.datetime(2026, 5, 1, hour=0),
             end_date=datetime.datetime(2026, 5, 31, hour=23),
             write_log=False,
             data_source=sim.machine_conf.get("ls2d_conf", {}).get("data_source", "CDS"),
@@ -236,12 +220,12 @@ def _attach_common_physics(
     sim += atmo
 
     sim += TimeModule(
-        xtime=0.0,
+        xtime=12.0,
         xyear=2026,
         runtime=3600,
         startyear=2026,
         startmonth=5,
-        startday=7,
+        startday=1,
         inferfromdatetime=True,
     )
 
@@ -367,15 +351,12 @@ def _build_middle_nested_sim_scaled64(
 
     midgrid = _new_grid(_GRID64_MID)
     _set_child_vertical_grid(supergrid, midgrid)
-    innergrid = _new_grid(_GRID64_INNER)
-    _set_child_vertical_grid(midgrid, innergrid)
 
     sim += midgrid
 
     nesting = NestingTopology()
     nesting += supergrid
     nesting += midgrid
-    nesting += innergrid
     nesting.my_idx = nesting.nestings.index(midgrid)
     sim += nesting
 
@@ -425,91 +406,9 @@ def _build_middle_nested_sim_scaled64(
     return sim
 
 
-def _build_inner_nested_sim_scaled64(
-    machine_conf: dict, middle_sim: dales_simulation
-) -> dales_simulation:
-    sim = dales_simulation("openbc_triple64_child_l3", machine_conf)
-    sim += DefaultNamelistModule()
-
-    midgrid = _new_grid(_GRID64_MID)
-    if middle_sim.grid is None:
-        raise ValueError(
-            "middle_sim.grid is missing; cannot align nested vertical grid"
-        )
-    _copy_vertical_grid(middle_sim.grid, midgrid)
-
-    innergrid = _new_grid(_GRID64_INNER)
-    _set_child_vertical_grid(midgrid, innergrid)
-
-    sim += innergrid
-
-    nesting = NestingTopology()
-    nesting += midgrid
-    nesting += innergrid
-    nesting.my_idx = nesting.nestings.index(innergrid)
-    sim += nesting
-
-    dxturb = innergrid.xsize / innergrid.itot * 4.0
-    dyturb = innergrid.ysize / innergrid.jtot * 4.0
-    openbc = do_openboundary(
-        time0="2026-05-01T12:00:00",
-        start="2026-05-01T12:00:00",
-        end="2026-05-01T13:00:00",
-        e12=0.01,
-        dxint=innergrid.xsize / innergrid.itot,
-        dyint=innergrid.ysize / innergrid.jtot,
-        dxturb=dxturb,
-        dyturb=dyturb,
-        tauh=0.5,
-        taum=0,
-        lambda_=dxturb,
-        lsynturb=True,
-        tchunk=50,
-    )
-    openbc += Nest_in_Dales(
-        inpath=middle_sim.output_path / "input",
-        inpath_coarse=middle_sim.output_path / "input",
-        outpath_coarse=middle_sim.output_path / "run_001",
-        outpath_coarse_old=middle_sim.output_path / "run_001",
-    )
-    sim += openbc
-    _attach_common_physics(sim, innergrid, True)
-
-    sim_lsm = sim.retrieve_module(LSMModule)
-    host_surfcross = xr.open_dataset(
-        middle_sim.output_path / "run_001" / "surfcross.001.nc"
-    )
-    sim_lsm += UniformSkinTemperature(
-        host_surfcross["tskin"].isel(time=0).mean().item()
-    )
-    host_surfcross.close()
-    host_lsm_inp = xr.open_dataset(middle_sim.output_path / "input" / "lsm.inp_001.nc")
-    sim_lsm += UniformSoilTemperature(
-        host_lsm_inp["t_soil"].mean(dim=("x", "y")).values.tolist()
-    )
-    sim_lsm += UniformSoilMoisture(
-        host_lsm_inp["theta_soil"].mean(dim=("x", "y")).values.tolist()
-    )
-    host_lsm_inp.close()
-
-    return sim
-
-
 def _run_job_direct(case_dir: Path, stage_name: str) -> None:
     logger.info("Running %s in %s", stage_name, case_dir)
     subprocess.run(["./job.001"], cwd=case_dir, check=True)
-
-
-def build_scaled64_triple_nesting_case(machine_conf: dict) -> dales_simulation:
-    parent_l1 = _build_outer_parent_sim_scaled64(machine_conf)
-    parent_l1.sim_preprocessing_pipeline()
-    _run_job_direct(parent_l1.output_path, "job_001_level1")
-
-    parent_l2 = _build_middle_nested_sim_scaled64(machine_conf, parent_l1)
-    parent_l2.sim_preprocessing_pipeline()
-    _run_job_direct(parent_l2.output_path, "job_001_level2")
-
-    return _build_inner_nested_sim_scaled64(machine_conf, parent_l2)
 
 
 if __name__ == "__main__":
@@ -554,10 +453,6 @@ if __name__ == "__main__":
     parent_l2 = _build_middle_nested_sim_scaled64(machine_conf, parent_l1)
     parent_l2.sim_preprocessing_pipeline()
     _run_job_direct(parent_l2.output_path, "job_001_level2")
-
-    child_l3 = _build_inner_nested_sim_scaled64(machine_conf, parent_l2)
-    child_l3.sim_preprocessing_pipeline()
-    _run_job_direct(child_l3.output_path, "job_001_level3")
 
     logger.info("Completed scaled64 triple-nesting setup")
     logger.info(

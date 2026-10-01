@@ -113,7 +113,8 @@ if __name__ == "__main__":
         proj4=PROJ4_RD,
     )
 
-    sim = dales_simulation(case_name, machine_conf)
+    sim = dales_simulation(case_name=case_name, machine_conf=machine_conf)
+
     logger.info("Created simulation: %s", case_name)
 
     sim += DefaultNamelistModule()
@@ -157,13 +158,13 @@ if __name__ == "__main__":
 
     sim += ConstantSurfaceTemperatureModule(
         thls=THLS,
-        z0mav=0.01,
-        z0hav=0.01,
-        ps=PS,
+        z0mav=0.01,  # aerodynamic roughness length for momentum
+        z0hav=0.01,  # aerodynamic roughness length for heat and moisture
+        ps=PS,  # surface pressure
     )
 
-    IBM = IBMModule()
-    IBM += FromAHN()
+    IBM = IBMModule()  # use the IBM
+    IBM += FromAHN()  # download height map from Algemene Hoogtekaart Nederland
     sim += IBM
 
     time = TimedependentModule(ltimedep=True)
