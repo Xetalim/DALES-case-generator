@@ -65,9 +65,9 @@ def test_spraying_sources_are_routed_from_shared_point_fields(machine_conf):
 def test_spraying_sources_resolve_real_coordinates(machine_conf):
     sim = _build_basic_sim(machine_conf("spraying_real_coords"))
     sim += SprayingModule(
-        x_spray=14.0,
-        y_spray=25.0,
-        z_spray=5.0,
+        x=14.0,
+        y=25.0,
+        z=5.0,
         lwater_spraying=True,
     )
 

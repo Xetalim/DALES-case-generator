@@ -23,7 +23,8 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    x_idx: Optional[Union[int, list[int]]] = field(
+    allow_idx_list: bool = False
+    x_idx: Optional[int] = field(
         default=None,
         metadata={
             "nml": "namspraying",
@@ -31,7 +32,7 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
             "doc": "Global i-index location for spray source.",
         },
     )
-    y_idx: Optional[Union[int, list[int]]] = field(
+    y_idx: Optional[int] = field(
         default=None,
         metadata={
             "nml": "namspraying",
@@ -39,7 +40,7 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
             "doc": "Global j-index location for spray source.",
         },
     )
-    z_idx: Optional[Union[int, list[int]]] = field(
+    z_idx: Optional[int] = field(
         default=None,
         metadata={
             "nml": "namspraying",
@@ -47,15 +48,9 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
             "doc": "Vertical level index for spray source.",
         },
     )
-    x: Optional[Union[float, list[float]]] = field(
-        default=None, metadata={"serialize": False}
-    )
-    y: Optional[Union[float, list[float]]] = field(
-        default=None, metadata={"serialize": False}
-    )
-    z: Optional[Union[float, list[float]]] = field(
-        default=None, metadata={"serialize": False}
-    )
+    x: Optional[float] = field(default=None, metadata={"serialize": False})
+    y: Optional[float] = field(default=None, metadata={"serialize": False})
+    z: Optional[float] = field(default=None, metadata={"serialize": False})
     lwater_spraying: bool = field(
         default=False,
         metadata={
@@ -96,12 +91,12 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
             "doc": "Salt mass fraction used for water spray.",
         },
     )
-    tracer: int = field(
-        default=1,
+    tracer: str = field(
+        default="salt",
         metadata={
             "nml": "namspraying",
             "key": "tracer",
-            "doc": "Tracer index that receives spray source.",
+            "doc": "Tracer name that receives spray source.",
         },
     )
     lsalt_sponge: bool = field(

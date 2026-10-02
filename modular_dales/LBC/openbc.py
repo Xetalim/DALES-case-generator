@@ -13,9 +13,6 @@ from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.Atmosphere import AtmosphereModule
 from modular_dales.IO_helpers.external_data_cache import cache_root
 from modular_dales.LBC.openbc_atmosphere_worker import OpenBCAtmosphereWorker
-from .openbc_periodic_dales_atmosphere_worker import (
-    OpenBCPeriodicDalesAtmosphereWorker,
-)
 from modular_dales.LBC.openbc_knmi_worker import OpenBCKNMIWorker
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 
@@ -169,141 +166,6 @@ class Nest_in_Dales:
 
 
 @dataclass
-class Nest_in_Periodic_Dales_And_Atmosphere:
-    """Nest DALES in atmosphere profiles and add turbulence from periodic DALES cross-sections.
-
-    This mode first builds open boundaries from ``Nest_in_AtmosphereProfiles``
-    (equivalent to ``openbc_atmosphere``) and then adds turbulent perturbations
-    extracted from periodic DALES precursor cross-sections.
-
-    Args:
-        periodic_outpath : Optional[str]
-            Path to periodic DALES output containing ``crossyz.*.*.nc``,
-            ``crossxz.*.*.nc``, and ``crossxy.*.*.nc`` files.
-        atmosphere_module : Optional[AtmosphereModule]
-            Atmosphere module used as baseline for mean open-boundary forcing.
-        variable_mapping : Dict[str, str]
-            Mapping from open-boundary variable names to atmosphere variable
-            names. Same semantics as ``Nest_in_AtmosphereProfiles``.
-        add_to_top_thl : Optional[float]
-            Optional offset added to top ``thl`` boundary.
-        filter_scale_m : float
-            Horizontal low-pass filter scale in meters used to compute the
-            large-scale component. Perturbations are ``section - filtered``.
-        top_layer_index : Optional[int]
-            Index of the ``crossxy`` layer used for top perturbations. If None,
-            the highest available layer is used.
-        perturbation_variables : Optional[List[str]]
-            Variables that receive periodic perturbations.
-        tau : Optional[float]
-            Exponential ramp timescale in seconds for perturbation spin-up.
-            Ramp factor is 0 at t=0 and approaches 1 as time increases.
-    """
-
-    periodic_outpath: Optional[str] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    atmosphere_module: Optional[AtmosphereModule] = field(
-        default=None,
-        repr=False,
-        metadata={"serialize": True},
-        init=True,
-    )
-    atmosphere_module_name: Optional[str] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    variable_mapping: Dict[str, str] = field(
-        default_factory=lambda: {
-            "u": "ua",
-            "v": "va",
-            "w": "w",
-            "thl": "thetal",
-            "qt": "qt",
-            "e12": "tke",
-        },
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    add_to_top_thl: Optional[float] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    filter_scale_m: float = field(
-        default=2000.0,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    top_layer_index: Optional[int] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    perturbation_variables: Optional[List[str]] = field(
-        default_factory=lambda: ["u", "v", "w", "thl", "qt"],
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    tau: Optional[float] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-
-
-@dataclass
-class Periodic_Dales_Turbulence_Perturbations:
-    """Add turbulence perturbations from a periodic DALES precursor to open boundaries.
-
-    This is a source-agnostic addon: it can be combined with HARMONIE, KNMI,
-    or AtmosphereProfiles open-boundary baselines.
-    """
-
-    periodic_outpath: Optional[str] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    filter_scale_m: float = field(
-        default=2000.0,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    top_layer_index: Optional[int] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    perturbation_variables: Optional[List[str]] = field(
-        default_factory=lambda: ["u", "v", "w", "thl", "qt"],
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    tau: Optional[float] = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-
-
-@dataclass
 class Nest_in_AtmosphereProfiles:
     """Nest DALES in a horizontally homogeneous atmosphere from profiles.
 
@@ -414,10 +276,10 @@ class do_openboundary(simulation_module):
     harmonieprepper: Optional[prep_harmonie.harmoniePrepper] = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    boundaries: Optional[Any] = field(
+    boundaries: Optional[xr.Dataset] = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    initfields: Optional[Any] = field(
+    initfields: Optional[xr.Dataset] = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
     nest_in_harmonie: Optional[Nest_in_Harmonie] = field(
@@ -426,12 +288,6 @@ class do_openboundary(simulation_module):
     nest_in_dales: Optional[Nest_in_Dales] = field(
         default=None, repr=False, metadata={"serialize": True}, init=True
     )
-    nest_in_periodic_dales_and_atmosphere: Optional[
-        Nest_in_Periodic_Dales_And_Atmosphere
-    ] = field(default=None, repr=False, metadata={"serialize": True}, init=True)
-    periodic_dales_turbulence_perturbations: Optional[
-        Periodic_Dales_Turbulence_Perturbations
-    ] = field(default=None, repr=False, metadata={"serialize": True}, init=True)
     nest_in_atmosphere: Optional[Nest_in_AtmosphereProfiles] = field(
         default=None, repr=False, metadata={"serialize": True}, init=True
     )
@@ -621,8 +477,6 @@ class do_openboundary(simulation_module):
 
         Args:
             obj: Nest_in_Harmonie, Nest_in_Dales,
-                Nest_in_Periodic_Dales_And_Atmosphere,
-                Periodic_Dales_Turbulence_Perturbations,
                 Nest_in_AtmosphereProfiles
 
         Returns:
@@ -634,19 +488,6 @@ class do_openboundary(simulation_module):
             self.nest_in_knmi = obj
         elif isinstance(obj, Nest_in_Dales):
             self.nest_in_dales = obj
-        elif isinstance(obj, Nest_in_Periodic_Dales_And_Atmosphere):
-            self.nest_in_periodic_dales_and_atmosphere = obj
-            self.periodic_dales_turbulence_perturbations = (
-                Periodic_Dales_Turbulence_Perturbations(
-                    periodic_outpath=obj.periodic_outpath,
-                    filter_scale_m=obj.filter_scale_m,
-                    top_layer_index=obj.top_layer_index,
-                    perturbation_variables=list(obj.perturbation_variables or []),
-                    tau=obj.tau,
-                )
-            )
-        elif isinstance(obj, Periodic_Dales_Turbulence_Perturbations):
-            self.periodic_dales_turbulence_perturbations = obj
         elif isinstance(obj, Nest_in_AtmosphereProfiles):
             self.nest_in_atmosphere = obj
 
@@ -654,8 +495,6 @@ class do_openboundary(simulation_module):
             raise TypeError(
                 "Expected "
                 "Nest_in_Harmonie/Nest_in_KNMI/Nest_in_Dales/"
-                "Nest_in_Periodic_Dales_And_Atmosphere/"
-                "Periodic_Dales_Turbulence_Perturbations/"
                 "Nest_in_AtmosphereProfiles, "
                 f"got {type(obj)}"
             )
@@ -679,8 +518,6 @@ class do_openboundary(simulation_module):
             self._prepare_from_knmi()
         elif self.nest_in_dales is not None:
             self._prepare_from_dales()
-        elif self.nest_in_periodic_dales_and_atmosphere is not None:
-            self._prepare_from_periodic_dales_and_atmosphere()
         elif self.nest_in_atmosphere is not None:
             self._prepare_from_atmosphere()
         else:
@@ -743,13 +580,11 @@ class do_openboundary(simulation_module):
         self.boundaries, self.initfields = dask.optimize(
             self.boundaries, self.initfields
         )
-        self._apply_periodic_turbulence_if_configured()
         logger.debug("Optimized fields")
 
     def _prepare_from_knmi(self) -> None:
         worker = OpenBCKNMIWorker(self)
         self.boundaries, self.initfields = worker.prepare()
-        self._apply_periodic_turbulence_if_configured()
 
     def _prepare_from_dales(self) -> None:
         config = OpenBoundaryConfig(
@@ -783,7 +618,8 @@ class do_openboundary(simulation_module):
                 "A minimal placeholder initfields dataset will be written instead."
             )
 
-            self.initfields = xr.Dataset(coords={"time": [0]})
+            self.initfields = None
+            self.linithetero = False
 
         self.boundaries = boundary_fields_fine.boundary_fields_fine(
             config,
@@ -792,61 +628,32 @@ class do_openboundary(simulation_module):
             grid_indices=self.indices,
             chunks=crosssection_chunks,
         )
-        self._apply_periodic_turbulence_if_configured()
 
     def _prepare_from_atmosphere(self) -> None:
         if self.nest_in_atmosphere.atmosphere_module.sim is None:
             self.nest_in_atmosphere.atmosphere_module._initialize_from_sim(self.sim)
         worker = OpenBCAtmosphereWorker(self)
         self.boundaries, self.initfields = worker.prepare()
-        self._apply_periodic_turbulence_if_configured()
-
-    def _prepare_from_periodic_dales_and_atmosphere(self) -> None:
-        source = self.nest_in_periodic_dales_and_atmosphere
-        if source.atmosphere_module is None:
-            raise ValueError(
-                "Nest_in_Periodic_Dales_And_Atmosphere requires 'atmosphere_module'."
-            )
-        if source.periodic_outpath is None:
-            raise ValueError(
-                "Nest_in_Periodic_Dales_And_Atmosphere requires 'periodic_outpath'."
-            )
-
-        # Reuse the existing atmosphere workflow as baseline mean boundary state.
-        self.nest_in_atmosphere = Nest_in_AtmosphereProfiles(
-            variable_mapping=dict(source.variable_mapping),
-            add_to_top_thl=source.add_to_top_thl,
-            atmosphere_module=source.atmosphere_module,
-            atmosphere_module_name=source.atmosphere_module_name,
-        )
-
-        worker = OpenBCPeriodicDalesAtmosphereWorker(self)
-        self.boundaries, self.initfields = worker.prepare()
-
-    def _apply_periodic_turbulence_if_configured(self) -> None:
-        if self.periodic_dales_turbulence_perturbations is None:
-            return
-        worker: Any = OpenBCPeriodicDalesAtmosphereWorker(self)
-        self.boundaries = worker.apply_perturbations_to_boundaries(self.boundaries)
 
     def write_files(self):
         # Save data
         logger.debug("Optimizing initial fields")
-        self.initfields = self.initfields.assign_attrs(
-            {
-                "title": f"initfields.inp.{self.exp_id:03d}.nc",
-            }
-        )
-        initfields_writer = self.initfields.to_netcdf(
-            path=self.output_path / "input" / self.initfields.attrs["title"],
-            mode="w",
-            format="netcdf4",
-            compute=False,
-        )
-        (initfields_writer,) = dask.optimize(initfields_writer)
-        logger.debug("Writing initial fields")
+        if self.initfields:
+            self.initfields = self.initfields.assign_attrs(
+                {
+                    "title": f"initfields.inp.{self.exp_id:03d}.nc",
+                }
+            )
+            initfields_writer = self.initfields.to_netcdf(
+                path=self.output_path / "input" / self.initfields.attrs["title"],
+                mode="w",
+                format="netcdf4",
+                compute=False,
+            )
+            (initfields_writer,) = dask.optimize(initfields_writer)
+            logger.debug("Writing initial fields")
 
-        initfields_writer.compute()
+            initfields_writer.compute()
 
         self.boundaries = self.boundaries.assign_attrs(
             {

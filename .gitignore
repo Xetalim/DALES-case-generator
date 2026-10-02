@@ -18,3 +18,5 @@ docs/generated/
 logs/app.log
 
 logs/errors.log
+
+dist/

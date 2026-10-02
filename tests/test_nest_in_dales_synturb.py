@@ -3,26 +3,27 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from modular_dales.LBC.nest_dales_in_dales.boundary_fields_fine import (
+from modular_dales.LBC.nest_dales_in_dales.synturb import (
     _load_synturb_profiles,
 )
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 
 
 def _write_profiles_dataset(path: Path) -> None:
     ds = xr.Dataset(
         data_vars={
-            "u2r": (("time", "zt"), [[1.0], [1.0]]),
-            "v2r": (("time", "zt"), [[1.0], [1.0]]),
-            "w2r": (("time", "zt"), [[0.2], [0.2]]),
-            "w2s": (("time", "zt"), [[0.0], [0.0]]),
-            "uwt": (("time", "zt"), [[2.0], [2.0]]),
-            "vwt": (("time", "zt"), [[-1.0], [-1.0]]),
-            "thl2r": (("time", "zt"), [[0.05], [0.05]]),
-            "wthlt": (("time", "zt"), [[1.0], [1.0]]),
-            "qt2r": (("time", "zt"), [[0.02], [0.02]]),
-            "wqtt": (("time", "zt"), [[1.0], [1.0]]),
+            "u2r": (("time", "zt"), [[1.0, 1.0], [1.0, 1.0]]),
+            "v2r": (("time", "zt"), [[1.0, 1.0], [1.0, 1.0]]),
+            "w2r": (("time", "zt"), [[0.2, 0.2], [0.2, 0.2]]),
+            "w2s": (("time", "zt"), [[0.0, 0.0], [0.0, 0.0]]),
+            "uwt": (("time", "zt"), [[2.0, 2.0], [2.0, 2.0]]),
+            "vwt": (("time", "zt"), [[-1.0, -1.0], [-1.0, -1.0]]),
+            "thl2r": (("time", "zt"), [[0.05, 0.05], [0.05, 0.05]]),
+            "wthlt": (("time", "zt"), [[1.0, 1.0], [1.0, 1.0]]),
+            "qt2r": (("time", "zt"), [[0.02, 0.02], [0.02, 0.02]]),
+            "wqtt": (("time", "zt"), [[1.0, 1.0], [1.0, 1.0]]),
         },
-        coords={"time": [10.0, 0.0], "zt": [100.0]},
+        coords={"time": [0, 10.0], "zt": [50.0, 150.0]},
     )
     ds.to_netcdf(path)
 
@@ -31,7 +32,7 @@ def test_load_synturb_profiles_repairs_covariances(tmp_path: Path) -> None:
     _write_profiles_dataset(tmp_path / "profiles.001.nc")
 
     synturb = _load_synturb_profiles(
-        {"outpath_coarse": tmp_path.as_posix()},
+        OpenBoundaryConfig(outpath_coarse=tmp_path.as_posix()),
         xr.DataArray([5.0], dims=["time"]),
         xr.DataArray([100.0], dims=["zt"]),
     )

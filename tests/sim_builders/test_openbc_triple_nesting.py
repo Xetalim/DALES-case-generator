@@ -134,7 +134,7 @@ def _attach_common_physics(
         # xday=180,
         xtime=12.0,
         xyear=2023,
-        runtime=3600,
+        runtime=60,
         startyear=2023,
         startmonth=7,
         startday=1,

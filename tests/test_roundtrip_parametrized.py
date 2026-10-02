@@ -1,6 +1,9 @@
 from __future__ import annotations
+from collections.abc import Callable
 
 import pytest
+
+from modular_dales.modular import dales_simulation
 
 from .generic_testers import (
     assert_roundtrip_simulation_outputs_identical,
@@ -87,7 +90,7 @@ from .sim_builders.test_knmi_download_workflow import knmi_download_workflow_cas
         ),
     ]
 )
-def sim_builder(request):
+def sim_builder(request) -> Callable[[dict], dales_simulation]:
     return request.param
 
 
@@ -182,12 +185,12 @@ def sim_builder_to_run(request):
         ),
     ]
 )
-def sim_builder_for_write_test(request):
+def sim_builder_for_write_test(request) -> Callable[[dict], dales_simulation]:
     return request.param
 
 
 def test_roundtrip_simulation_outputs_identical(
-    machine_conf, sim_builder, simulation_report
+    machine_conf, sim_builder: Callable[[dict], dales_simulation], simulation_report
 ) -> None:
     """End-to-end roundtrip test, parametrized over all simulation builders."""
 
@@ -196,7 +199,11 @@ def test_roundtrip_simulation_outputs_identical(
     )
 
 
-def test_simulation_runs(machine_conf, sim_builder_to_run, simulation_report) -> None:
+def test_simulation_runs(
+    machine_conf,
+    sim_builder_to_run: Callable[[dict], dales_simulation],
+    simulation_report,
+) -> None:
     """Simulation run + job.001 test, parametrized over all simulation builders."""
 
     run_simulation_and_check_job(
@@ -204,7 +211,17 @@ def test_simulation_runs(machine_conf, sim_builder_to_run, simulation_report) ->
     )
 
 
-def test_files_written(machine_conf, sim_builder_for_write_test) -> None:
+def test_files_written(
+    machine_conf, sim_builder_for_write_test: Callable[[dict], dales_simulation]
+) -> None:
     """Tests that the expected files are written, parametrized over all simulation builders."""
 
     sim_builder_for_write_test(machine_conf)
+
+
+def test_case_generates(
+    machine_conf, sim_builder: Callable[[dict], dales_simulation]
+) -> None:
+    """Tests that case is generated, parametrized over all simulation builders."""
+
+    sim_builder(machine_conf("case_generates")).sim_preprocessing_pipeline()

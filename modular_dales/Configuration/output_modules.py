@@ -30,13 +30,15 @@ def _resolve_nearest_indices(grid_axis, coordinates, axis_name: str) -> list[int
 
 
 class _HorizontalPointOutputMixin:
+    allow_idx_list = False
+
     def _prepare_point_indices(self, module_label: str) -> None:
         x_idx = _normalize_horizontal_points(self.x_idx)
         y_idx = _normalize_horizontal_points(self.y_idx)
-        z_idx = _normalize_horizontal_points(getattr(self, "z_idx", default=None))
+        z_idx = _normalize_horizontal_points(getattr(self, "z_idx", None))
         x = _normalize_horizontal_points(self.x)
         y = _normalize_horizontal_points(self.y)
-        z = _normalize_horizontal_points(getattr(self, "z", default=None))
+        z = _normalize_horizontal_points(getattr(self, "z", None))
 
         if x_idx is None:
             if x is None:
@@ -60,19 +62,12 @@ class _HorizontalPointOutputMixin:
             raise ValueError(f"{module_label} requires at least one sampling point")
 
         resolved_npoints = len(x_idx)
-        if (
-            hasattr(self, "npoints")
-            and self.npoints is not None
-            and int(self.npoints) != resolved_npoints
-        ):
-            raise ValueError(
-                f"{module_label} npoints={self.npoints} does not match resolved point count {resolved_npoints}"
-            )
-        if not any(
-            field.type is list and field.name == "x_idx" for field in fields(self)
-        ):
+        if not self.allow_idx_list:
             self.x_idx = x_idx[0]
             self.y_idx = y_idx[0]
+        else:
+            self.x_idx = x_idx
+            self.y_idx = y_idx
         if hasattr(self, "npoints"):
             self.npoints = resolved_npoints
 
@@ -95,13 +90,10 @@ class _HorizontalPointOutputMixin:
                 )
 
             self.z_idx = z_idx
-        if not any(
-            field.type is list and field.name == "z_idx" for field in fields(self)
-        ):
+        if not self.allow_idx_list:
             self.z_idx = z_idx[0]
-
-    def _prepare_horizontal_point_indices(self, module_label: str) -> None:
-        self._prepare_point_indices(module_label)
+        else:
+            self.z_idx = z_idx
 
 
 @register_module
@@ -1045,6 +1037,7 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
+    allow_idx_list: bool = True
     enabled: bool = field(
         default=True,
         metadata={
@@ -1067,6 +1060,7 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
             "nml": "NAMVIRTUALMEASUREMENT",
             "key": "npoints",
         },
+        init=False,
     )
     x_idx: Optional[Union[int, list[int]]] = field(
         default=None,
@@ -1093,7 +1087,7 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
         self.module_name = "VirtualMeasurementOutputModule"
 
     def prepare_calculation(self):
-        self._prepare_horizontal_point_indices(self.module_name)
+        self._prepare_point_indices(self.module_name)
         return None
 
     def check_settings(self):
@@ -1113,6 +1107,7 @@ class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_modul
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
+    allow_idx_list: bool = True
     enabled: bool = field(
         default=True,
         metadata={
@@ -1127,6 +1122,7 @@ class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_modul
             "nml": "NAMCOLSTAT",
             "key": "npoints",
         },
+        init=False,
     )
     x_idx: Optional[Union[int, list[int]]] = field(
         default=None,
@@ -1153,7 +1149,7 @@ class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_modul
         self.module_name = "ColumnStatisticsOutputModule"
 
     def prepare_calculation(self):
-        self._prepare_horizontal_point_indices(self.module_name)
+        self._prepare_point_indices(self.module_name)
         return None
 
     def check_settings(self):

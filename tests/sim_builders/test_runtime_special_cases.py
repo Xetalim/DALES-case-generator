@@ -247,9 +247,9 @@ def spraying_runtime_case(machine_conf: dict) -> dales_simulation:
     sim += SprayingModule(
         lsalt_spraying=True,
         lwater_spraying=False,
-        i_glob_spray=4,
-        j_glob_spray=4,
-        k_glob_spray=2,
+        x_idx=4,
+        y_idx=4,
+        z_idx=2,
         salt_spray_rate=2.0e-2,
         salinity=1.0,
         tracer="salt",

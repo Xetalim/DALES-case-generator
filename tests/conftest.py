@@ -116,7 +116,7 @@ def pytest_html_results_table_html(report, data):
 
 
 @pytest.fixture
-def machine_conf(tmp_path: Path):
+def machine_conf(tmp_path: Path) -> Callable[[str], dict]:
     """Provide a machine configuration with a temporary BASE_OUTPUT_PATH.
 
     Returns a function that takes a case name and returns a machine
