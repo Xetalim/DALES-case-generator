@@ -1,19 +1,21 @@
 """Immersed Boundary Method (IBM) module for building and geometry representation."""
 
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Optional
+
 import netCDF4
 import numpy as np
 
 from modular_dales.Geometry import (
-    ModifierClass,
     GridDales,
+    ModifierClass,
 )
 from modular_dales.Geometry.geometry_modification import GeometricModification
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module, register_singleton
+
 from .download_AHN import get_process_ahn
 from .global_dem import get_process_global_dem
 
@@ -105,7 +107,6 @@ class IBMCreatorClass(ModifierClass):
 
     def output_nc(self, filename):
         with netCDF4.Dataset(filename, "w") as nc:
-
             nc.createDimension("x", len(self.x))
             nc.createDimension("y", len(self.y))
 
@@ -153,19 +154,19 @@ class IBMModule(simulation_module):
     """
 
     sim: Optional["simulation_module"] = field(default=None, repr=False)
-    ibm_modifications: List[IBMModification] = field(
+    ibm_modifications: list[IBMModification] = field(
         default_factory=list, init=True, repr=False, metadata={"serialize": True}
     )
     ibm_generator: Any = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    from_ahn: Optional[FromAHN] = field(
+    from_ahn: FromAHN | None = field(
         default=None,
         init=True,
         repr=False,
         metadata={"serialize": True},
     )
-    from_global_dem: Optional[FromGlobalDEM] = field(
+    from_global_dem: FromGlobalDEM | None = field(
         default=None,
         init=True,
         repr=False,
@@ -201,7 +202,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    lwallheat: Optional[bool] = field(
+    lwallheat: bool | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -212,7 +213,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    thlwall: Optional[float] = field(
+    thlwall: float | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -223,7 +224,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    thlibm: Optional[float] = field(
+    thlibm: float | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -235,7 +236,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    thlroof: Optional[float] = field(
+    thlroof: float | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -247,7 +248,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    qtibm: Optional[float] = field(
+    qtibm: float | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -258,7 +259,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    lpoislast: Optional[bool] = field(
+    lpoislast: bool | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -269,7 +270,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    z0m_wall: Optional[float] = field(
+    z0m_wall: float | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -280,7 +281,7 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    z0h_wall: Optional[float] = field(
+    z0h_wall: float | None = field(
         default=None,
         metadata={
             "nml": "IBM",
@@ -389,9 +390,7 @@ class IBMModule(simulation_module):
 
         return layers
 
-    def _merge_terrain_layers(
-        self, layers: list[_TerrainLayer]
-    ) -> Optional[np.ndarray]:
+    def _merge_terrain_layers(self, layers: list[_TerrainLayer]) -> np.ndarray | None:
         """Merge loaded terrain layers into a single IBM height field."""
 
         if not layers:
@@ -483,7 +482,7 @@ class IBMModule(simulation_module):
 class IBMModifications:
     """Collection of IBM modifications."""
 
-    modifications: List[IBMModification] = field(
+    modifications: list[IBMModification] = field(
         default_factory=list, metadata={"serialize": True}
     )
 

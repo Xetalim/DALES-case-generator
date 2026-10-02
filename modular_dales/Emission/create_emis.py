@@ -1,8 +1,7 @@
-import os
-from dataclasses import dataclass
-from typing import Union, List
 import datetime
 import logging
+import os
+from dataclasses import dataclass
 
 import netCDF4 as nc
 import numpy as np
@@ -24,7 +23,7 @@ class TracerInfo:
     lreact: bool = False
     ldep: bool = False
     lags: bool = False
-    profile: Union[np.ndarray, None] = None
+    profile: np.ndarray | None = None
 
 
 @dataclass
@@ -41,8 +40,8 @@ class PointSource:
 @dataclass
 class Tracer:
     info: TracerInfo
-    profile: Union[list, np.ndarray]
-    pointsources: List[PointSource]
+    profile: list | np.ndarray
+    pointsources: list[PointSource]
 
 
 class emissions:

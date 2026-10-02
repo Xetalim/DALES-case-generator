@@ -27,7 +27,6 @@ from modular_dales.Atmosphere import (
     LS2DAtmosphereModule,
     FromLS2D,
 )
-from modular_dales.Atmosphere.atmosphere import build_default_variables
 from modular_dales.Atmosphere.atmosphere import TimedAtmosphereProfile
 from modular_dales.Atmosphere.ls2d_atmosphere import LS2DAtmosphereModule
 from modular_dales.Configuration import (
@@ -109,9 +108,9 @@ if __name__ == "__main__":
     x1, y1 = 140146, 459189  # de bilt
     print(x1 - x0)
     print(y1 - y0)
-    print(f"Size in km: {(x1-x0)/1000} x {(y1-y0)/1000}")
+    print(f"Size in km: {(x1 - x0) / 1000} x {(y1 - y0) / 1000}")
     if (x1 - x0) != (y1 - y0):
-        print(f"Warning: domain is not square, got {(x1-x0)} x {(y1-y0)}")
+        print(f"Warning: domain is not square, got {(x1 - x0)} x {(y1 - y0)}")
         print("Adjusting y1 to make it square")
         y1 = y0 + (x1 - x0)
     dz0 = 3.0
@@ -203,11 +202,7 @@ if __name__ == "__main__":
         sim.nml, sim.nml_docs, "user_defined", "NAMSLURB", "dtav_slurb", 120
     )
     # External atmosphere module, not registered via sim += as openbc inits it for you.
-    time = TimedependentModule(
-        ltimedep=True
-    )  # we set ltimedep to False to be sure that we don't get any unexpected time dependence from the physics module, as we will inject time series via the openboundary module.
-    time += FromLS2D()  # Enable LS2D-driven time series injection into atmosphere
-    sim += time
+    sim += TimedependentModule(ltimedep=True)
     # Configure LS2D-driven atmosphere; central_lat / central_lon and
     # case_name will be taken from GridDales and dales_simulation.
     atmo_ls2d = LS2DAtmosphereModule(

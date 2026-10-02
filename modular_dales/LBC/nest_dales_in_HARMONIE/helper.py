@@ -1,7 +1,8 @@
+import logging
 import math
+
 import numpy as np
 import xarray as xr
-import logging
 from modular_dales.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ def differentiate(data, coord, order, acc=6):
     out = out.where(out != 0).load()
     x = data.coords[coord].values
     ipoints = np.arange((ncoef - 1) / 2, len(x) - (ncoef - 1) / 2, dtype=int)
-    b = np.zeros((ncoef))
+    b = np.zeros(ncoef)
     b[order] = 1.0
     for ip in ipoints:
         A = np.zeros((ncoef, ncoef))

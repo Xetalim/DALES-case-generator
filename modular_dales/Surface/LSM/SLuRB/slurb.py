@@ -1,12 +1,13 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Any, List, Literal, Optional, Union
+from typing import Any, Literal, Optional
 
 import netCDF4
 import numpy as np
-
-from modular_dales.Geometry.geometry_modification import ModifierClass
-from modular_dales.Geometry.geometry_modification import GeometricModification
+from modular_dales.Geometry.geometry_modification import (
+    GeometricModification,
+    ModifierClass,
+)
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
@@ -20,9 +21,9 @@ class SLURBVariableModification:
     """Typed SLURB variable modification payload."""
 
     varname: str
-    value: Union[int, float]
+    value: int | float
     dtype: Literal["float", "real", "int", "integer"] = "float"
-    n_layers: Optional[int] = None
+    n_layers: int | None = None
 
     def to_numpy_dtype(self):
         """Map supported dtype labels to numpy-compatible dtypes."""
@@ -38,7 +39,7 @@ class SLURBVariableModification:
 class SLURBModification(GeometricModification):
     """Single SLURB modification."""
 
-    vars: List[SLURBVariableModification] = field(default_factory=list)
+    vars: list[SLURBVariableModification] = field(default_factory=list)
     """List of typed variable modifications."""
 
 
@@ -47,12 +48,12 @@ class SLURBModification(GeometricModification):
 class SLURBModifications:
     """Collection of SLURB modifications."""
 
-    modifications: List[SLURBModification] = field(
+    modifications: list[SLURBModification] = field(
         default_factory=list, metadata={"serialize": True}
     )
 
     def __add__(
-        self, modification: Union[SLURBModification, List[SLURBModification]]
+        self, modification: SLURBModification | list[SLURBModification]
     ) -> "SLURBModifications":
         """Add a modification."""
         if isinstance(modification, list):
@@ -62,7 +63,7 @@ class SLURBModifications:
         return self
 
     def __iadd__(
-        self, modification: Union[SLURBModification, List[SLURBModification]]
+        self, modification: SLURBModification | list[SLURBModification]
     ) -> "SLURBModifications":
         """In-place addition."""
         return self.__add__(modification)
@@ -141,7 +142,7 @@ class SLURBModule(simulation_module):
     slb_generator: Any = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    urban_fraction: Optional[float] = field(
+    urban_fraction: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -151,7 +152,7 @@ class SLURBModule(simulation_module):
             "doc": "Urban tile fraction used by the SLURB parameterization.",
         },
     )
-    urban_roughness_length: Optional[float] = field(
+    urban_roughness_length: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -161,7 +162,7 @@ class SLURBModule(simulation_module):
             "doc": "Bulk roughness length for urban canopy momentum exchange in m.",
         },
     )
-    building_plan_area_fraction: Optional[float] = field(
+    building_plan_area_fraction: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -171,7 +172,7 @@ class SLURBModule(simulation_module):
             "doc": "Plan area fraction covered by buildings.",
         },
     )
-    building_frontal_area_fraction: Optional[float] = field(
+    building_frontal_area_fraction: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -181,7 +182,7 @@ class SLURBModule(simulation_module):
             "doc": "Frontal area density controlling urban drag.",
         },
     )
-    building_height: Optional[float] = field(
+    building_height: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -191,7 +192,7 @@ class SLURBModule(simulation_module):
             "doc": "Representative building height in m.",
         },
     )
-    window_fraction: Optional[float] = field(
+    window_fraction: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -201,7 +202,7 @@ class SLURBModule(simulation_module):
             "doc": "Fraction of facade area occupied by windows.",
         },
     )
-    street_canyon_aspect_ratio: Optional[float] = field(
+    street_canyon_aspect_ratio: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -211,7 +212,7 @@ class SLURBModule(simulation_module):
             "doc": "Street canyon height-to-width ratio.",
         },
     )
-    building_type: Optional[int] = field(
+    building_type: int | None = field(
         default=None,
         init=True,
         metadata={
@@ -221,7 +222,7 @@ class SLURBModule(simulation_module):
             "doc": "Index selecting building material/thermal parameter set.",
         },
     )
-    pavement_type: Optional[int] = field(
+    pavement_type: int | None = field(
         default=None,
         init=True,
         metadata={
@@ -231,7 +232,7 @@ class SLURBModule(simulation_module):
             "doc": "Index selecting pavement material parameter set.",
         },
     )
-    anisotropic_street_canyons: Optional[bool] = field(
+    anisotropic_street_canyons: bool | None = field(
         default=None,
         init=True,
         metadata={
@@ -241,7 +242,7 @@ class SLURBModule(simulation_module):
             "doc": "Enable anisotropic canyon treatment with separate facade directions.",
         },
     )
-    street_canyon_orientation: Optional[float] = field(
+    street_canyon_orientation: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -273,7 +274,7 @@ class SLURBModule(simulation_module):
             "doc": "Indoor building temperature used for wall/roof heat transfer in K.",
         },
     )
-    shf_external: Optional[float] = field(
+    shf_external: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -283,7 +284,7 @@ class SLURBModule(simulation_module):
             "doc": "External anthropogenic sensible heat flux source in W m-2.",
         },
     )
-    qsws_external: Optional[float] = field(
+    qsws_external: float | None = field(
         default=None,
         init=True,
         metadata={
@@ -315,7 +316,7 @@ class SLURBModule(simulation_module):
 
     def do_config(self):
         """Apply SLURB modifications to configuration."""
-        return None
+        return
 
     def prepare_calculation(self):
         return self.prepare_calculations()
@@ -343,7 +344,7 @@ class SLURBModule(simulation_module):
 
     def check_settings(self):
         """Check SLURB settings validity."""
-        return None
+        return
 
     def write_files(self):
         """Write SLURB files."""

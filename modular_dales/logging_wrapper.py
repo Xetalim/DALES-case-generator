@@ -2,14 +2,18 @@
 # Posted by HanSooloo, modified by community. See post 'Timeline' for change history
 # Retrieved 2025-12-16, License - CC BY-SA 4.0
 import logging
+import logging.config
 import pathlib
+
 import yaml
+
+from modular_dales.helpers import package_resource_path
 
 
 # At the beginning of every .py file in the project
 def logwrap(fn):
+    return fn
     from functools import wraps
-    import inspect
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -43,13 +47,28 @@ def logwrap(fn):
 
 
 def setup_logging(config_path="logging.yaml"):
-    import logging.config
-
     path = pathlib.Path(config_path)
     if path.exists():
-        with path.open() as f:
-            user_cfg = yaml.safe_load(f)
+        _configure_logging(path)
+        return
 
-        logging.config.dictConfig(user_cfg)
-    else:
-        logging.basicConfig()
+    if path.name == "logging.yaml":
+        with package_resource_path("logging.yaml") as default_path:
+            _configure_logging(default_path)
+        return
+
+    logging.basicConfig()
+
+
+def _configure_logging(config_path):
+    with config_path.open(encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file)
+
+    for handler in config.get("handlers", {}).values():
+        filename = handler.get("filename")
+        if filename:
+            pathlib.Path(filename).expanduser().parent.mkdir(
+                parents=True, exist_ok=True
+            )
+
+    logging.config.dictConfig(config)

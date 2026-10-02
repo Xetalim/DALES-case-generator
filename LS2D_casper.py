@@ -31,10 +31,7 @@ from modular_dales.Atmosphere import (
     InterpolatedProfile,
     LS2DAtmosphereModule,
 )
-from modular_dales.Atmosphere.atmosphere import (
-    TimedAtmosphereProfile,
-    build_default_variables,
-)
+from modular_dales.Atmosphere.atmosphere import TimedAtmosphereProfile
 from modular_dales.Atmosphere.ls2d_atmosphere import LS2DAtmosphereModule
 from modular_dales.Configuration import (
     CapeModule,
@@ -96,7 +93,7 @@ if __name__ == "__main__":
     middle = 123366.770928, 442217.642717
     x0, y0 = middle[0] - xsize / 2, middle[1] - ysize / 2
     x1, y1 = middle[0] + xsize / 2, middle[1] + ysize / 2
-    print(f"Size in km: {(x1-x0)/1000} x {(y1-y0)/1000}")
+    print(f"Size in km: {(x1 - x0) / 1000} x {(y1 - y0) / 1000}")
 
     grid = GridDales(
         itot=256,
@@ -165,10 +162,7 @@ if __name__ == "__main__":
     sim += TimestatModule(enabled=True)
     sim += RadfieldModule(enabled=True, timeav=300)
 
-    time = TimedependentModule(ltimedep=True, usesLS2DforTime=True)
-    time += FromLS2D()
-
-    sim += time
+    sim += TimedependentModule(ltimedep=True)
 
     atmo_ls2d = LS2DAtmosphereModule(
         era5_path=sim.machine_conf.get("ls2d_conf", {}).get(

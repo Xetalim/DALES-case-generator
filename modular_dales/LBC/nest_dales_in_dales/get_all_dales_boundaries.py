@@ -5,17 +5,14 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
-
 from modular_dales.Geometry import GridDalesOpenBC
-from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
-from modular_dales.logging_wrapper import logwrap
-
-
 from modular_dales.LBC.nest_dales_in_dales.load_any_boundary_var import (
     get_boundary_dict,
     load_any_boundary_var,
 )
 from modular_dales.LBC.nest_dales_in_dales.timestep0 import boundaries_timestep0
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
+from modular_dales.logging_wrapper import logwrap
 
 if TYPE_CHECKING:
     from modular_dales.LBC.nesting_idx import NestingIndices

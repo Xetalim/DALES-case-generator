@@ -339,7 +339,6 @@ def do_everything(
             urban_natural_lcz_to_natural_lsm=urban_natural_lcz_to_natural_lsm,
         )
 
-        #
         ds = ensure_sorted(ds)
 
     return ds

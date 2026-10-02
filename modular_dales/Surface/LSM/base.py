@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import logging
-from typing import List, Optional
+from dataclasses import dataclass, field
 
 from modular_dales.IO_helpers.dales_external_data import resolve_van_genuchten_path
 from modular_dales.Surface.surface import SurfaceModule
@@ -16,22 +15,23 @@ logger = logging.getLogger(__name__)
 class BaseLSMModule(SurfaceModule):
     """Base class that owns required LSM namelist options."""
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
+    sim: simulation_module | None = field(default=None, repr=False)
     isurf: int = field(
         default=11,
         init=False,
         metadata={"nml": "NAMSURFACE", "key": "isurf", "required": True},
     )
-    ps: Optional[float] = field(
+    ps: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "ps",
             "required": True,
             "serialize": True,
+            "forcing_var": "psurf",
         },
     )
-    z0mav: Optional[float] = field(
+    z0mav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -40,7 +40,7 @@ class BaseLSMModule(SurfaceModule):
             "serialize": True,
         },
     )
-    z0hav: Optional[float] = field(
+    z0hav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -49,11 +49,11 @@ class BaseLSMModule(SurfaceModule):
             "serialize": True,
         },
     )
-    albedoav: Optional[float] = field(
+    albedoav: float | None = field(
         default=None,
         metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
     )
-    iinterp_t: Optional[int] = field(
+    iinterp_t: int | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM",
@@ -62,7 +62,7 @@ class BaseLSMModule(SurfaceModule):
             "serialize": True,
         },
     )
-    iinterp_theta: Optional[int] = field(
+    iinterp_theta: int | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM",
@@ -71,7 +71,7 @@ class BaseLSMModule(SurfaceModule):
             "serialize": True,
         },
     )
-    kmax_soil: Optional[int] = field(
+    kmax_soil: int | None = field(
         default=4,
         metadata={
             "nml": "DOMAIN",
@@ -80,7 +80,7 @@ class BaseLSMModule(SurfaceModule):
             "serialize": True,
         },
     )
-    dz_soil: Optional[List[float]] = field(
+    dz_soil: list[float] | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM",

@@ -1,13 +1,13 @@
 # Interpolate initial field to DALES grid
 # Creates initfields.inp.xxx.nc
+import logging
+from datetime import datetime
+from typing import TYPE_CHECKING
+
 import numpy as np
 import xarray as xr
-from datetime import datetime
-import pandas as pd
-from typing import TYPE_CHECKING
 from modular_dales.Geometry.GridDales import GridDalesOpenBC
 from modular_dales.logging_wrapper import logwrap
-import logging
 
 if TYPE_CHECKING:
     from modular_dales.LBC.openboundary_config import OpenBoundaryConfig

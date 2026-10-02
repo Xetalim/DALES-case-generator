@@ -57,9 +57,7 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
     )
     sim += domain_info
 
-    time = TimedependentModule()
-    time += FromLS2D()  # Enable LS2D-driven time series injection into atmosphere
-    sim += time
+    sim += TimedependentModule()
     # Configure LS2D-driven atmosphere; central_lat / central_lon and
     # case_name will be taken from GridDales and dales_simulation.
     atmo_ls2d = LS2DAtmosphereModule(

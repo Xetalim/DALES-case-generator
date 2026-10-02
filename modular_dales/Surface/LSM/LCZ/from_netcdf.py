@@ -27,7 +27,6 @@ from __future__ import annotations
 import logging
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import rasterio
@@ -59,7 +58,7 @@ NC_COVER_VARS = {
 NC_MORPH_VARS = ["D_Z0_town", "D_BLD", "D_BLD_HEIG", "WALL_O_HOR"]
 
 
-def _get_src_crs(ds_in: xr.Dataset) -> Optional[str]:
+def _get_src_crs(ds_in: xr.Dataset) -> str | None:
     """Best-effort extraction of CRS string from an xarray Dataset."""
     # 1. grid_mapping variable (CF convention)
     for var in ds_in.data_vars:
@@ -167,7 +166,7 @@ def _derive_slurb_fields(raw: dict) -> dict:
 def load_from_netcdf(
     nc_path,
     grid,
-    esa_cache_dir: Optional[Path] = None,
+    esa_cache_dir: Path | None = None,
 ) -> xr.Dataset:
     """
     Load a surface-cover + morphology NetCDF and return an xarray Dataset

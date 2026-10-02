@@ -1,14 +1,12 @@
 """Additional non-output settings modules for DALES namelist configuration."""
 
 from dataclasses import dataclass, field
-from typing import Optional, Union
-
-import numpy as np
+from typing import Optional
 
 from modular_dales.Configuration.output_modules import _HorizontalPointOutputMixin
-from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 
 @register_module
@@ -24,7 +22,7 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
     allow_idx_list: bool = False
-    x_idx: Optional[int] = field(
+    x_idx: int | None = field(
         default=None,
         metadata={
             "nml": "namspraying",
@@ -32,7 +30,7 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
             "doc": "Global i-index location for spray source.",
         },
     )
-    y_idx: Optional[int] = field(
+    y_idx: int | None = field(
         default=None,
         metadata={
             "nml": "namspraying",
@@ -40,7 +38,7 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
             "doc": "Global j-index location for spray source.",
         },
     )
-    z_idx: Optional[int] = field(
+    z_idx: int | None = field(
         default=None,
         metadata={
             "nml": "namspraying",
@@ -48,9 +46,9 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
             "doc": "Vertical level index for spray source.",
         },
     )
-    x: Optional[float] = field(default=None, metadata={"serialize": False})
-    y: Optional[float] = field(default=None, metadata={"serialize": False})
-    z: Optional[float] = field(default=None, metadata={"serialize": False})
+    x: float | None = field(default=None, metadata={"serialize": False})
+    y: float | None = field(default=None, metadata={"serialize": False})
+    z: float | None = field(default=None, metadata={"serialize": False})
     lwater_spraying: bool = field(
         default=False,
         metadata={
@@ -133,7 +131,6 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
 
     def prepare_calculation(self):
         self._prepare_point_indices("SprayingModule")
-        return None
 
     def check_settings(self):
         return None
@@ -189,7 +186,7 @@ class GeneralPhysicsModule(simulation_module):
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
 
-    lmoist: Optional[bool] = field(
+    lmoist: bool | None = field(
         default=None,
         metadata={
             "nml": "thermodynamics",
@@ -197,7 +194,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Enable moist thermodynamics.",
         },
     )
-    chi_half: Optional[bool] = field(
+    chi_half: bool | None = field(
         default=None,
         metadata={
             "nml": "thermodynamics",
@@ -205,7 +202,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Use half-level chi/exner treatment where applicable.",
         },
     )
-    lconstexner: Optional[bool] = field(
+    lconstexner: bool | None = field(
         default=None,
         metadata={
             "nml": "thermodynamics",
@@ -213,7 +210,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Use initial pressure profile in exner function.",
         },
     )
-    lbaseexner: Optional[bool] = field(
+    lbaseexner: bool | None = field(
         default=None,
         metadata={
             "nml": "thermodynamics",
@@ -221,7 +218,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Use base-state pressure profile in exner function.",
         },
     )
-    lnoclouds: Optional[bool] = field(
+    lnoclouds: bool | None = field(
         default=None,
         metadata={
             "nml": "thermodynamics",
@@ -229,7 +226,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Disable cloud liquid calculations in thermodynamics.",
         },
     )
-    lqlnr: Optional[bool] = field(
+    lqlnr: bool | None = field(
         default=None,
         metadata={
             "nml": "thermodynamics",
@@ -238,7 +235,7 @@ class GeneralPhysicsModule(simulation_module):
         },
     )
 
-    ldelta: Optional[bool] = field(
+    ldelta: bool | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -246,7 +243,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Use delta-based subgrid length scale.",
         },
     )
-    lmason: Optional[bool] = field(
+    lmason: bool | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -254,7 +251,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Enable Mason wall-damping formulation.",
         },
     )
-    cf: Optional[float] = field(
+    cf: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -262,7 +259,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Subgrid closure constant cf.",
         },
     )
-    cn: Optional[float] = field(
+    cn: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -270,7 +267,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Subgrid closure constant cn.",
         },
     )
-    Rigc: Optional[float] = field(
+    Rigc: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -278,7 +275,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Critical Richardson number for subgrid closure.",
         },
     )
-    Prandtl: Optional[float] = field(
+    Prandtl: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -286,7 +283,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Subgrid turbulent Prandtl number.",
         },
     )
-    lsmagorinsky: Optional[bool] = field(
+    lsmagorinsky: bool | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -294,11 +291,11 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Enable Smagorinsky-type closure.",
         },
     )
-    cs: Optional[float] = field(
+    cs: float | None = field(
         default=None,
         metadata={"nml": "NAMSUBGRID", "key": "cs", "doc": "Smagorinsky coefficient."},
     )
-    nmason: Optional[int] = field(
+    nmason: int | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -306,7 +303,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Selector for Mason damping variant.",
         },
     )
-    sgs_surface_fix: Optional[bool] = field(
+    sgs_surface_fix: bool | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -314,7 +311,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Enable near-surface SGS correction.",
         },
     )
-    ch1: Optional[float] = field(
+    ch1: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -322,7 +319,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Empirical closure coefficient ch1.",
         },
     )
-    lanisotrop: Optional[bool] = field(
+    lanisotrop: bool | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",
@@ -330,7 +327,7 @@ class GeneralPhysicsModule(simulation_module):
             "doc": "Enable anisotropic diffusion treatment.",
         },
     )
-    lD80R: Optional[bool] = field(
+    lD80R: bool | None = field(
         default=None,
         metadata={
             "nml": "NAMSUBGRID",

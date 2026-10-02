@@ -1,15 +1,14 @@
-from dataclasses import dataclass, field
-from typing import Optional, List
 import logging
+from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
 
 from modular_dales.Geometry import GridDales, GridDalesOpenBC
 from modular_dales.LBC.nesting_idx import NestingIndices
+from modular_dales.LBC.openbc import do_openboundary
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
-
-from modular_dales.LBC.openbc import do_openboundary
 
 logger = logging.getLogger(__name__)
 
@@ -36,19 +35,19 @@ class NestingTopology(simulation_module):
     supernest_supergrid: Optional["GridDales"] = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    indices: Optional[dict] = field(
+    indices: dict | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    nestings: List["GridDales"] = field(
+    nestings: list["GridDales"] = field(
         default_factory=list, repr=False, metadata={"serialize": True}, init=True
     )
-    my_idx: Optional[int] = field(
+    my_idx: int | None = field(
         default=None, repr=False, metadata={"serialize": True}, init=True
     )
     openbc_module: Optional["do_openboundary"] = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    lcross: Optional[bool] = field(
+    lcross: bool | None = field(
         default=True,
         metadata={
             "nml": "namcrosssection",
@@ -57,7 +56,7 @@ class NestingTopology(simulation_module):
         },
         init=False,
     )
-    lstat: Optional[bool] = field(
+    lstat: bool | None = field(
         default=True,
         metadata={
             "nml": "namgenstat",
@@ -77,7 +76,7 @@ class NestingTopology(simulation_module):
             logger.info("Adding GridDales to Nesting_Topology: %s", other)
             self.nestings.append(other)
         else:
-            raise ValueError("Can only add GridDales instances to Nesting_Topology")
+            raise TypeError("Can only add GridDales instances to Nesting_Topology")
         return self
 
     def __iadd__(self, other):
@@ -104,13 +103,15 @@ class NestingTopology(simulation_module):
             subnest_subgrid = self.nestings[self.my_idx + 1].as_openbc()
             subnest_supergrid = self.grid
 
-            ixwest, ixeast = list(subnest_supergrid.xm).index(
-                np.min(subnest_subgrid.xm)
-            ), list(subnest_supergrid.xm).index(np.max(subnest_subgrid.xm))
+            ixwest, ixeast = (
+                list(subnest_supergrid.xm).index(np.min(subnest_subgrid.xm)),
+                list(subnest_supergrid.xm).index(np.max(subnest_subgrid.xm)),
+            )
 
-            iysouth, iynorth = list(subnest_supergrid.ym).index(
-                np.min(subnest_subgrid.ym)
-            ), list(subnest_supergrid.ym).index(np.max(subnest_subgrid.ym))
+            iysouth, iynorth = (
+                list(subnest_supergrid.ym).index(np.min(subnest_subgrid.ym)),
+                list(subnest_supergrid.ym).index(np.max(subnest_subgrid.ym)),
+            )
             iztop = list(subnest_supergrid.zt).index(np.max(subnest_subgrid.zt))
 
             existing_height = list(
@@ -139,13 +140,15 @@ class NestingTopology(simulation_module):
             supernest_subgrid = self.grid.as_openbc()
             supernest_supergrid = self.nestings[self.my_idx - 1]
 
-            ixwest, ixeast = list(supernest_supergrid.xm).index(
-                np.min(supernest_subgrid.xm)
-            ), list(supernest_supergrid.xm).index(np.max(supernest_subgrid.xm))
+            ixwest, ixeast = (
+                list(supernest_supergrid.xm).index(np.min(supernest_subgrid.xm)),
+                list(supernest_supergrid.xm).index(np.max(supernest_subgrid.xm)),
+            )
 
-            iysouth, iynorth = list(supernest_supergrid.ym).index(
-                np.min(supernest_subgrid.ym)
-            ), list(supernest_supergrid.ym).index(np.max(supernest_subgrid.ym))
+            iysouth, iynorth = (
+                list(supernest_supergrid.ym).index(np.min(supernest_subgrid.ym)),
+                list(supernest_supergrid.ym).index(np.max(supernest_subgrid.ym)),
+            )
 
             iztop = list(supernest_supergrid.zt).index(np.max(supernest_subgrid.zt))
 

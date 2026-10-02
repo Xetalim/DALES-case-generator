@@ -206,10 +206,7 @@ def _attach_common_physics(
     start_ts, end_ts = _may_start_end(start_day)
 
     if use_ls2d:
-        time = TimedependentModule(ltimedep=True, usesLS2DforTime=True)
-        time += FromLS2D()
-
-        sim += time
+        sim += TimedependentModule(ltimedep=True)
     if use_ls2d:
         atmo_ls2d = LS2DAtmosphereModule(
             era5_path=sim.machine_conf.get("ls2d_conf", {}).get(

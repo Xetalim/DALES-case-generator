@@ -5,27 +5,32 @@ import os
 import pathlib
 import subprocess
 from dataclasses import is_dataclass
-from typing import List, Tuple, Union
-from collections import namedtuple
+from pathlib import Path, PosixPath
+from typing import Union
 
 import f90nml
 import yaml
-from pathlib import Path, PosixPath
 
-from modular_dales.modular.simulation_module import simulation_module, set_nml_section
+from modular_dales.helpers import package_resource_path
+from modular_dales.modular.forcing import ForcingSet, collect_forcings
+from modular_dales.modular.simulation_module import set_nml_section, simulation_module
 from modular_dales.MODULE_REGISTRY import MODULE_REGISTRY
 
 from .serialize_deserialize import _deserialize_dataclass, asdict_user_set
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
+
+
 def yaml_equivalent_of_path(dumper, data):
     return dumper.represent_str(str(data))
+
 
 yaml.add_multi_representer(Path, yaml_equivalent_of_path)
 yaml.add_multi_representer(PosixPath, yaml_equivalent_of_path)
 
-def check_core_amounts(machine_conf, nml) -> Tuple[int, int, int]:
+
+def check_core_amounts(machine_conf, nml) -> tuple[int, int, int]:
     """Adjust core count and MPI decomposition for DALES.
 
     This helper chooses a decomposition (nprocx, nprocy, nprocs) such that:
@@ -193,14 +198,12 @@ class dales_simulation:
         """
         self.case_name = case_name
         self.machine_conf = machine_conf
-        self.modules: List[simulation_module] = []
+        self.modules: list[simulation_module] = []
         self.has_surface_module = False  # set by SurfaceModule when added
         self.has_atmosphere_module = False  # set by AtmosphereModule when added
         # Start with empty namelist - will be populated by modules
         self.nml = f90nml.namelist.Namelist()
-        self.nml_docs = (
-            {}
-        )  # stores info about which module set which namelist variables for better error messages and debugging
+        self.nml_docs = {}  # stores info about which module set which namelist variables for better error messages and debugging
 
         # These will be initialized by init_output_folder()
         self.output_path = None
@@ -209,6 +212,23 @@ class dales_simulation:
         self.required_files = {}
         self.required_folder_list = []
         self._initialized = False
+        self._forcings: ForcingSet | None = None
+        self._forcings_in_progress = False
+
+    def forcings(self) -> ForcingSet:
+        """Merged data provided by all modules; computed once and then reused."""
+        if self._forcings is None:
+            if self._forcings_in_progress:
+                raise RuntimeError(
+                    "sim.forcings() was requested while it is being computed; "
+                    "a provider must not request forcings from its provide_forcings()/prepare_calculation()"
+                )
+            self._forcings_in_progress = True
+            try:
+                self._forcings = collect_forcings(self.modules)
+            finally:
+                self._forcings_in_progress = False
+        return self._forcings
 
     def init_output_folder(self):
         """Initialize output folder and paths.
@@ -266,6 +286,7 @@ class dales_simulation:
                 module,
             )
         self.modules.append(module)
+        self._forcings = None
         return self
 
     def __iadd__(self, module: "simulation_module") -> "dales_simulation":
@@ -277,7 +298,8 @@ class dales_simulation:
         Returns:
             self: Returns the simulation instance
         """
-        return self.__add__(module)
+        self.__add__(module)
+        return self
 
     def do_config(self):
         """Configure all modules.
@@ -313,12 +335,12 @@ class dales_simulation:
         """Prepare all modules for calculations.
 
         Call this explicitly after check_settings().
+        Modules that depend on others (e.g. forcing consumers) prepare their
+        dependencies on demand via ``ensure_prepared()``.
         """
         for module in self.modules:
-            if not module.prepare_calculation_done:
-                module.prepare_calculation()
+            module.ensure_prepared()
             module.apply_namelist_from_fields()
-            module.prepare_calculation_done = True
         # check core counts against namelist
         ncores_final, nprocx, nprocy = check_core_amounts(self.machine_conf, self.nml)
         self.machine_conf["job_conf"]["numcores"] = ncores_final
@@ -348,9 +370,7 @@ class dales_simulation:
                     continue
             elif isinstance(module, module_name):
                 return module
-        raise KeyError(
-            f"Module with name '{module_name}' not found!"
-        )
+        raise KeyError(f"Module with name '{module_name}' not found!")
 
     def module_exists(self, module_name: Union[str, "simulation_module", type]) -> bool:
         """Check if a module with the given name exists."""
@@ -358,6 +378,7 @@ class dales_simulation:
             module.module_name == module_name or isinstance(module, module_name)
             for module in self.modules
         )
+
     def write_module_files(self):
         """Call write_files on all registered modules."""
 
@@ -377,55 +398,71 @@ class dales_simulation:
                 ]
             )
 
-        subprocess.call(
-            [
-                "rsync",
-                "-a",
-                (pathlib.Path.cwd() / "input_template/input").as_posix() + "/",
-                str(self.output_path / "input"),
-            ]
-        )
+        with package_resource_path("input_template", "input") as template_input:
+            subprocess.call(
+                [
+                    "rsync",
+                    "-a",
+                    template_input.as_posix() + "/",
+                    str(self.output_path / "input"),
+                ]
+            )
 
         # Write the namelist to the case directory
         self.nml.write(
             self.output_path / f"input/namoptions.{self.exp_id:03d}", force=True
         )
         with open(
-            self.output_path / f"input/docs_namoptions.{self.exp_id:03d}.md", "w"
+            self.output_path / f"input/docs_namoptions.{self.exp_id:03d}.md",
+            "w",
+            encoding="utf-8",
         ) as f:
-            for group, vars in self.nml_docs.items():
+            for group, variables in self.nml_docs.items():
                 f.write(f"## &{group}\n\n")
-                for var, desc in vars.items():
-                    f.write(f"- **{var}**: {desc}\n")
+                f.writelines(
+                    f"- **{var}**: {desc}\n" for var, desc in variables.items()
+                )
                 f.write("\n")
 
         yaml_str = self.save_sim_to_yaml()
         with open(
-            self.output_path / f"input/simulation_config.{self.exp_id:03d}.yaml", "w"
+            self.output_path / f"input/simulation_config.{self.exp_id:03d}.yaml",
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write(yaml_str)
 
     def apply_job_configuration(self):
         """Apply job configuration and set up file transfers."""
         job_conf = self.machine_conf.get("job_conf", {})
-        job_template_path = job_conf.get("job_template", None)
-        if job_template_path is None:
+        configured_template = job_conf.get("job_template", None)
+        if configured_template is None:
             logger.warning(
-                "No job_template_path specified in machine configuration; using default template input_template/job.001"
+                "No job_template specified in machine configuration; using the bundled job.001 template"
             )
-            job_template_path = pathlib.Path("input_template") / "job.001"
+            with package_resource_path("input_template", "job.001") as template_path:
+                content = template_path.read_text(encoding="utf-8")
         else:
-            job_template_path = pathlib.Path("input_template") / job_template_path
-            if not job_template_path.is_file():
-                raise ValueError(
-                    f"Specified job_template_path {job_template_path} does not exist or is not a file"
-                )
-
-        # Get job filename - use default job.001
-        job_filename = job_template_path
-
-        with open(job_filename, "r") as f:
-            content = f.read()
+            configured_path = pathlib.Path(configured_template).expanduser()
+            local_paths = (
+                configured_path,
+                pathlib.Path("input_template") / configured_path,
+            )
+            local_template = next(
+                (path for path in local_paths if path.is_file()), None
+            )
+            if local_template is not None:
+                content = local_template.read_text(encoding="utf-8")
+            else:
+                resource_name = configured_path.name
+                with package_resource_path(
+                    "input_template", resource_name
+                ) as template_path:
+                    if not template_path.is_file():
+                        raise ValueError(
+                            f"Specified job_template {configured_template} is neither a local file nor a bundled template"
+                        )
+                    content = template_path.read_text(encoding="utf-8")
 
         # Set up required file transfers
         required_transfers = ""
@@ -454,10 +491,10 @@ class dales_simulation:
 
         # Replace job configuration variables
         for varname, replacement in job_conf.items():
-            content = content.replace(f"{{{{{varname}}}}}", f'"{str(replacement)}"')
+            content = content.replace(f"{{{{{varname}}}}}", f'"{replacement!s}"')
 
         logger.info("Writing job file to %s", self.output_path / "job.001")
-        with open(self.output_path / "job.001", "w") as f:
+        with open(self.output_path / "job.001", "w", encoding="utf-8") as f:
             f.write(content)
 
         subprocess.call(

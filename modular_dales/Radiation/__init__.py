@@ -12,13 +12,13 @@ from .radiation_types import (
 )
 
 __all__ = [
-    "BackradPressureProfile",
     "BackradInterpolatedProfile",
-    "RadiationModule",
+    "BackradPressureProfile",
     "NoRadiationModule",
     "ParameterizedRadiationModule",
-    "SurfaceLSMRadiationModule",
     "RRTMGRadiationModule",
+    "RadiationModule",
     "RteRrtmgpRadiationModule",
+    "SurfaceLSMRadiationModule",
     "UserRadiationModule",
 ]

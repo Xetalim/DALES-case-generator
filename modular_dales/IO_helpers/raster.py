@@ -1,12 +1,13 @@
 import logging
 from typing import TYPE_CHECKING
+
 import numpy as np
 import rasterio
+import rasterio.fill
+import xarray as xr
 from pyproj import CRS
 from rasterio.transform import from_origin
 from rasterio.warp import Resampling, reproject
-import rasterio.fill
-import xarray as xr
 
 if TYPE_CHECKING:
     from modular_dales.Geometry import GridDales
@@ -136,8 +137,6 @@ def get_reproject(
 
     with rasterio.open(out_file, "w", **out_profile) as ds:
         ds.write(dst)
-
-    return
 
 
 def fix_lambert_offsets(ds):

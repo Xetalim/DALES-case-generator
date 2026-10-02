@@ -2,12 +2,12 @@
 
 from .emission import (
     EmissionModule,
-    EmissionTracer,
     EmissionPointSource,
+    EmissionTracer,
 )
 
 __all__ = [
     "EmissionModule",
-    "EmissionTracer",
     "EmissionPointSource",
+    "EmissionTracer",
 ]

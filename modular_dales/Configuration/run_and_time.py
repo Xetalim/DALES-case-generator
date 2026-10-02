@@ -1,11 +1,11 @@
 import logging
-from datetime import date
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Optional
 
-from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -26,18 +26,14 @@ class RunModule(simulation_module):
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    iexpnr: Optional[int] = field(
-        default=None, metadata={"nml": "RUN", "key": "iexpnr"}
-    )
-    runtime: Optional[float] = field(
+    iexpnr: int | None = field(default=None, metadata={"nml": "RUN", "key": "iexpnr"})
+    runtime: float | None = field(
         default=None, metadata={"nml": "RUN", "key": "runtime"}
     )
-    ladaptive: Optional[bool] = field(
+    ladaptive: bool | None = field(
         default=None, metadata={"nml": "RUN", "key": "ladaptive"}
     )
-    dtmax: Optional[float] = field(
-        default=None, metadata={"nml": "RUN", "key": "dtmax"}
-    )
+    dtmax: float | None = field(default=None, metadata={"nml": "RUN", "key": "dtmax"})
 
     def __post_init__(self):
         super().__init__(self.sim)
@@ -45,15 +41,15 @@ class RunModule(simulation_module):
 
     def prepare_calculation(self):
         """Set up run-related namelist parameters."""
-        return None
+        return
 
     def check_settings(self):
         """Check run settings validity."""
-        return None
+        return
 
     def write_files(self):
         """No files to write for run module."""
-        return None
+        return
 
 
 @register_module
@@ -152,7 +148,7 @@ class TimeModule(simulation_module):
         },
     )
 
-    runtime: Optional[float] = field(
+    runtime: float | None = field(
         default=None,
         metadata={
             "nml": "RUN",
@@ -161,7 +157,7 @@ class TimeModule(simulation_module):
             "doc": "Total runtime in seconds for RUN:runtime.",
         },
     )
-    trestart: Optional[float] = field(
+    trestart: float | None = field(
         default=None,
         metadata={
             "nml": "RUN",
@@ -176,7 +172,7 @@ class TimeModule(simulation_module):
 
     def do_config(self):
         """Configure time-related namelist parameters."""
-        return None
+        return
 
     def _apply_datetime_inference(self) -> None:
         """Infer DOMAIN xyear/xday from NAMDATETIME start date when enabled."""
@@ -196,12 +192,11 @@ class TimeModule(simulation_module):
                 self.xyear,
                 self.startyear,
             )
-        return None
 
     def prepare_calculation(self):
         """No calculation work needed."""
-        return None
+        return
 
     def write_files(self):
         """No files to write."""
-        return None
+        return

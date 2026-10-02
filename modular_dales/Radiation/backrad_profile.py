@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import pathlib
-from typing import Optional, Union
+from collections.abc import Mapping
+from dataclasses import dataclass
 
 import numpy as np
-from scipy.interpolate import interp1d
 import xarray as xr
+from scipy.interpolate import interp1d
+
+from modular_dales.IO_helpers.dales_external_data import resolve_rrtmg_data_paths
+from modular_dales.IO_helpers.external_data_cache import cache_root
 
 
 @dataclass
@@ -22,10 +25,10 @@ class BackradPressureProfile:
     pressure_pa: list[float]
     temperature_k: list[float]
     specific_humidity_kgkg: list[float]
-    ozone_kgkg: Optional[list[float]] = None
-    liquid_water_kgkg: Optional[list[float]] = None
+    ozone_kgkg: list[float] | None = None
+    liquid_water_kgkg: list[float] | None = None
 
-    def normalized(self) -> "BackradPressureProfile":
+    def normalized(self) -> BackradPressureProfile:
         p = np.asarray(self.pressure_pa, dtype=float)
         t = np.asarray(self.temperature_k, dtype=float)
         q = np.asarray(self.specific_humidity_kgkg, dtype=float)
@@ -103,8 +106,13 @@ class BackradPressureProfile:
         return "\n".join(lines)
 
     @classmethod
-    def from_netcdf(cls, path: pathlib.Path) -> "BackradPressureProfile":
-        ds = xr.open_dataset(path)
+    def from_netcdf(cls, path: pathlib.Path) -> BackradPressureProfile:
+        with xr.open_dataset(path) as ds:
+            return cls.from_dataset(ds)
+
+    @classmethod
+    def from_dataset(cls, ds: xr.Dataset) -> BackradPressureProfile:
+        """Profile from ``T``, ``q`` (and optional ``o3``) on pressure coordinate ``lev``."""
         profile = cls(
             pressure_pa=np.asarray(ds["lev"].values, dtype=float).tolist(),
             temperature_k=np.asarray(ds["T"].values, dtype=float).tolist(),
@@ -118,7 +126,7 @@ class BackradPressureProfile:
         return profile.normalized()
 
     @classmethod
-    def from_ascii(cls, path: pathlib.Path) -> "BackradPressureProfile":
+    def from_ascii(cls, path: pathlib.Path) -> BackradPressureProfile:
         with path.open("r", encoding="utf-8") as handle:
             rows = [line.strip() for line in handle.readlines() if line.strip()]
 
@@ -167,10 +175,10 @@ class BackradInterpolatedProfile:
     pressure_pa: list[float]
     temperature_points: list[float]
     specific_humidity_points: list[float]
-    ozone_points: Optional[list[float]] = None
-    liquid_water_points: Optional[list[float]] = None
-    target_pressure_pa: Optional[list[float]] = None
-    fill_value: Union[float, str] = "extrapolate"
+    ozone_points: list[float] | None = None
+    liquid_water_points: list[float] | None = None
+    target_pressure_pa: list[float] | None = None
+    fill_value: float | str = "extrapolate"
 
     def _interpolate(
         self, x: np.ndarray, y: np.ndarray, x_target: np.ndarray
@@ -187,7 +195,7 @@ class BackradInterpolatedProfile:
 
     def to_profile(
         self,
-        template_profile: Optional[BackradPressureProfile] = None,
+        template_profile: BackradPressureProfile | None = None,
     ) -> BackradPressureProfile:
         p = np.asarray(self.pressure_pa, dtype=float)
         t = np.asarray(self.temperature_points, dtype=float)
@@ -270,3 +278,64 @@ def write_profile(profile: BackradPressureProfile, path: pathlib.Path) -> pathli
     else:
         path.write_text(profile.to_ascii(), encoding="utf-8")
     return path
+
+
+def profile_from_forcings(
+    initial: Mapping[str, xr.DataArray],
+) -> BackradPressureProfile | None:
+    """Sounding provided by other modules as ``backrad_T``/``backrad_q``/``backrad_o3`` on ``lev``."""
+    if "backrad_T" not in initial or "backrad_q" not in initial:
+        return None
+    sounding = {"T": initial["backrad_T"], "q": initial["backrad_q"]}
+    if "backrad_o3" in initial:
+        sounding["o3"] = initial["backrad_o3"]
+    return BackradPressureProfile.from_dataset(xr.Dataset(sounding))
+
+
+def select_backrad_profile(module) -> BackradPressureProfile:
+    """Backrad sounding for a radiation module.
+
+    Precedence: the module's own ``backrad_*`` setting, then a sounding
+    provided by another module (e.g. LS2D or Harmonie), then the default.
+    """
+    user_sources = [
+        value
+        for value in (
+            module.backrad_profile,
+            module.backrad_source_file,
+            module.backrad_interpolated_profile,
+        )
+        if value is not None
+    ]
+    if len(user_sources) > 1:
+        raise ValueError(
+            f"{module.module_name}: provide at most one of backrad_profile, backrad_source_file, or backrad_interpolated_profile."
+        )
+    if module.backrad_profile is not None:
+        return module.backrad_profile
+    if module.backrad_source_file is not None:
+        return profile_from_path(pathlib.Path(module.backrad_source_file))
+    if module.backrad_interpolated_profile is not None:
+        return module.backrad_interpolated_profile.to_profile(
+            template_profile=default_profile()
+        )
+    provided = profile_from_forcings(module.sim.forcings().initial)
+    return provided if provided is not None else default_profile()
+
+
+def register_radiation_files(module, iradiation: int) -> None:
+    """Write the backrad sounding and register the RRTMG(P) input files for ``iradiation`` 4/5."""
+    if iradiation not in (4, 5):
+        return
+    sim = module.sim
+    backrad_nc = write_profile(
+        select_backrad_profile(module),
+        cache_root("backrad", sim) / f"backrad.inp.{sim.exp_id:03d}.nc",
+    )
+    sim.required_files[backrad_nc.name] = backrad_nc.as_posix()
+    external = resolve_rrtmg_data_paths(sim)
+    sim.required_files["rrtmg_lw.nc"] = external.rrtmg_lw.as_posix()
+    sim.required_files["rrtmg_sw.nc"] = external.rrtmg_sw.as_posix()
+    if iradiation == 5:
+        for file in external.rrtmgp_data_dir.glob("*.nc"):
+            sim.required_files[file.name] = file.as_posix()

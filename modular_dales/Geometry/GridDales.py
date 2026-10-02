@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field, fields
-from typing import Optional, Sequence
+from typing import Optional
 
 import numpy as np
 from pyproj import CRS
@@ -88,7 +89,7 @@ class GridDales(simulation_module):
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "xlon", "required": False},
     )
-    x0: Optional[float] = field(
+    x0: float | None = field(
         default=None,
         init=True,
         repr=True,
@@ -99,7 +100,7 @@ class GridDales(simulation_module):
             "required": False,
         },  # TODO add x0 if merged
     )
-    y0: Optional[float] = field(
+    y0: float | None = field(
         default=None,
         init=True,
         repr=True,
@@ -110,7 +111,7 @@ class GridDales(simulation_module):
             "required": False,
         },  # TODO add y0 if merged
     )
-    alpha: Optional[float] = field(
+    alpha: float | None = field(
         default=None,
         init=True,
         repr=True,
@@ -118,13 +119,13 @@ class GridDales(simulation_module):
             "serialize": True,
         },
     )
-    dz0: Optional[float] = field(
+    dz0: float | None = field(
         default=None,
         init=True,
         repr=True,
         metadata={"serialize": True},
     )
-    proj4: Optional[str] = field(
+    proj4: str | None = field(
         default=None,
         init=True,
         repr=True,
@@ -132,7 +133,7 @@ class GridDales(simulation_module):
             "serialize": True,
         },
     )
-    wkt: Optional[str] = field(
+    wkt: str | None = field(
         default=None,
         init=True,
         repr=True,
@@ -140,7 +141,7 @@ class GridDales(simulation_module):
             "serialize": True,
         },
     )
-    crs: Optional[str] = field(
+    crs: str | None = field(
         default=None,
         init=False,
         repr=False,
@@ -165,15 +166,15 @@ class GridDales(simulation_module):
 
     def prepare_calculation(self):
         """No additional preparation needed."""
-        return None
+        return
 
     def check_settings(self):
         """Check grid settings validity."""
-        return None
+        return
 
     def write_files(self):
         """No files to write for grid module."""
-        return None
+        return
 
     def as_dic(self):
         dic = {}
@@ -273,7 +274,7 @@ class GridDales(simulation_module):
         self,
         ds,
         mapping_var_name: str = "crs",
-        data_var_names: Optional[Sequence[str]] = None,
+        data_var_names: Sequence[str] | None = None,
     ):
         """Attach CF-compliant grid_mapping information to a NetCDF file.
 
@@ -400,9 +401,7 @@ class GridDales(simulation_module):
             if data_var_names is not None:
                 for var_name in data_var_names:
                     if var_name in ds.variables:
-                        setattr(
-                            ds.variables[var_name], "grid_mapping", mapping_var_name
-                        )
+                        ds.variables[var_name].grid_mapping = mapping_var_name
                     else:
                         logger.warning(
                             "Variable '%s' not found in NetCDF dataset when setting grid_mapping",
@@ -416,9 +415,9 @@ class GridDales(simulation_module):
             ):
                 if coord_name in ds.variables:
                     coord_var = ds.variables[coord_name]
-                    setattr(coord_var, "standard_name", std_name)
-                    setattr(coord_var, "units", "m")
-                    setattr(coord_var, "axis", axis)
+                    coord_var.standard_name = std_name
+                    coord_var.units = "m"
+                    coord_var.axis = axis
 
             return None
 

@@ -1,0 +1,43 @@
+#!/bin/bash
+#SBATCH --job-name=DALES_harmonie
+#SBATCH --qos=nf
+#SBATCH --ntasks=8
+#SBATCH --cpus-per-task=1
+#SBATCH --time=01:00:00
+#SBATCH --mem-per-cpu=2GB
+
+module load prgenv/expert
+module load gcc/15.2.0
+module load openmpi/4.1.7.1.7:gnu:15.2
+module load netcdf4/4.9.3:gnu:15.2
+module load cmake/4.0.2
+module load fftw
+
+expnr=001
+coldstart="true"
+Exp_dir=$(dirname "$0")
+cd "$Exp_dir" || exit
+RUNDIR="run_$expnr"
+
+if [ $coldstart = true ]; then
+echo "Cold start"
+{{required_folders}}
+{{required_filetransfers}}
+{{required_folder_rsyncs}}
+for inp in input/*$expnr*
+do
+rsync -a $inp $RUNDIR/ || exit
+done
+if [ "$1" = "NORUN" ]; then
+    exit 0
+fi
+rsync -vt {{dales_exec}} $RUNDIR/dales || echo "Dales exec not found"
+else
+echo "Warm start"
+fi
+cd $RUNDIR || exit
+if [ "$1" = "DEBUG" ]; then
+    {{debugger}} ./dales namoptions.$expnr
+else
+    srun -np {{numcores}} ./dales namoptions.$expnr
+fi

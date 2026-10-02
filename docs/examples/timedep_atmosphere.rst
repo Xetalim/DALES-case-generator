@@ -13,6 +13,11 @@ What this example demonstrates
   ``dpdx``.
 - Driving surface temperature with a ``TimeDependentScalar``.
 
+Every variable may use its own time points: all series are linearly
+interpolated onto the ``timesteps`` of ``TimedependentModule`` (or, when
+those are omitted, onto the union of all provided time points). Values
+outside a series' range are held constant.
+
 Core ideas
 ----------
 

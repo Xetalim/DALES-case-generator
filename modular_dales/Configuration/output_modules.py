@@ -1,17 +1,17 @@
-from typing import List, Optional, Union
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from numbers import Number
+from typing import Optional
 
 import numpy as np
 
-from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 
 def _normalize_horizontal_points(
-    values: Union[Number, list[Number], None],
-) -> Optional[list[Number]]:
+    values: Number | list[Number] | None,
+) -> list[Number] | None:
     if values is None:
         return None
     if isinstance(values, Number):
@@ -111,7 +111,7 @@ class EasyOutputModule(simulation_module):
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    output_interval: Optional[Union[int, list[int]]] = field(
+    output_interval: int | list[int] | None = field(
         default=60,
         metadata={
             "nml": [
@@ -173,7 +173,7 @@ class EasyOutputModule(simulation_module):
 
     def do_config(self):
         """Configure output-related namelist parameters."""
-        return None
+        return
 
     def __post_init__(self):
         super().__init__(self.sim)
@@ -181,15 +181,15 @@ class EasyOutputModule(simulation_module):
 
     def prepare_calculation(self):
         """No preparation needed."""
-        return None
+        return
 
     def check_settings(self):
         """Check output settings validity."""
-        return None
+        return
 
     def write_files(self):
         """Write output files if needed."""
-        return None
+        return
 
 
 @register_module
@@ -202,7 +202,7 @@ class CapeModule(simulation_module):
         default=False,
         metadata={"nml": "namcape", "key": "lcape", "required": True},
     )
-    dtav: Optional[int] = field(
+    dtav: int | None = field(
         default=60,
         metadata={"nml": "namcape", "key": "dtav", "required": True},
     )
@@ -235,7 +235,7 @@ class LSMCrossModule(simulation_module):
         default=False,
         metadata={"nml": "namlsmcrosssection", "key": "lcross", "required": True},
     )
-    dtav: Optional[int] = field(
+    dtav: int | None = field(
         default=60,
         metadata={"nml": "namlsmcrosssection", "key": "dtav", "required": True},
     )
@@ -268,7 +268,7 @@ class TimestatModule(simulation_module):
         default=False,
         metadata={"nml": "namtimestat", "key": "ltimestat", "required": True},
     )
-    dtav: Optional[int] = field(
+    dtav: int | None = field(
         default=60,
         metadata={"nml": "namtimestat", "key": "dtav", "required": True},
     )
@@ -305,7 +305,7 @@ class StatsModule(simulation_module):
             "required": True,
         },
     )
-    dtav: Optional[int] = field(
+    dtav: int | None = field(
         default=60,
         metadata={
             "nml": ["namgenstat", "nambudget", "NAMRADSTAT"],
@@ -313,7 +313,7 @@ class StatsModule(simulation_module):
             "required": True,
         },
     )
-    timeav: Optional[int] = field(
+    timeav: int | None = field(
         default=60,
         metadata={
             "nml": ["namgenstat", "nambudget", "NAMRADSTAT"],
@@ -354,11 +354,11 @@ class RadfieldModule(simulation_module):
         default=False,
         metadata={"nml": "namradfield", "key": "lradfield", "required": True},
     )
-    dtav: Optional[int] = field(
+    dtav: int | None = field(
         default=60,
         metadata={"nml": "namradfield", "key": "dtav", "required": True},
     )
-    timeav: Optional[int] = field(
+    timeav: int | None = field(
         default=60,
         metadata={"nml": "namradfield", "key": "timeav", "required": True},
     )
@@ -395,25 +395,25 @@ class CrossSectionOutputModule(simulation_module):
         default=True,
         metadata={"nml": "namcrosssection", "key": "lcross", "required": True},
     )
-    cross_dtav: Optional[int] = field(
+    cross_dtav: int | None = field(
         default=60,
         metadata={"nml": "namcrosssection", "key": "dtav", "required": True},
     )
-    xy: List[int] = field(
+    xy: list[int] = field(
         default_factory=list,
         metadata={"nml": "namcrosssection", "key": "crossheight", "required": True},
     )
-    xz: List[int] = field(
+    xz: list[int] = field(
         default_factory=list,
         metadata={"nml": "namcrosssection", "key": "crossplane", "required": True},
     )
-    yz: List[int] = field(
+    yz: list[int] = field(
         default_factory=list,
         metadata={"nml": "namcrosssection", "key": "crossortho", "required": True},
     )
-    xy_coords: List[float] = field(default_factory=list, metadata={"serialize": False})
-    xz_coords: List[float] = field(default_factory=list, metadata={"serialize": False})
-    yz_coords: List[float] = field(default_factory=list, metadata={"serialize": False})
+    xy_coords: list[float] = field(default_factory=list, metadata={"serialize": False})
+    xz_coords: list[float] = field(default_factory=list, metadata={"serialize": False})
+    yz_coords: list[float] = field(default_factory=list, metadata={"serialize": False})
     xy_enabled: bool = field(
         default=False,
         metadata={"nml": "namcrosssection", "key": "lxy", "required": True},
@@ -429,26 +429,26 @@ class CrossSectionOutputModule(simulation_module):
 
     def do_config(self):
         """Configure output-related namelist parameters."""
-        return None
+        return
 
     def __post_init__(self):
         super().__init__(self.sim)
         self.module_name = "CrossSectionOutputModule"
 
     @staticmethod
-    def _nearest_index(values: List[float], target: float) -> int:
+    def _nearest_index(values: list[float], target: float) -> int:
         return min(range(len(values)), key=lambda i: abs(values[i] - target))
 
     def _resolve_index_or_coords(
         self,
-        indices: List[int],
-        coords: List[float],
-        axis_values: List[float],
+        indices: list[int],
+        coords: list[float],
+        axis_values: list[float],
         label: str,
         base_offset: int,
         min_allowed: int,
         max_allowed: int,
-    ) -> List[int]:
+    ) -> list[int]:
         if indices and coords:
             raise ValueError(
                 f"CrossSectionOutputModule.{label}: provide either indices or real-space coordinates, not both"
@@ -471,7 +471,7 @@ class CrossSectionOutputModule(simulation_module):
         return resolved
 
     @staticmethod
-    def _merge_unique(existing: List[int], incoming: List[int]) -> List[int]:
+    def _merge_unique(existing: list[int], incoming: list[int]) -> list[int]:
         return list(dict.fromkeys(list(existing) + list(incoming)))
 
     def prepare_calculation(self):
@@ -509,7 +509,6 @@ class CrossSectionOutputModule(simulation_module):
         )
         self.check_for_new_cross()
         """No preparation needed."""
-        return None
 
     def check_for_new_cross(self):
         existing_cross = self.nml.get("namcrosssection", {}) if self.nml else {}
@@ -538,13 +537,12 @@ class CrossSectionOutputModule(simulation_module):
 
     def check_settings(self):
         """Check output settings validity."""
-        return None
+        return
 
     def write_files(self):
         self.check_for_new_cross()
         self.apply_namelist_from_fields()
         """Write output files if needed."""
-        return None
 
 
 @register_module
@@ -569,7 +567,7 @@ class CheckSimulationModule(simulation_module):
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    check_interval: Optional[int] = field(
+    check_interval: int | None = field(
         default=60,
         metadata={
             "nml": "NAMCHECKSIM",
@@ -606,19 +604,19 @@ class CheckSimulationModule(simulation_module):
 
     def do_config(self):
         """No configuration needed."""
-        return None
+        return
 
     def prepare_calculation(self):
         """Check simulation settings and configuration."""
-        return None
+        return
 
     def check_settings(self):
         """No additional checks needed."""
-        return None
+        return
 
     def write_files(self):
         """No files to write."""
-        return None
+        return
 
 
 @register_module
@@ -636,7 +634,7 @@ class SamplingModule(simulation_module):
     """
 
     sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    output_interval: Optional[Union[int, list[int]]] = field(
+    output_interval: int | list[int] | None = field(
         default=60,
         metadata={
             "nml": ["namsampling", "namsampling"],
@@ -691,7 +689,7 @@ class SamplingModule(simulation_module):
 
     def do_config(self):
         """Configure output-related namelist parameters."""
-        return None
+        return
 
     def __post_init__(self):
         super().__init__(self.sim)
@@ -699,15 +697,15 @@ class SamplingModule(simulation_module):
 
     def prepare_calculation(self):
         """No preparation needed."""
-        return None
+        return
 
     def check_settings(self):
         """Check output settings validity."""
-        return None
+        return
 
     def write_files(self):
         """Write output files if needed."""
-        return None
+        return
 
 
 @register_module
@@ -751,7 +749,7 @@ class FielddumpModule(simulation_module):
     #         "doc": "Write binary fielddump files instead of text.",
     #     },
     # )
-    klow: Optional[int] = field(
+    klow: int | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -759,7 +757,7 @@ class FielddumpModule(simulation_module):
             "doc": "Lowest model level index included in dump.",
         },
     )
-    khigh: Optional[int] = field(
+    khigh: int | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -767,7 +765,7 @@ class FielddumpModule(simulation_module):
             "doc": "Highest model level index included in dump; 0 lets DALES decide.",
         },
     )
-    ncoarse: Optional[int] = field(
+    ncoarse: int | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -775,7 +773,7 @@ class FielddumpModule(simulation_module):
             "doc": "Horizontal coarsening factor for dumped fields.",
         },
     )
-    tmin: Optional[float] = field(
+    tmin: float | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -783,7 +781,7 @@ class FielddumpModule(simulation_module):
             "doc": "Start time in seconds for writing dumps.",
         },
     )
-    tmax: Optional[float] = field(
+    tmax: float | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -792,19 +790,19 @@ class FielddumpModule(simulation_module):
         },
     )
 
-    lu: Optional[bool] = field(
+    lu: bool | None = field(
         default=None,
         metadata={"nml": "namfielddump", "key": "lu", "doc": "Dump u velocity field."},
     )
-    lv: Optional[bool] = field(
+    lv: bool | None = field(
         default=None,
         metadata={"nml": "namfielddump", "key": "lv", "doc": "Dump v velocity field."},
     )
-    lw: Optional[bool] = field(
+    lw: bool | None = field(
         default=None,
         metadata={"nml": "namfielddump", "key": "lw", "doc": "Dump w velocity field."},
     )
-    lqt: Optional[bool] = field(
+    lqt: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -812,7 +810,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump total water mixing ratio field.",
         },
     )
-    lql: Optional[bool] = field(
+    lql: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -820,7 +818,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump liquid water mixing ratio field.",
         },
     )
-    lthl: Optional[bool] = field(
+    lthl: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -828,15 +826,15 @@ class FielddumpModule(simulation_module):
             "doc": "Dump liquid water potential temperature field.",
         },
     )
-    lbuoy: Optional[bool] = field(
+    lbuoy: bool | None = field(
         default=None,
         metadata={"nml": "namfielddump", "key": "lbuoy", "doc": "Dump buoyancy field."},
     )
-    lcli: Optional[bool] = field(
+    lcli: bool | None = field(
         default=None,
         metadata={"nml": "namfielddump", "key": "lcli", "doc": "Dump cloud ice field."},
     )
-    lclw: Optional[bool] = field(
+    lclw: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -844,7 +842,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump cloud liquid water field.",
         },
     )
-    lta: Optional[bool] = field(
+    lta: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -852,7 +850,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump absolute temperature field.",
         },
     )
-    lplw: Optional[bool] = field(
+    lplw: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -860,7 +858,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump longwave pressure-related field.",
         },
     )
-    lpli: Optional[bool] = field(
+    lpli: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -868,7 +866,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump ice-phase pressure-related field.",
         },
     )
-    lhus: Optional[bool] = field(
+    lhus: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -876,7 +874,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump specific humidity field.",
         },
     )
-    lhur: Optional[bool] = field(
+    lhur: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -884,7 +882,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump relative humidity field.",
         },
     )
-    ltntr: Optional[bool] = field(
+    ltntr: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -892,7 +890,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump total tendency field (resolved).",
         },
     )
-    ltntrs: Optional[bool] = field(
+    ltntrs: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -900,7 +898,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump subgrid tendency field.",
         },
     )
-    ltntrl: Optional[bool] = field(
+    ltntrl: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -908,7 +906,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump large-scale tendency field.",
         },
     )
-    le12: Optional[bool] = field(
+    le12: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -916,7 +914,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump subgrid TKE field.",
         },
     )
-    lekh: Optional[bool] = field(
+    lekh: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -924,7 +922,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump heat diffusivity field.",
         },
     )
-    lekm: Optional[bool] = field(
+    lekm: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -932,7 +930,7 @@ class FielddumpModule(simulation_module):
             "doc": "Dump momentum diffusivity field.",
         },
     )
-    lsv: Optional[bool] = field(
+    lsv: bool | None = field(
         default=None,
         metadata={
             "nml": "namfielddump",
@@ -957,7 +955,6 @@ class FielddumpModule(simulation_module):
                 raise ValueError(
                     "FielddumpModule: khigh must be >= klow, or 0 for DALES default"
                 )
-        return None
 
     def write_files(self):
         return None
@@ -1001,11 +998,11 @@ class BulkMicrophysicsStatisticsOutputModule(simulation_module):
         default=True,
         metadata={"nml": "NAMBULKMICROSTAT", "key": "lmicrostat", "required": True},
     )
-    dtav: Optional[float] = field(
+    dtav: float | None = field(
         default=60,
         metadata={"nml": "NAMBULKMICROSTAT", "key": "dtav", "required": True},
     )
-    timeav: Optional[float] = field(
+    timeav: float | None = field(
         default=60,
         metadata={"nml": "NAMBULKMICROSTAT", "key": "timeav", "required": True},
     )
@@ -1046,7 +1043,7 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
             "required": True,
         },
     )
-    dtav: Optional[float] = field(
+    dtav: float | None = field(
         default=60,
         metadata={
             "nml": "NAMVIRTUALMEASUREMENT",
@@ -1054,7 +1051,7 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
             "required": True,
         },
     )
-    npoints: Optional[int] = field(
+    npoints: int | None = field(
         default=None,
         metadata={
             "nml": "NAMVIRTUALMEASUREMENT",
@@ -1062,22 +1059,22 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
         },
         init=False,
     )
-    x_idx: Optional[Union[int, list[int]]] = field(
+    x_idx: int | list[int] | None = field(
         default=None,
         metadata={
             "nml": "NAMVIRTUALMEASUREMENT",
             "key": "x_idx",
         },
     )
-    y_idx: Optional[Union[int, list[int]]] = field(
+    y_idx: int | list[int] | None = field(
         default=None,
         metadata={
             "nml": "NAMVIRTUALMEASUREMENT",
             "key": "y_idx",
         },
     )
-    x: Optional[Union[float, list[float]]] = field(default=None)
-    y: Optional[Union[float, list[float]]] = field(default=None)
+    x: float | list[float] | None = field(default=None)
+    y: float | list[float] | None = field(default=None)
 
     def do_config(self):
         return None
@@ -1088,7 +1085,6 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
 
     def prepare_calculation(self):
         self._prepare_point_indices(self.module_name)
-        return None
 
     def check_settings(self):
         return None
@@ -1116,7 +1112,7 @@ class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_modul
             "required": True,
         },
     )
-    npoints: Optional[int] = field(
+    npoints: int | None = field(
         default=None,
         metadata={
             "nml": "NAMCOLSTAT",
@@ -1124,22 +1120,22 @@ class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_modul
         },
         init=False,
     )
-    x_idx: Optional[Union[int, list[int]]] = field(
+    x_idx: int | list[int] | None = field(
         default=None,
         metadata={
             "nml": "NAMCOLSTAT",
             "key": "x_idx",
         },
     )
-    y_idx: Optional[Union[int, list[int]]] = field(
+    y_idx: int | list[int] | None = field(
         default=None,
         metadata={
             "nml": "NAMCOLSTAT",
             "key": "y_idx",
         },
     )
-    x: Optional[Union[float, list[float]]] = field(default=None)
-    y: Optional[Union[float, list[float]]] = field(default=None)
+    x: float | list[float] | None = field(default=None)
+    y: float | list[float] | None = field(default=None)
 
     def do_config(self):
         return None
@@ -1150,7 +1146,6 @@ class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_modul
 
     def prepare_calculation(self):
         self._prepare_point_indices(self.module_name)
-        return None
 
     def check_settings(self):
         return None

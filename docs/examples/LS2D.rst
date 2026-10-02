@@ -49,9 +49,9 @@ The Python structure is
     )
     sim += domain_info
 
-    time =  TimedependentModule()
-    time += FromLS2D()  # Enable LS2D-driven time series injection into atmosphere
-    sim += time
+    # Without explicit timesteps, the LS2D time points (and any other
+    # provided series) are combined into one common time axis.
+    sim += TimedependentModule()
     # Configure LS2D-driven atmosphere; central_lat / central_lon and
     # case_name will be taken from GridDales and dales_simulation.
     atmo_ls2d = LS2DAtmosphereModule(

@@ -1,0 +1,53 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  detailed:
+    format: "%(asctime)s | %(levelname)-8s | %(process)d | %(threadName)s | %(name)s:%(lineno)d | %(funcName)s | %(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: standard
+    stream: ext://sys.stdout
+  file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/app.log
+    mode: w
+    encoding: utf-8
+  errors:
+    class: logging.FileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/errors.log
+    mode: w
+
+loggers:
+  rasterio:
+    level: WARNING
+  rasterio.env:
+    level: WARNING
+  rasterio._env:
+    level: WARNING
+  matplotlib:
+    level: ERROR
+  gribapi.bindings:
+    level: WARNING
+  distributed:
+    level: WARNING
+    handlers:
+      - file
+      - errors
+
+root:
+  level: DEBUG
+  handlers:
+    - console
+    - file
+    - errors

@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 
 @register_module

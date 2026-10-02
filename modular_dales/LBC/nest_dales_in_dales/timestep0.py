@@ -1,21 +1,17 @@
-from typing import TYPE_CHECKING
+import glob
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
-import glob
-
-
 from modular_dales.Geometry.GridDales import GridDalesOpenBC
-from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
-from modular_dales.LBC.nest_dales_in_dales.load_any_boundary_var import (
-    load_any_boundary_var,
-)
-from modular_dales.logging_wrapper import logwrap
 from modular_dales.LBC.nest_dales_in_dales.load_any_boundary_var import (
     get_boundary_dict,
+    load_any_boundary_var,
 )
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
+from modular_dales.logging_wrapper import logwrap
 
 if TYPE_CHECKING:
     from modular_dales.LBC.nesting_idx import NestingIndices
@@ -215,7 +211,6 @@ def boundaries_timestep0(
     # Get initial boundary fields from previous simulation, specifically,
     # the last time step in the output of the previous simulation
     else:
-
         boundary_dict = get_boundary_dict(input_json.outpath_coarse_old, grid, indices)
 
         all_ls = []

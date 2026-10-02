@@ -193,10 +193,7 @@ def _attach_common_physics(
     is_nested: bool = False,
 ) -> None:
     if use_ls2d:
-        time = TimedependentModule(ltimedep=True, usesLS2DforTime=True)
-        time += FromLS2D()
-
-        sim += time
+        sim += TimedependentModule(ltimedep=True)
     if use_ls2d:
         atmo_ls2d = LS2DAtmosphereModule(
             era5_path=sim.machine_conf.get("ls2d_conf", {}).get(

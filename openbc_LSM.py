@@ -24,7 +24,6 @@ from modular_dales.Atmosphere import (
     AtmosphericProfile,
     InterpolatedProfile,
 )
-from modular_dales.Atmosphere.atmosphere import build_default_variables
 from modular_dales.Atmosphere.atmosphere import TimedAtmosphereProfile
 from modular_dales.Configuration import (
     DefaultNamelistModule,
@@ -185,7 +184,6 @@ if __name__ == "__main__":
     # time_mod = TimedependentModule(timesteps=[0, 50, 600, 9600])
     # sim += time_mod
     atmo = AtmosphereModule()
-    atmo.variables = build_default_variables(get_all_vars())
     atmo += AtmosphericProfile(variable=ua, shape="lin", params=dict(surf_val=3, ddz=0))
     atmo += AtmosphericProfile(variable=ug, shape="lin", params=dict(surf_val=3, ddz=0))
     atmo += AtmosphericProfile(variable=vg, shape="lin", params=dict(surf_val=3, ddz=0))
@@ -267,7 +265,6 @@ if __name__ == "__main__":
     set_nml_section(sim.nml, sim.nml_docs, "user_defined", "RUN", "nprocy", 0)
     # External atmosphere module, not registered via sim += as openbc inits it for you.
     atmo_external = AtmosphereModule()
-    atmo_external.variables = build_default_variables(get_all_vars())
     for prof in atmo.shaped_profiles:
         if prof.variable != co2:
             atmo_external.shaped_profiles.append(prof)
@@ -382,7 +379,6 @@ if __name__ == "__main__":
     )
     sim2 += emis
     atmo2 = AtmosphereModule()
-    atmo2.variables = build_default_variables(get_all_vars())
     for prof in atmo.shaped_profiles:
         if prof.variable != co2:
             atmo2.shaped_profiles.append(prof)
@@ -391,7 +387,6 @@ if __name__ == "__main__":
             atmo2.interpolated_profiles.append(prof)
     sim2 += atmo2
     # atmo = AtmosphereModule()
-    # atmo.variables = build_default_variables(get_all_vars())
     # atmo += AtmosphericProfile(variable=ua, shape="lin", params=dict(surf_val=1, ddz=0))
     # # atmo += AtmosphericProfile(variable=ug, shape="lin", params=dict(surf_val=1, ddz=0))
     # atmo += AtmosphericProfile(variable=va, shape="lin", params=dict(surf_val=0, ddz=0))

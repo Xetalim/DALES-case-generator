@@ -9,15 +9,15 @@ This module mirrors the IBM module pattern:
 
 """
 
-from dataclasses import dataclass, field
 import logging
-from typing import Any, List, Optional
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
-from modular_dales import simulation_module, register_module
+from modular_dales import register_module, simulation_module
 from modular_dales.Emission.create_emis import (
-    emissions,
-    TracerInfo,
     PointSource,
+    TracerInfo,
+    emissions,
     get_emis_sim_hours,
 )
 
@@ -93,10 +93,10 @@ class EmissionModule(simulation_module):
     sim: Optional["simulation_module"] = field(default=None, repr=False)
 
     # User-configurable content
-    tracers: List[EmissionTracer] = field(
+    tracers: list[EmissionTracer] = field(
         default_factory=list, metadata={"serialize": True}
     )
-    point_sources: List[EmissionPointSource] = field(
+    point_sources: list[EmissionPointSource] = field(
         default_factory=list, metadata={"serialize": True}
     )
 
@@ -134,7 +134,7 @@ class EmissionModule(simulation_module):
         },
         init=True,
     )
-    emisnames: List[str] = field(
+    emisnames: list[str] = field(
         default_factory=list,
         metadata={
             "nml": "NAMEMISSION",

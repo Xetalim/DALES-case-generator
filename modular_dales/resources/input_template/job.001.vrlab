@@ -1,0 +1,43 @@
+#!/bin/bash
+#SBATCH --ntasks={{numcores}}
+#SBATCH --cpus-per-task=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --partition inf
+#SBATCH --mem=10G
+#SBATCH -J bomex
+
+export HDF5_USE_FILE_LOCKING=FALSE
+export SYST=localpc_ifort
+module load dales.rc4
+module load cmake fftw netcdf-fortran
+ulimit -s unlimited
+
+expnr=001
+coldstart="true"
+Exp_dir=$(dirname "$0")
+cd "$Exp_dir" || exit
+RUNDIR="./run_$expnr/"
+
+if [ $coldstart = true ]; then
+echo "Cold start"
+mkdir -p $RUNDIR
+{{required_folders}}
+{{required_filetransfers}}
+{{required_folder_rsyncs}}
+for inp in input/*$expnr*
+do
+rsync -a $inp $RUNDIR/ || exit
+done
+if [ "$1" = "NORUN" ]; then
+    exit 0
+fi
+rsync -vt {{dales_exec}} $RUNDIR/dales || echo "Dales exec not found"
+else
+echo "Warm start"
+fi
+cd $RUNDIR || exit
+if [ "$1" = "DEBUG" ]; then
+    {{debugger}} ./dales namoptions.$expnr
+else
+    mpirun -np {{numcores}} ./dales namoptions.$expnr
+fi

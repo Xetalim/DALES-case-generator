@@ -6,13 +6,12 @@ from pathlib import Path
 from typing import Optional
 
 from modular_dales.IO_helpers.external_data_cache import cache_root
-from modular_dales.MODULE_REGISTRY import register_module
-from modular_dales.modular.simulation_module import simulation_module
-
 from modular_dales.LBC.nest_dales_in_HARMONIE.knmi_api import (
     ForecastDownloadResult,
     download_harmonie_forecast_pair,
 )
+from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +24,7 @@ def resolve_knmi_harmonie_download_module(
     if not sim.module_exists(KNMIHarmonieForecastDownloadModule):
         return None
     module = sim.retrieve_module(KNMIHarmonieForecastDownloadModule)
-    if not module.prepare_calculation_done:
-        module.prepare_calculation()
-        module.prepare_calculation_done = True
+    module.ensure_prepared()
     return module
 
 
@@ -44,13 +41,13 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
     """
 
     sim: Optional["simulation_module"] = field(default=None, repr=False)
-    forecast_datetime: Optional[str] = field(
+    forecast_datetime: str | None = field(
         default=None,
         init=True,
         repr=True,
         metadata={"serialize": True},
     )
-    download_root: Optional[str] = field(
+    download_root: str | None = field(
         default=None,
         init=True,
         repr=True,
@@ -68,7 +65,7 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
         repr=True,
         metadata={"serialize": True},
     )
-    check_disk_space: Optional[bool] = field(
+    check_disk_space: bool | None = field(
         default=None,
         init=True,
         repr=True,
@@ -105,25 +102,25 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
         metadata={"serialize": True},
     )
 
-    ml_glob: Optional[str] = field(
+    ml_glob: str | None = field(
         default=None,
         init=False,
         repr=False,
         metadata={"serialize": False},
     )
-    sfc_glob: Optional[str] = field(
+    sfc_glob: str | None = field(
         default=None,
         init=False,
         repr=False,
         metadata={"serialize": False},
     )
-    p5_tar_path: Optional[str] = field(
+    p5_tar_path: str | None = field(
         default=None,
         init=False,
         repr=False,
         metadata={"serialize": False},
     )
-    p3_tar_path: Optional[str] = field(
+    p3_tar_path: str | None = field(
         default=None,
         init=False,
         repr=False,
@@ -154,7 +151,6 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
 
     def check_settings(self):
         self._resolve_forecast_datetime()
-        return None
 
     def prepare_calculation(self):
         forecast_datetime = self._resolve_forecast_datetime()
@@ -188,7 +184,6 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
             forecast_datetime,
             output_root,
         )
-        return None
 
     def write_files(self):
         return None

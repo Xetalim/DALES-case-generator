@@ -167,9 +167,7 @@ if __name__ == "__main__":
     IBM += FromAHN()  # download height map from Algemene Hoogtekaart Nederland
     sim += IBM
 
-    time = TimedependentModule(ltimedep=True)
-    time += FromLS2D()  # Enable LS2D-driven time series injection into atmosphere
-    sim += time
+    sim += TimedependentModule(ltimedep=True)
 
     # sim += EasyOutputModule(output_interval=1, enable_output=True)
     # sim += RadfieldModule(enabled=True, dtav=5, timeav=5)

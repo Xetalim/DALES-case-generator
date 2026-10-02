@@ -1,15 +1,15 @@
 """Public API for surface forcing modules."""
 
 from .surface import (
-    SurfaceModule,
     ConstantFluxesModule,
     ConstantFluxesWithShearModule,
     ConstantSurfaceTemperatureModule,
+    SurfaceModule,
 )
 
 __all__ = [
-    "SurfaceModule",
     "ConstantFluxesModule",
     "ConstantFluxesWithShearModule",
     "ConstantSurfaceTemperatureModule",
+    "SurfaceModule",
 ]

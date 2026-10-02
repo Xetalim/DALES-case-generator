@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -14,7 +13,7 @@ from modular_dales.MODULE_REGISTRY import register_module, register_special_seri
 @dataclass
 class VaryingSkinTemperature:
     skin_temperature: np.ndarray
-    aquatic_skin_temperature: Optional[float] = None
+    aquatic_skin_temperature: float | None = None
     """Spatially varying skin temperature over the horizontal domain.
 
     Init: provide values as a list or array-like object.
@@ -48,7 +47,7 @@ class VaryingSoilMoisture:
 @dataclass
 class UniformSkinTemperature:
     skin_temperature: float
-    aquatic_skin_temperature: Optional[float] = None
+    aquatic_skin_temperature: float | None = None
     """Uniform skin temperature (K) across the horizontal domain."""
 
 
@@ -56,7 +55,7 @@ class UniformSkinTemperature:
 @register_module
 @dataclass
 class UniformSoilTemperature:
-    soil_temperature: List[float]
+    soil_temperature: list[float]
     """Uniform soil temperature profile across soil levels.
 
     Init: provide a sequence of length kmax_soil containing temperature values.
@@ -67,7 +66,7 @@ class UniformSoilTemperature:
 @register_module
 @dataclass
 class UniformSoilMoisture:
-    soil_moisture: List[float]
+    soil_moisture: list[float]
     """Uniform soil moisture profile across soil levels.
 
     Init: provide a sequence of length kmax_soil containing moisture values.
@@ -80,7 +79,7 @@ class SoilTemperatureMoistureFromHarmonie:
     harmonie_soil_file: str = field(
         default=None, init=True, repr=True, metadata={"serialize": True}
     )
-    harmonie_soil_height_levels: List[float] = field(
+    harmonie_soil_height_levels: list[float] = field(
         default_factory=list, init=True, repr=True, metadata={"serialize": True}
     )
     harmonie_soil_valid_time: str = field(
@@ -89,13 +88,13 @@ class SoilTemperatureMoistureFromHarmonie:
     use_as_tskin: bool = field(
         default=False, init=True, repr=True, metadata={"serialize": True}
     )
-    aquatic_skin_temperature: Optional[float] = field(
+    aquatic_skin_temperature: float | None = field(
         default=None, init=True, repr=True, metadata={"serialize": True}
     )
-    data: Optional[xr.Dataset] = field(
+    data: xr.Dataset | None = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    grid: Optional[GridDales] = field(
+    grid: GridDales | None = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
     """Gridded interpolated temperatures and moistures from HARMONIE soil data.
@@ -115,7 +114,7 @@ class SoilTemperatureMoistureFromHarmonie:
             )
 
     def get_soil_temp_moisture_arrays(
-        self, grid: GridDales, dz_soil: Union[np.ndarray, List]
+        self, grid: GridDales, dz_soil: np.ndarray | list
     ):
         # Placeholder for any processing needed to read the HARMONIE soil file and extract soil moisture profiles
         ds_soil = fix_lambert_offsets(
@@ -165,7 +164,7 @@ class SoilTemperatureMoistureFromHarmonie:
             self.data["tskin"] = tskin
 
     def get_soil_moisture_array(
-        self, grid: GridDales, dz_soil: Union[np.ndarray, List]
+        self, grid: GridDales, dz_soil: np.ndarray | list
     ) -> np.ndarray:
         if self.data is None:
             self.get_soil_temp_moisture_arrays(grid, dz_soil)
@@ -179,7 +178,7 @@ class SoilTemperatureMoistureFromHarmonie:
         return self.data.tskin.values
 
     def get_soil_temperature_array(
-        self, grid: GridDales, dz_soil: Union[np.ndarray, List]
+        self, grid: GridDales, dz_soil: np.ndarray | list
     ) -> np.ndarray:
         if self.data is None:
             self.get_soil_temp_moisture_arrays(grid, dz_soil)

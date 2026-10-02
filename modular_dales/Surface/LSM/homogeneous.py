@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from typing import List, Optional
 
 from modular_dales.MODULE_REGISTRY import register_module
+
 from .base import BaseLSMModule
 
 
@@ -14,7 +14,7 @@ from .base import BaseLSMModule
 class LSMHomogeneousModule(BaseLSMModule):
     """Standalone homogeneous LSM configuration module."""
 
-    c_low: Optional[float] = field(
+    c_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -23,7 +23,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Tile fraction for low vegetation.",
         },
     )
-    c_high: Optional[float] = field(
+    c_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -32,7 +32,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Tile fraction for high vegetation.",
         },
     )
-    c_bare: Optional[float] = field(
+    c_bare: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -41,7 +41,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Tile fraction for bare soil.",
         },
     )
-    c_water: Optional[float] = field(
+    c_water: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -50,7 +50,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Tile fraction for open water.",
         },
     )
-    c_asph: Optional[float] = field(
+    c_asph: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -59,7 +59,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Tile fraction for asphalt/impervious surface.",
         },
     )
-    z0m_low: Optional[float] = field(
+    z0m_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -68,7 +68,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Momentum roughness length for low vegetation in m.",
         },
     )
-    z0m_high: Optional[float] = field(
+    z0m_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -77,7 +77,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Momentum roughness length for high vegetation in m.",
         },
     )
-    z0m_bare: Optional[float] = field(
+    z0m_bare: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -86,7 +86,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Momentum roughness length for bare soil in m.",
         },
     )
-    z0m_water: Optional[float] = field(
+    z0m_water: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -95,7 +95,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Momentum roughness length for water in m.",
         },
     )
-    z0m_asph: Optional[float] = field(
+    z0m_asph: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -104,7 +104,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Momentum roughness length for asphalt in m.",
         },
     )
-    z0h_low: Optional[float] = field(
+    z0h_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -113,7 +113,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Scalar roughness length for low vegetation in m.",
         },
     )
-    z0h_high: Optional[float] = field(
+    z0h_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -122,7 +122,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Scalar roughness length for high vegetation in m.",
         },
     )
-    z0h_bare: Optional[float] = field(
+    z0h_bare: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -131,7 +131,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Scalar roughness length for bare soil in m.",
         },
     )
-    z0h_water: Optional[float] = field(
+    z0h_water: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -140,7 +140,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Scalar roughness length for water in m.",
         },
     )
-    z0h_asph: Optional[float] = field(
+    z0h_asph: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -149,7 +149,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Scalar roughness length for asphalt in m.",
         },
     )
-    lambda_s_low: Optional[float] = field(
+    lambda_s_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -158,7 +158,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Stable transfer coefficient for low vegetation.",
         },
     )
-    lambda_s_high: Optional[float] = field(
+    lambda_s_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -167,7 +167,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Stable transfer coefficient for high vegetation.",
         },
     )
-    lambda_s_bare: Optional[float] = field(
+    lambda_s_bare: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -176,7 +176,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Stable transfer coefficient for bare soil.",
         },
     )
-    lambda_s_asph: Optional[float] = field(
+    lambda_s_asph: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -185,7 +185,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Stable transfer coefficient for asphalt.",
         },
     )
-    lambda_us_low: Optional[float] = field(
+    lambda_us_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -194,7 +194,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Unstable transfer coefficient for low vegetation.",
         },
     )
-    lambda_us_high: Optional[float] = field(
+    lambda_us_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -203,7 +203,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Unstable transfer coefficient for high vegetation.",
         },
     )
-    lambda_us_bare: Optional[float] = field(
+    lambda_us_bare: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -212,7 +212,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Unstable transfer coefficient for bare soil.",
         },
     )
-    lambda_us_asph: Optional[float] = field(
+    lambda_us_asph: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -221,7 +221,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Unstable transfer coefficient for asphalt.",
         },
     )
-    lai_low: Optional[float] = field(
+    lai_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -230,7 +230,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Leaf area index for low vegetation.",
         },
     )
-    lai_high: Optional[float] = field(
+    lai_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -239,7 +239,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Leaf area index for high vegetation.",
         },
     )
-    rs_min_low: Optional[float] = field(
+    rs_min_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -248,7 +248,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Minimum stomatal resistance for low vegetation in s/m.",
         },
     )
-    rs_min_high: Optional[float] = field(
+    rs_min_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -257,7 +257,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Minimum stomatal resistance for high vegetation in s/m.",
         },
     )
-    rs_min_bare: Optional[float] = field(
+    rs_min_bare: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -266,7 +266,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Minimum surface resistance for bare soil in s/m.",
         },
     )
-    rs_min_asph: Optional[float] = field(
+    rs_min_asph: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -275,7 +275,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Minimum surface resistance for asphalt in s/m.",
         },
     )
-    t_soil_p: Optional[List[float]] = field(
+    t_soil_p: list[float] | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -284,7 +284,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Initial homogeneous soil temperature profile in K.",
         },
     )
-    theta_soil_p: Optional[List[float]] = field(
+    theta_soil_p: list[float] | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -293,7 +293,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Initial homogeneous soil moisture profile in m3/m3.",
         },
     )
-    soil_index_p: Optional[List[int]] = field(
+    soil_index_p: list[int] | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -302,7 +302,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Initial homogeneous soil type index profile.",
         },
     )
-    ar_low: Optional[float] = field(
+    ar_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -311,7 +311,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Root profile parameter a for low vegetation.",
         },
     )
-    br_low: Optional[float] = field(
+    br_low: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -320,7 +320,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Root profile parameter b for low vegetation.",
         },
     )
-    ar_high: Optional[float] = field(
+    ar_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -329,7 +329,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Root profile parameter a for high vegetation.",
         },
     )
-    br_high: Optional[float] = field(
+    br_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -338,7 +338,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Root profile parameter b for high vegetation.",
         },
     )
-    gD_high: Optional[float] = field(
+    gD_high: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -347,7 +347,7 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Vapour pressure deficit response coefficient for high vegetation.",
         },
     )
-    tskin_water: Optional[float] = field(
+    tskin_water: float | None = field(
         default=None,
         metadata={
             "nml": "NAMLSM_HOMOGENEOUS",
@@ -356,13 +356,14 @@ class LSMHomogeneousModule(BaseLSMModule):
             "doc": "Skin temperature assigned to water tile in K.",
         },
     )
-    thls: Optional[float] = field(
+    thls: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "thls",
             "required": True,
             "serialize": True,
+            "forcing_var": "thls",
             "doc": "Surface potential temperature in K.",
         },
     )
@@ -401,7 +402,6 @@ class LSMHomogeneousModule(BaseLSMModule):
             )
 
         super().do_config()
-        return None
 
     def prepare_calculation(self):
         for name in ("t_soil_p", "theta_soil_p", "soil_index_p"):
@@ -410,4 +410,3 @@ class LSMHomogeneousModule(BaseLSMModule):
                 raise ValueError(
                     f"{self.__class__.__name__}.{name} length ({len(values)}) must match kmax_soil ({self.kmax_soil})."
                 )
-        return None

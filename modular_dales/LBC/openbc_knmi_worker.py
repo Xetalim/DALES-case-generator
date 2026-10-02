@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import dask
 import numpy as np
@@ -11,13 +11,15 @@ import xarray as xr
 
 from modular_dales.LBC.nest_dales_in_HARMONIE import (
     boundary as harmonie_boundary,
+)
+from modular_dales.LBC.nest_dales_in_HARMONIE import (
     initfields,
     nest_dales_in_KNMI,
 )
-from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
     resolve_knmi_harmonie_download_module,
 )
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 
 if TYPE_CHECKING:
     from modular_dales.LBC.openbc import do_openboundary
@@ -29,10 +31,10 @@ logger = logging.getLogger(__name__)
 class OpenBCKNMIWorker:
     """Build open boundaries from KNMI operational HARMONIE output."""
 
-    def __init__(self, module: "do_openboundary") -> None:
+    def __init__(self, module: do_openboundary) -> None:
         self.module = module
 
-    def prepare(self) -> Tuple[xr.Dataset, xr.Dataset]:
+    def prepare(self) -> tuple[xr.Dataset, xr.Dataset]:
         config = self._build_config()
         prepper = nest_dales_in_KNMI.KNMIPrepper(
             config,
@@ -101,7 +103,7 @@ class OpenBCKNMIWorker:
 
     def _resolve_noise_window(
         self,
-    ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None, float | None]:
         noise_std = self.module.nest_in_knmi.noise_std
         noise_minzt = self.module.nest_in_knmi.noise_minzt
         noise_maxzt = self.module.nest_in_knmi.noise_maxzt
@@ -133,7 +135,7 @@ class OpenBCKNMIWorker:
         )
         return noise_std, noise_minzt, noise_maxzt
 
-    def _selected_noise_targets(self) -> Tuple[set[str], set[str]]:
+    def _selected_noise_targets(self) -> tuple[set[str], set[str]]:
         all_boundaries = {"west", "east", "south", "north", "top"}
         base_vars = {"u", "v", "w", "thl", "qt", "e12"}
         requested_bounds = self.module.nest_in_knmi.noise_boundaries

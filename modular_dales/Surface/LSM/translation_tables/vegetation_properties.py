@@ -210,4 +210,4 @@ if __name__ == "__main__":
     for i in range(1, 31):
         ii = top10_to_ifs[i]
         ifs_name = ifs_vegetation.name[ii] if ii > 0 else "None"
-        print("{0:30s} ({1:2d}) = {2}".format(top10_names[i], i, ifs_name))
+        print(f"{top10_names[i]:30s} ({i:2d}) = {ifs_name}")

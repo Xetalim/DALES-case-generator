@@ -1,0 +1,61 @@
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "dales-generator"
+version = "0.1.0"
+description = "Composable generator for DALES input cases"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [
+	{name = "Andre van Ginkel"},
+]
+keywords = ["DALES", "atmospheric-modeling", "large-eddy-simulation"]
+classifiers = [
+	"Development Status :: 3 - Alpha",
+	"Intended Audience :: Science/Research",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.13",
+	"Topic :: Scientific/Engineering :: Atmospheric Science",
+]
+dependencies = [
+	"dask[distributed]==2025.12.0",
+	"f90nml==1.4.4",
+	"geopandas==0.14.4",
+	"matplotlib==3.10.8",
+	"netcdf4==1.7.2",
+	"numpy==2.4.2",
+	"pandas==3.0.1",
+	"pyproj==3.7.2",
+	"PyYAML==6.0.3",
+	"rasterio==1.5.0",
+	"rioxarray==0.21.0",
+	"scipy==1.17.1",
+	"Shapely==2.1.2",
+	"xarray==2025.10.1",
+	"dales_tile_combiner",
+	"LS2D",
+	"cdsapi",
+]
+
+[project.urls]
+Homepage = "https://github.com/Xetalim/DALES-case-generator"
+Repository = "https://github.com/Xetalim/DALES-case-generator.git"
+Issues = "https://github.com/Xetalim/DALES-case-generator/issues"
+
+[tool.poetry]
+packages = [{include = "modular_dales"}]
+include = [{path = "modular_dales/resources", format = ["sdist", "wheel"]}]
+
+[tool.poetry.group.test.dependencies]
+pytest = "9.0.2"
+
+[tool.coverage.run]
+include = [
+    "modular_dales/*",
+	"tests/*",
+]
+omit = [
+	"./*.py",
+]

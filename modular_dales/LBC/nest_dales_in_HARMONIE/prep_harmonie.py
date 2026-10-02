@@ -2,23 +2,20 @@
 # Transforms pressure coordinates into height levels.
 # Transforms HARMONIE prognostic variables to DALES prognostic variables
 import logging
-import pathlib
 
 import dask
 import numpy as np
 import xarray as xr
-
 from modular_dales.Geometry import GridDalesOpenBC
-from modular_dales.logging_wrapper import logwrap
-
-from modular_dales.LBC.nest_dales_in_HARMONIE.Transform import Transform
-import modular_dales.LBC.nest_dales_in_HARMONIE.hybrid_levels as hybrid_levels
+from modular_dales.IO_helpers.raster import fix_lambert_offsets
+from modular_dales.LBC.nest_dales_in_HARMONIE import hybrid_levels
 from modular_dales.LBC.nest_dales_in_HARMONIE.helper import (
     calcBaseprof,
     differentiate,
 )
-from modular_dales.IO_helpers.raster import fix_lambert_offsets
+from modular_dales.LBC.nest_dales_in_HARMONIE.Transform import Transform
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
+from modular_dales.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -210,17 +207,6 @@ class harmoniePrepper:
         (self.data,) = dask.optimize(self.data)
 
         return self.data, self.transform
-
-    def write_backrad_file(self, output_dir: pathlib.Path, exp_id: int) -> pathlib.Path:
-        """Write a pressure-based backrad NetCDF profile derived from HARMONIE data."""
-        if self.backrad_profile is None:
-            raise ValueError(
-                "Backrad profile is not available yet. Call prep_harmonie() before write_backrad_file()."
-            )
-        output_dir.mkdir(parents=True, exist_ok=True)
-        target = output_dir / f"backrad.inp.{int(exp_id):03d}.nc"
-        self.backrad_profile.to_netcdf(target)
-        return target
 
 
 def _build_backrad_profile_from_harmonie(data: xr.Dataset) -> xr.Dataset:
@@ -632,7 +618,7 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
 
             # Crop data to time and spatial range, using harmonie spatial resolution or filter as buffer
             dx = ds_ml["x"][1] - ds_ml["x"][0]
-            dy = ds_ml["y"][1] - ds_ml["y"][0]
+            # dy = ds_ml["y"][1] - ds_ml["y"][0]
 
             if (
                 input_json.filter is not None
@@ -675,7 +661,7 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
         ds_sfc.close()
         # del data
     else:
-        logger.debug(f"Reading in saved dataset")
+        logger.debug("Reading in saved dataset")
         data = xr.open_dataset(
             "/ec/res4/scratch/nld4411/dales_nest_harmonie/netcdfs_newnew4/data.nc",
             engine="netcdf4",
@@ -683,7 +669,7 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
         )
         ds_ml.close()
         ds_sfc.close()
-        logger.debug(f"Read in saved dataset")
+        logger.debug("Read in saved dataset")
     return data, transform, x_sw, y_sw
 
 

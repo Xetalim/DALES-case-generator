@@ -1,22 +1,16 @@
 """Radiation module for solar and thermal radiation handling."""
 
-from dataclasses import dataclass, field
-import pathlib
 import logging
+import pathlib
+from dataclasses import dataclass, field
 from typing import Optional
 
-from modular_dales.IO_helpers.external_data_cache import (
-    cache_root,
-)
-from modular_dales.IO_helpers.dales_external_data import resolve_rrtmg_data_paths
-from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.Radiation.backrad_profile import (
     BackradInterpolatedProfile,
     BackradPressureProfile,
-    default_profile,
-    profile_from_path,
-    write_profile,
+    register_radiation_files,
 )
 from modular_dales.Surface.surface import SurfaceModule
 
@@ -58,56 +52,56 @@ class RadiationModule(simulation_module):
     """
 
     sim: Optional["simulation_module"] = field(default=None, repr=False)
-    iradiation: Optional[int] = field(
+    iradiation: int | None = field(
         default=None, metadata={"nml": "PHYSICS", "key": "IRADIATION"}
     )
     # NAMDE parameters
-    ssa: Optional[float] = field(default=None, metadata={"nml": "NAMDE", "key": "ssa"})
-    laero: Optional[float] = field(
+    ssa: float | None = field(default=None, metadata={"nml": "NAMDE", "key": "ssa"})
+    laero: float | None = field(
         default=None, metadata={"nml": "NAMDE", "key": "laero"}
     )
-    ide: Optional[int] = field(default=None, metadata={"nml": "NAMDE", "key": "ide"})
+    ide: int | None = field(default=None, metadata={"nml": "NAMDE", "key": "ide"})
 
     # NAMRADIATION parameters
-    lCnstZenith: Optional[bool] = field(
+    lCnstZenith: bool | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "lCnstZenith"}
     )
-    ioverlap: Optional[int] = field(
+    ioverlap: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "ioverlap"}
     )
-    inflglw: Optional[int] = field(
+    inflglw: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "inflglw"}
     )
-    iceflglw: Optional[int] = field(
+    iceflglw: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "iceflglw"}
     )
-    liqflglw: Optional[int] = field(
+    liqflglw: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "liqflglw"}
     )
-    inflgsw: Optional[int] = field(
+    inflgsw: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "inflgsw"}
     )
-    iceflgsw: Optional[int] = field(
+    iceflgsw: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "iceflgsw"}
     )
-    liqflgsw: Optional[int] = field(
+    liqflgsw: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "liqflgsw"}
     )
-    iyear: Optional[int] = field(
+    iyear: int | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "iyear"}
     )
-    ocean: Optional[bool] = field(
+    ocean: bool | None = field(
         default=None, metadata={"nml": "NAMRADIATION", "key": "ocean"}
     )
 
     # NAMRTERRMTGP parameters
-    nbatch: Optional[int] = field(
+    nbatch: int | None = field(
         default=None, metadata={"nml": "NAMRTERRTMGP", "key": "nbatch"}
     )
-    usepade: Optional[bool] = field(
+    usepade: bool | None = field(
         default=None, metadata={"nml": "NAMRTERRTMGP", "key": "usepade"}
     )
-    doclearsky: Optional[bool] = field(
+    doclearsky: bool | None = field(
         default=None, metadata={"nml": "NAMRTERRTMGP", "key": "doclearsky"}
     )
 
@@ -125,21 +119,21 @@ class RadiationModule(simulation_module):
     surface_module: Optional["SurfaceModule"] = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    backrad_profile: Optional[BackradPressureProfile] = field(
+    backrad_profile: BackradPressureProfile | None = field(
         default=None,
         metadata={
             "serialize": True,
             "doc": "Optional pressure-based profile (Pa, K, kg/kg) used to generate backrad files.",
         },
     )
-    backrad_source_file: Optional[pathlib.Path] = field(
+    backrad_source_file: pathlib.Path | None = field(
         default=None,
         metadata={
             "serialize": True,
             "doc": "Optional path to existing backrad.inp.* or backrad.inp.*.nc profile.",
         },
     )
-    backrad_interpolated_profile: Optional[BackradInterpolatedProfile] = field(
+    backrad_interpolated_profile: BackradInterpolatedProfile | None = field(
         default=None,
         metadata={
             "serialize": True,
@@ -153,7 +147,7 @@ class RadiationModule(simulation_module):
 
     def do_config(self):
         """Ensure radiation configuration is set."""
-        return None
+        return
 
     def prepare_calculation(self):
         """No additional preparation needed."""
@@ -162,11 +156,9 @@ class RadiationModule(simulation_module):
         else:
             raise ValueError("RadiationModule requires a SurfaceModule.")
 
-        return None
 
     def check_settings(self):
         """Validate constant fluxes settings."""
-        pass
 
     def write_files(self):
         iradiation = self.iradiation or 0
@@ -183,56 +175,4 @@ class RadiationModule(simulation_module):
             raise ValueError(
                 "RadiationModule: albedoav must be set in surface config for radiation to work properly"
             )
-        exp_id = self.exp_id
-
-        profile_sources = sum(
-            value is not None
-            for value in (
-                self.backrad_profile,
-                self.backrad_source_file,
-                self.backrad_interpolated_profile,
-            )
-        )
-        if profile_sources > 1:
-            raise ValueError(
-                "RadiationModule: provide at most one of backrad_profile, backrad_source_file, or backrad_interpolated_profile."
-            )
-
-        selected_profile = self.backrad_profile
-        if selected_profile is None and self.backrad_source_file is not None:
-            selected_profile = profile_from_path(pathlib.Path(self.backrad_source_file))
-        if selected_profile is None and self.backrad_interpolated_profile is not None:
-            selected_profile = self.backrad_interpolated_profile.to_profile(
-                template_profile=default_profile()
-            )
-        if selected_profile is None:
-            selected_profile = default_profile()
-
-        backrad_cache = cache_root("backrad", self.sim)
-        backrad_cache.mkdir(parents=True, exist_ok=True)
-
-        if iradiation == 4:
-            backrad_nc = write_profile(
-                selected_profile,
-                backrad_cache / f"backrad.inp.{exp_id:03d}.nc",
-            )
-            self.sim.required_files[f"backrad.inp.{exp_id:03d}.nc"] = (
-                backrad_nc.as_posix()
-            )
-            external = resolve_rrtmg_data_paths(self.sim)
-            self.sim.required_files["rrtmg_lw.nc"] = external.rrtmg_lw.as_posix()
-            self.sim.required_files["rrtmg_sw.nc"] = external.rrtmg_sw.as_posix()
-        elif iradiation == 5:
-            backrad_nc = write_profile(
-                selected_profile,
-                backrad_cache / f"backrad.inp.{exp_id:03d}.nc",
-            )
-            self.sim.required_files[f"backrad.inp.{exp_id:03d}.nc"] = (
-                backrad_nc.as_posix()
-            )
-            external = resolve_rrtmg_data_paths(self.sim)
-            self.sim.required_files["rrtmg_lw.nc"] = external.rrtmg_lw.as_posix()
-            self.sim.required_files["rrtmg_sw.nc"] = external.rrtmg_sw.as_posix()
-            for file in external.rrtmgp_data_dir.glob("*.nc"):
-                self.sim.required_files[file.name] = file.as_posix()
-        return None
+        register_radiation_files(self, iradiation)

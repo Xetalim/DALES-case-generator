@@ -73,16 +73,13 @@ import dask
 import numpy as np
 import rioxarray  # noqa: F401 — activates .rio accessor on xr objects
 import xarray as xr
+from modular_dales.IO_helpers.raster import fix_lambert_offsets
+from modular_dales.LBC.nest_dales_in_HARMONIE import hybrid_levels, prep_harmonie
+from modular_dales.LBC.nest_dales_in_HARMONIE.Transform import Transform
+from modular_dales.logging_wrapper import logwrap
 from pyproj import CRS, Transformer
 from rasterio.enums import Resampling
 from rasterio.transform import Affine
-
-from modular_dales.logging_wrapper import logwrap
-
-from modular_dales.LBC.nest_dales_in_HARMONIE.Transform import Transform
-import modular_dales.LBC.nest_dales_in_HARMONIE.hybrid_levels as hybrid_levels
-from modular_dales.LBC.nest_dales_in_HARMONIE import prep_harmonie
-from modular_dales.IO_helpers.raster import fix_lambert_offsets
 
 logger = logging.getLogger(__name__)
 
@@ -658,8 +655,7 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
         x1_dst, y1_dst = fwd.transform(x1_src, y0_src)
         resolution = np.hypot(x1_dst - x0_dst, y1_dst - y0_dst)
         logger.info(
-            "Source grid metric spacing ≈ %.0f m "
-            "(from adjacent points at grid centre)",
+            "Source grid metric spacing ≈ %.0f m (from adjacent points at grid centre)",
             resolution,
         )
 

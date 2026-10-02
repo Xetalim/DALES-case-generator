@@ -1,9 +1,7 @@
 import logging
 from pathlib import Path
-from typing import Union
 
 import pandas as pd
-
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nesting_idx import NestingIndices
 from modular_dales.logging_wrapper import logwrap
@@ -19,7 +17,7 @@ def load_any_boundary_var(
     boundary: str,
     grid: GridDalesOpenBC,
     indices: "NestingIndices",
-    isel: Union[bool, None] = False,
+    isel: bool | None = False,
     expand_dims=False,
     expand_dims_time0=None,
     var_postfix="",

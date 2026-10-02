@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import logging
+import subprocess
 from pathlib import Path
 
 import dask
@@ -19,6 +20,7 @@ import yaml
 from modular_dales import (
     AtmosphereModule,
     AtmosphericProfile,
+    CapeModule,
     CrossSectionOutputModule,
     DefaultNamelistModule,
     FielddumpModule,
@@ -30,47 +32,45 @@ from modular_dales import (
     RadfieldModule,
     RadiationModule,
     StatsModule,
-    CapeModule,
     TimeModule,
     dales_simulation,
     do_openboundary,
 )
 from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D, LS2DAtmosphereModule
+from modular_dales.Configuration import NetCDFStatisticsSyncModule
 from modular_dales.Configuration.output_modules import (
     CapeModule,
+    ColumnStatisticsOutputModule,
     CrossSectionOutputModule,
     FielddumpModule,
     LSMCrossModule,
+    RadfieldModule,
     SamplingModule,
     StatsModule,
-    RadfieldModule,
     TimestatModule,
-    ColumnStatisticsOutputModule,
     VirtualMeasurementOutputModule,
 )
-from modular_dales.Configuration import NetCDFStatisticsSyncModule
 from modular_dales.Geometry.geometry_modification import AllGeometry
+from modular_dales.logging_wrapper import setup_logging
+from modular_dales.modular.simulation_module import set_nml_section
+from modular_dales.modular.time_dependent import TimedependentModule
 from modular_dales.Radiation.radiation import RadiationModule
 from modular_dales.Surface.LSM.LSM import (
     FromBofek,
     FromLCZ,
     FromTop10,
-    LSMModule,
     LandUseModification,
+    LSMModule,
 )
-from modular_dales.Surface.LSM.SLuRB.slurb import (
-    SLURBModule,
-)
-from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.logging_wrapper import setup_logging
-from modular_dales.modular.time_dependent import TimedependentModule
+from modular_dales.Surface.LSM.SLuRB.slurb import (
+    SLURBModule,
+)
 from modular_dales.vars import *  # noqa: F401,F403
-import subprocess
 
 setup_logging("logging.yaml")
 logging.basicConfig(level=logging.INFO)
@@ -209,10 +209,7 @@ def _attach_common_physics(
     )
 
     if use_ls2d:
-        time = TimedependentModule(ltimedep=True, usesLS2DforTime=True)
-        time += FromLS2D()
-
-        sim += time
+        sim += TimedependentModule(ltimedep=True)
     if use_ls2d:
         atmo_ls2d = LS2DAtmosphereModule(
             era5_path=sim.machine_conf.get("ls2d_conf", {}).get(
@@ -490,7 +487,7 @@ if __name__ == "__main__":
     args = _parse_args()
 
     # use single threaded instead of local cluster+client when debugging
-    from dask.distributed import LocalCluster, Client
+    from dask.distributed import Client, LocalCluster
 
     n_cores = os.cpu_count() or 2
 

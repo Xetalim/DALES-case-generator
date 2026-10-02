@@ -27,7 +27,6 @@ from modular_dales.Atmosphere import (
     LS2DAtmosphereModule,
     FromLS2D,
 )
-from modular_dales.Atmosphere.atmosphere import build_default_variables
 from modular_dales.Atmosphere.atmosphere import TimedAtmosphereProfile
 from modular_dales.Atmosphere.ls2d_atmosphere import LS2DAtmosphereModule
 from modular_dales.Configuration import (
@@ -121,9 +120,9 @@ if __name__ == "__main__":
         x1, y1 = 140146, 459189  # de bilt
         print(x1 - x0)
         print(y1 - y0)
-        print(f"Size in km: {(x1-x0)/1000} x {(y1-y0)/1000}")
+        print(f"Size in km: {(x1 - x0) / 1000} x {(y1 - y0) / 1000}")
         if (x1 - x0) != (y1 - y0):
-            print(f"Warning: domain is not square, got {(x1-x0)} x {(y1-y0)}")
+            print(f"Warning: domain is not square, got {(x1 - x0)} x {(y1 - y0)}")
             print("Adjusting y1 to make it square")
             y1 = y0 + (x1 - x0)
 

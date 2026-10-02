@@ -5,61 +5,17 @@ intended for users of the library, while still keeping the internal
 package structure available for advanced use.
 """
 
-from .modular.time_dependent_scalars import TimeDependentScalar
-from .MODULE_REGISTRY import (
-    MODULE_REGISTRY,
-    SINGLETON_REGISTRY,
-    register_module,
-    register_singleton,
-)
-
-from .modular.dales_simulation import dales_simulation
-from .modular.simulation_module import simulation_module
-
-from .Geometry.GridDales import GridDales, GridDalesOpenBC
-from .Geometry.geometry_modification import (
-    AllGeometry,
-    CircleRealGeometry,
-    FuncGeometry,
-    RectangleRealGeometry,
-    RectangleIdxGeometry,
-    CircleIdxGeometry,
-    MaskGeometry,
-)
-
-from .logging_wrapper import logwrap, setup_logging
-
-from .modular.time_dependent import (
-    TimedependentModule,
-)
-from .vars import VariableDefinition, get_all_vars
-
-from .LBC import (
-    do_openboundary,
-    Nest_in_Dales,
-    Nest_in_AtmosphereProfiles,
-    OpenBoundaryConfig,
-    NestingTopology,
-    KNMIHarmonieForecastDownloadModule,
-)
-
 from .Atmosphere import (
     AtmosphereModule,
     AtmosphericProfile,
-    InterpolatedProfile,
     HarmonieAtmosphereModule,
+    InterpolatedProfile,
     LS2DAtmosphereModule,
 )
-
 from .Configuration.defaultnamelist import DefaultNamelistModule
-from .Configuration.run_and_time import RunModule, TimeModule
-from .Configuration.settings_modules import (
-    GeneralPhysicsModule,
-    LateralSpongeModule,
-    SprayingModule,
-)
 from .Configuration.output_modules import (
     CapeModule,
+    ColumnStatisticsOutputModule,
     CrossSectionOutputModule,
     EasyOutputModule,
     FielddumpModule,
@@ -68,55 +24,63 @@ from .Configuration.output_modules import (
     SamplingModule,
     StatsModule,
     TimestatModule,
-    ColumnStatisticsOutputModule,
     VirtualMeasurementOutputModule,
 )
-
-from .Geometry.geometry_modification import ModifierClass
-
-from .Surface.surface import (
-    SurfaceModule,
-    ConstantFluxesModule,
-    ConstantFluxesWithShearModule,
-    ConstantSurfaceTemperatureModule,
+from .Configuration.run_and_time import RunModule, TimeModule
+from .Configuration.settings_modules import (
+    GeneralPhysicsModule,
+    LateralSpongeModule,
+    SprayingModule,
 )
-from .Surface.LSM.LSM import (
-    LSMModule,
-    LandUseModification,
-    LandUseModifications,
-    FromLCZ,
-    FromTop10,
-    FromBofek,
-    AGSParameters,
-)
-from .Surface.LSM.base import BaseLSMModule
-from .Surface.LSM.homogeneous import LSMHomogeneousModule
-from .Surface.LSM.modular_temps_moisture import (
-    UniformSkinTemperature,
-    UniformSoilTemperature,
-    UniformSoilMoisture,
-    VaryingSkinTemperature,
-    VaryingSoilTemperature,
-    VaryingSoilMoisture,
-)
-from .Surface.LSM.SLuRB.slurb import (
-    SLURBModule,
-    SLURBModification,
-    SLURBVariableModification,
-    SLURBModifications,
-)
-
 from .Emission.emission import (
     EmissionModule,
-    EmissionTracer,
     EmissionPointSource,
+    EmissionTracer,
 )
-
-from .Radiation.radiation import RadiationModule
+from .Geometry.geometry_modification import (
+    AllGeometry,
+    CircleIdxGeometry,
+    CircleRealGeometry,
+    FuncGeometry,
+    MaskGeometry,
+    ModifierClass,
+    RectangleIdxGeometry,
+    RectangleRealGeometry,
+)
+from .Geometry.GridDales import GridDales, GridDalesOpenBC
+from .IBM.IBM import (
+    FromAHN,
+    FromGlobalDEM,
+    IBMModification,
+    IBMModifications,
+    IBMModule,
+)
+from .LBC import (
+    KNMIHarmonieForecastDownloadModule,
+    Nest_in_AtmosphereProfiles,
+    Nest_in_Dales,
+    NestingTopology,
+    OpenBoundaryConfig,
+    do_openboundary,
+)
+from .logging_wrapper import logwrap, setup_logging
+from .modular.dales_simulation import dales_simulation
+from .modular.simulation_module import simulation_module
+from .modular.time_dependent import (
+    TimedependentModule,
+)
+from .modular.time_dependent_scalars import TimeDependentScalar
+from .MODULE_REGISTRY import (
+    MODULE_REGISTRY,
+    SINGLETON_REGISTRY,
+    register_module,
+    register_singleton,
+)
 from .Radiation.backrad_profile import (
     BackradInterpolatedProfile,
     BackradPressureProfile,
 )
+from .Radiation.radiation import RadiationModule
 from .Radiation.radiation_types import (
     NoRadiationModule,
     ParameterizedRadiationModule,
@@ -125,14 +89,38 @@ from .Radiation.radiation_types import (
     SurfaceLSMRadiationModule,
     UserRadiationModule,
 )
-
-from .IBM.IBM import (
-    IBMModule,
-    IBMModification,
-    IBMModifications,
-    FromAHN,
-    FromGlobalDEM,
+from .Surface.LSM.base import BaseLSMModule
+from .Surface.LSM.homogeneous import LSMHomogeneousModule
+from .Surface.LSM.LSM import (
+    AGSParameters,
+    FromBofek,
+    FromLCZ,
+    FromTop10,
+    LandUseModification,
+    LandUseModifications,
+    LSMModule,
 )
+from .Surface.LSM.modular_temps_moisture import (
+    UniformSkinTemperature,
+    UniformSoilMoisture,
+    UniformSoilTemperature,
+    VaryingSkinTemperature,
+    VaryingSoilMoisture,
+    VaryingSoilTemperature,
+)
+from .Surface.LSM.SLuRB.slurb import (
+    SLURBModification,
+    SLURBModifications,
+    SLURBModule,
+    SLURBVariableModification,
+)
+from .Surface.surface import (
+    ConstantFluxesModule,
+    ConstantFluxesWithShearModule,
+    ConstantSurfaceTemperatureModule,
+    SurfaceModule,
+)
+from .vars import VariableDefinition, get_all_vars
 
 __all__ = [
     # Core simulation framework
@@ -227,9 +215,6 @@ __all__ = [
     "FromAHN",
     "FromGlobalDEM",
     # LBC / nesting
-    "NestingTopology",
-    "do_openboundary",
-    "Nest_in_Dales",
     # variables
     "VariableDefinition",
     "get_all_vars",

@@ -1,17 +1,16 @@
 import csv
 import logging
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import xarray as xr
 
-from modular_dales.Surface.LSM.translation_tables.vegetation_properties import (
-    top10_to_ifs,
-)
 from modular_dales.Surface.LSM.LCZ.get_from_LCZ import (
     LCZ_URBAN_NATURAL_TO_IFS,
     lcz_dict,
+)
+from modular_dales.Surface.LSM.translation_tables.vegetation_properties import (
+    top10_to_ifs,
 )
 
 logger = logging.getLogger(__name__)
@@ -360,7 +359,7 @@ def apply_bofek_to_lsm_writer(
     lsm_writer.value_dic["index_soil"][:, :, :] = index_soil + 1
 
 
-def get_veg_params(lu: str, planttype: Optional[int] = None) -> dict[str, float]:
+def get_veg_params(lu: str, planttype: int | None = None) -> dict[str, float]:
     lu = lu.lower()
     if lu not in _VEG_LOOKUP:
         logger.warning("Unknown AGS land-use type '%s'; using zero parameters", lu)
@@ -377,7 +376,7 @@ def get_veg_params(lu: str, planttype: Optional[int] = None) -> dict[str, float]
 
 def apply_ags_parameters_to_lsm_writer(
     lsm_writer,
-    grass_planttype: Optional[int] = None,
+    grass_planttype: int | None = None,
 ) -> None:
     shape = (lsm_writer.grid.jtot, lsm_writer.grid.itot)
 

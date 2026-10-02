@@ -2,29 +2,34 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
-import xarray as xr
 import dask
+import xarray as xr
 
-from modular_dales.Geometry import GridDalesOpenBC
-from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.Atmosphere import AtmosphereModule
-from modular_dales.IO_helpers.external_data_cache import cache_root
-from modular_dales.LBC.openbc_atmosphere_worker import OpenBCAtmosphereWorker
-from modular_dales.LBC.openbc_knmi_worker import OpenBCKNMIWorker
-from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
-
+from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales import (
     boundary_fields_fine,
     initial_fields_fine,
 )
 from modular_dales.LBC.nest_dales_in_HARMONIE import (
     boundary as harmonie_boundary,
+)
+from modular_dales.LBC.nest_dales_in_HARMONIE import (
     initfields,
     prep_harmonie,
 )
+from modular_dales.LBC.openbc_atmosphere_worker import OpenBCAtmosphereWorker
+from modular_dales.LBC.openbc_knmi_worker import OpenBCKNMIWorker
+from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
+from modular_dales.modular.forcing import (
+    EXTERNAL_FORCING_PRIORITY,
+    ForcingSet,
+    sounding_forcings,
+)
+from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -71,10 +76,10 @@ class Nest_in_Harmonie:
             (e.g., surface fluxes, skin temperature) required for the nesting.
     """
 
-    ml_glob: Optional[str] = field(
+    ml_glob: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    sfc_glob: Optional[str] = field(
+    sfc_glob: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
 
@@ -98,34 +103,34 @@ class Nest_in_KNMI:
             via mass continuity instead of setting w=0. Default False.
     """
 
-    ml_glob: Optional[str] = field(
+    ml_glob: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    sfc_glob: Optional[str] = field(
+    sfc_glob: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
     w_from_continuity: bool = field(
         default=False, repr=True, metadata={"serialize": True}, init=True
     )
-    use_grib: Optional[bool] = field(
+    use_grib: bool | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    noise_std: Optional[float] = field(
+    noise_std: float | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    noise_seed: Optional[int] = field(
+    noise_seed: int | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    noise_boundaries: Optional[List[str]] = field(
+    noise_boundaries: list[str] | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    noise_variables: Optional[List[str]] = field(
+    noise_variables: list[str] | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    noise_minzt: Optional[float] = field(
+    noise_minzt: float | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    noise_maxzt: Optional[float] = field(
+    noise_maxzt: float | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
 
@@ -151,16 +156,16 @@ class Nest_in_Dales:
             used to source initial fields for the current simulation
     """
 
-    outpath_coarse: Optional[str] = field(
+    outpath_coarse: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    outpath_coarse_old: Optional[str] = field(
+    outpath_coarse_old: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    inpath_coarse: Optional[str] = field(
+    inpath_coarse: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    inpath: Optional[str] = field(
+    inpath: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
 
@@ -194,7 +199,7 @@ class Nest_in_AtmosphereProfiles:
         a grid attached.
     """
 
-    variable_mapping: Dict[str, str] = field(
+    variable_mapping: dict[str, str] = field(
         default_factory=lambda: {
             "u": "ua",
             "v": "va",
@@ -207,55 +212,55 @@ class Nest_in_AtmosphereProfiles:
         metadata={"serialize": True},
         init=True,
     )
-    add_to_top_thl: Optional[float] = field(
+    add_to_top_thl: float | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    noise_std: Optional[float] = field(
+    noise_std: float | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    noise_seed: Optional[int] = field(
+    noise_seed: int | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    noise_boundaries: Optional[List[str]] = field(
+    noise_boundaries: list[str] | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    noise_variables: Optional[List[str]] = field(
+    noise_variables: list[str] | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    noise_minzt: Optional[float] = field(
+    noise_minzt: float | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    noise_maxzt: Optional[float] = field(
+    noise_maxzt: float | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    atmosphere_module_name: Optional[str] = field(
+    atmosphere_module_name: str | None = field(
         default=None,
         repr=True,
         metadata={"serialize": True},
         init=True,
     )
-    atmosphere_module: Optional[AtmosphereModule] = field(
+    atmosphere_module: AtmosphereModule | None = field(
         default=None,
         repr=False,
         metadata={"serialize": True},
@@ -266,51 +271,53 @@ class Nest_in_AtmosphereProfiles:
 @register_module
 @dataclass
 class do_openboundary(simulation_module):
+    forcing_priority = EXTERNAL_FORCING_PRIORITY
+
     sim: Optional["simulation_module"] = field(default=None, repr=False)
     openBCgrid: GridDalesOpenBC = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    indices: Optional[dict] = field(
+    indices: dict | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    harmonieprepper: Optional[prep_harmonie.harmoniePrepper] = field(
+    harmonieprepper: prep_harmonie.harmoniePrepper | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    boundaries: Optional[xr.Dataset] = field(
+    boundaries: xr.Dataset | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    initfields: Optional[xr.Dataset] = field(
+    initfields: xr.Dataset | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    nest_in_harmonie: Optional[Nest_in_Harmonie] = field(
+    nest_in_harmonie: Nest_in_Harmonie | None = field(
         default=None, repr=False, metadata={"serialize": True}, init=True
     )
-    nest_in_dales: Optional[Nest_in_Dales] = field(
+    nest_in_dales: Nest_in_Dales | None = field(
         default=None, repr=False, metadata={"serialize": True}, init=True
     )
-    nest_in_atmosphere: Optional[Nest_in_AtmosphereProfiles] = field(
+    nest_in_atmosphere: Nest_in_AtmosphereProfiles | None = field(
         default=None, repr=False, metadata={"serialize": True}, init=True
     )
-    nest_in_knmi: Optional[Nest_in_KNMI] = field(
+    nest_in_knmi: Nest_in_KNMI | None = field(
         default=None, repr=False, metadata={"serialize": True}, init=True
     )
 
-    e12: Optional[float] = field(
+    e12: float | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    tracernames: Optional[List[str]] = field(
+    tracernames: list[str] | None = field(
         default_factory=list, repr=True, metadata={"serialize": True}, init=True
     )
-    tchunk: Optional[int] = field(
+    tchunk: int | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    start: Optional[str] = field(
+    start: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    time0: Optional[str] = field(
+    time0: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    end: Optional[str] = field(
+    end: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
     lopenbc: bool = field(
@@ -472,6 +479,15 @@ class do_openboundary(simulation_module):
         super().__init__(self.sim)
         self.module_name = "do_openboundary"
 
+    def provide_forcings(self) -> ForcingSet:
+        """Radiation sounding derived from Harmonie when nesting in Harmonie."""
+        if self.nest_in_harmonie is None:
+            return ForcingSet()
+        self.ensure_prepared()
+        return ForcingSet(
+            initial=sounding_forcings(self.harmonieprepper.backrad_profile)
+        )
+
     def __add__(self, obj) -> "do_openboundary":
         """Add configurations to open boundary module.
 
@@ -538,12 +554,6 @@ class do_openboundary(simulation_module):
         self.harmonieprepper = prep_harmonie.harmoniePrepper(config, self.openBCgrid)
         self.harmonieprepper.load_data()
         data, transform = self.harmonieprepper.prep_harmonie()
-        backrad_path = self.harmonieprepper.write_backrad_file(
-            cache_root("backrad", self.sim), self.exp_id
-        )
-        self.sim.required_files[f"backrad.inp.{self.exp_id:03d}.nc"] = (
-            backrad_path.as_posix()
-        )
         # we need to use the right surface pressure as calculated from the input data
         logger.info("Setting namelist NAMSURFACE:ps to %f", self.harmonieprepper.ps)
 

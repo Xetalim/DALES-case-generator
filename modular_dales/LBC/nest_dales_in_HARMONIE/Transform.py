@@ -1,5 +1,6 @@
-from pyproj import Transformer
 import logging
+
+from pyproj import Transformer
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

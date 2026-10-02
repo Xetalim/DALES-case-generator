@@ -1,16 +1,14 @@
-import logging
 import hashlib
+import logging
 import tempfile
 from pathlib import Path
 
-import numpy as np
 import geopandas as gpd
-
-from pyproj import Transformer
-
+import numpy as np
 import rasterio
-from rasterio.warp import Resampling
+from pyproj import Transformer
 from rasterio.merge import merge
+from rasterio.warp import Resampling
 from rasterio.windows import from_bounds
 from shapely.geometry import box
 
@@ -18,8 +16,8 @@ from modular_dales.Geometry import GridDales
 from modular_dales.IO_helpers import (
     cache_root,
     ensure_sorted,
-    raster_to_xarray,
     get_reproject,
+    raster_to_xarray,
 )
 
 logger = logging.getLogger(__name__)
@@ -196,7 +194,6 @@ def get_process_ahn(grid, zeroes_buffer=5, subtract_ahn_mode=True):
         get_ahn(grid, ahn_file)
 
         ds = raster_to_xarray(ahn_file, "bc_height")
-        #
         ds = ensure_sorted(ds)
         ds[:, :] = ds[:, :] - ds.min()
         if subtract_ahn_mode:

@@ -1,17 +1,25 @@
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import fields
-from typing import TYPE_CHECKING, Any, Mapping, Union
+from dataclasses import fields, is_dataclass
+from typing import TYPE_CHECKING, Any, ClassVar, Union
 
 from modular_dales.logging_wrapper import logwrap
-from modular_dales.modular.time_dependent_scalars import TimeDependentScalar
+from modular_dales.modular.forcing import (
+    USER_FORCING_PRIORITY,
+    ForcingSet,
+    var_attrs,
+)
+from modular_dales.modular.time_dependent_scalars import (
+    Z_DIM,
+    TimeDependentScalar,
+    value_at,
+)
+from modular_dales.vars import get_var_by_name
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
-    import numpy as np
     from modular_dales.Geometry.GridDales import GridDales
     from modular_dales.modular.dales_simulation import dales_simulation
-    from modular_dales.vars import VariableDefinition
 
 
 def set_nml_section(
@@ -39,6 +47,9 @@ def set_nml_section(
 class simulation_module(ABC):
     """Base class for DALES simulation modules."""
 
+    forcing_priority: ClassVar[int] = USER_FORCING_PRIORITY
+    """Priority of this module's forcings when several modules provide the same variable."""
+
     def __init__(self, sim: "dales_simulation" = None):
         """Initialize module with reference to parent simulation.
 
@@ -50,6 +61,8 @@ class simulation_module(ABC):
         self.module_name = None  # Optional name for logging and identification
         self.do_config_done = False
         self.prepare_calculation_done = False
+        self._prepare_in_progress = False
+        self._provided_forcings: ForcingSet | None = None
         self.check_settings_done = False
         self.write_files_done = False
 
@@ -60,6 +73,8 @@ class simulation_module(ABC):
             nml: Namelist section (e.g., "NAMSURFACE")
             key: Key in namelist section (defaults to field name)
             required: Whether a value is required (raises if None)
+            forcing_var: Variable whose t=0 value (from another module's time
+                series, e.g. LS2D) replaces a plain value of this field
         """
 
         for dataclass_field in fields(self):
@@ -72,6 +87,17 @@ class simulation_module(ABC):
             raise_conflict = meta.get("raise_conflict", False)
             value = getattr(self, dataclass_field.name)
 
+            forcing_var = meta.get("forcing_var")
+            if forcing_var is not None and not isinstance(value, TimeDependentScalar):
+                external_value = self._external_forcing_start_value(forcing_var)
+                if external_value is not None:
+                    logger.info(
+                        "%s: '%s' taken from provided time series at t=0 (%s)",
+                        self.module_name,
+                        dataclass_field.name,
+                        external_value,
+                    )
+                    value = external_value
             if isinstance(value, TimeDependentScalar):
                 value = value.value_at_start()
             if value is None:
@@ -82,11 +108,11 @@ class simulation_module(ABC):
                 continue
             if isinstance(key, list) or isinstance(nml_section, list):
                 if isinstance(value, list):
-                    for nml_section, key, value in zip(nml_section, key, value):
+                    for nml_section_i, key_i, value_i in zip(nml_section, key, value):
                         self.set_nml_section(
-                            nml_section,
-                            key,
-                            value,
+                            nml_section_i,
+                            key_i,
+                            value_i,
                             raise_conflict=raise_conflict,
                         )
                     continue
@@ -105,10 +131,10 @@ class simulation_module(ABC):
                             raise_conflict=raise_conflict,
                         )
                 else:
-                    for nml_section, key in zip(nml_section, key):
+                    for nml_section_i, key_i in zip(nml_section, key):
                         self.set_nml_section(
-                            nml_section,
-                            key,
+                            nml_section_i,
+                            key_i,
                             value,
                             raise_conflict=raise_conflict,
                         )
@@ -211,7 +237,6 @@ class simulation_module(ABC):
 
         Default implementation does nothing. Override in subclasses as needed.
         """
-        pass
 
     def check_settings(self):
         """Check and validate settings for this module.
@@ -222,31 +247,78 @@ class simulation_module(ABC):
 
         Default implementation does nothing. Override in subclasses as needed.
         """
-        pass
 
     @abstractmethod
     def prepare_calculation(self):
         """Prepare data and setup for calculations."""
-        pass
 
     @abstractmethod
     def write_files(self):
         """Write output files for this module."""
-        pass
 
-    def get_timedep_atmosphere_forcings(
-        self,
-    ) -> Mapping["VariableDefinition", Mapping[float, "np.ndarray"]]:
-        """Optional hook: provide time-dependent forcing series for Atmosphere output.
+    def ensure_prepared(self) -> None:
+        """Run ``prepare_calculation`` once; safe to call from dependent modules."""
 
-        Expected return format:
-            {
-                VariableDefinition: {time_seconds: value_or_profile_column, ...},
-                ...
-            }
-        where value_or_profile_column can be a scalar (broadcast over z) or
-        a 1D z-profile array.
-        :meta private:
+        if self.prepare_calculation_done:
+            return
+        if getattr(self, "_prepare_in_progress", False):
+            raise RuntimeError(
+                f"Circular prepare dependency involving module '{self.module_name}'"
+            )
+        self._prepare_in_progress = True
+        try:
+            self.prepare_calculation()
+        finally:
+            self._prepare_in_progress = False
+        self.prepare_calculation_done = True
+
+    @staticmethod
+    def _forcing_var_name(dataclass_field) -> str | None:
+        meta = dataclass_field.metadata or {}
+        if "forcing_var" in meta:
+            return meta["forcing_var"]
+        if dataclass_field.name in get_var_by_name():
+            return dataclass_field.name
+        return None
+
+    def provided_forcings(self) -> ForcingSet:
+        """``provide_forcings()``, evaluated only once."""
+        if getattr(self, "_provided_forcings", None) is None:
+            self._provided_forcings = self.provide_forcings()
+        return self._provided_forcings
+
+    def provide_forcings(self) -> ForcingSet:
+        """Forcings provided by this module.
+
+        The default exposes dataclass fields holding a ``TimeDependentScalar``
+        as time series of the variable named by ``metadata["forcing_var"]``
+        (or by the field name). Override for richer providers.
         """
 
-        return {}
+        forcings = ForcingSet()
+        if not is_dataclass(self):
+            return forcings
+        for dataclass_field in fields(self):
+            value = getattr(self, dataclass_field.name, None)
+            if not isinstance(value, TimeDependentScalar):
+                continue
+            var_name = self._forcing_var_name(dataclass_field)
+            if var_name is None:
+                raise ValueError(
+                    f"Module '{self.module_name}' field '{dataclass_field.name}' holds a TimeDependentScalar "
+                    "but maps to no known variable; set metadata['forcing_var']"
+                )
+            forcings.series[var_name] = value.as_series(var_name).assign_attrs(
+                var_attrs(get_var_by_name()[var_name])
+            )
+        return forcings
+
+    def _external_forcing_start_value(self, var_name: str) -> float | None:
+        """t=0 value of a series for ``var_name`` provided by another module, if any."""
+
+        if self.sim is None or not self.check_settings_done:
+            return None
+        series = self.sim.forcings().series.get(var_name)
+        if series is None or Z_DIM in series.dims:
+            return None
+        return float(value_at(series, 0.0))

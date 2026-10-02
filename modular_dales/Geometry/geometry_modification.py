@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Protocol, Union
+from typing import Any, Protocol, Union
 
 import numpy as np
 
@@ -232,8 +233,7 @@ class ModifierClass:
         geometry_obj = modification.geometry
         if not hasattr(geometry_obj, "to_mask") or not callable(geometry_obj.to_mask):
             raise TypeError(
-                "geometry must implement to_mask(modifier), got "
-                f"{type(geometry_obj)}"
+                f"geometry must implement to_mask(modifier), got {type(geometry_obj)}"
             )
         geometry = geometry_obj.to_mask(self)
         self.do_modification(geometry, modification)

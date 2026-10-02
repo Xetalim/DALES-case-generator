@@ -8,9 +8,9 @@ import os
 import shutil
 import subprocess
 import tarfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
 
 import requests
 
@@ -63,10 +63,10 @@ class ForecastDownloadResult:
     p3_tar: Path
     p5_extract_dir: Path
     p3_extract_dir: Path
-    p5_nc_glob: Optional[str] = None
-    p3_nc_glob: Optional[str] = None
-    p5_grib_glob: Optional[str] = None
-    p3_grib_glob: Optional[str] = None
+    p5_nc_glob: str | None = None
+    p3_nc_glob: str | None = None
+    p5_grib_glob: str | None = None
+    p3_grib_glob: str | None = None
 
 
 class OpenDataAPI:
@@ -76,7 +76,7 @@ class OpenDataAPI:
         self.base_url = API_URL
         self.headers = {"Authorization": api_token}
 
-    def _get_json(self, url: str, params: Optional[dict] = None) -> dict:
+    def _get_json(self, url: str, params: dict | None = None) -> dict:
         response = requests.get(url, headers=self.headers, params=params, timeout=60)
         response.raise_for_status()
         return response.json()

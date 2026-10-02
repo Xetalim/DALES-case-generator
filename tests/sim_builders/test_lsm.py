@@ -19,7 +19,6 @@ from modular_dales import (
 from modular_dales.Atmosphere import (
     InterpolatedProfile,
 )
-from modular_dales.Atmosphere.atmosphere import build_default_variables
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Emission.emission import EmissionModule, EmissionTracer
 from modular_dales.Radiation.radiation import RadiationModule
@@ -112,9 +111,9 @@ def assert_lsm_files_written(machine_conf) -> None:
     assert len(lsm_files) == 1, f"Expected 1 LSM file, found {len(lsm_files)}"
     for lsm_file in lsm_files:
         assert lsm_file.is_file(), f"Expected LSM file {lsm_file} to exist"
-        assert (
-            lsm_file.stat().st_size > 0
-        ), f"Expected LSM file {lsm_file} to be non-empty"
+        assert lsm_file.stat().st_size > 0, (
+            f"Expected LSM file {lsm_file} to be non-empty"
+        )
 
 
 def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
@@ -153,7 +152,6 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
 
     # Base state needed by open boundaries.
     atmo = AtmosphereModule()
-    atmo.variables = build_default_variables(get_all_vars())
     atmo += AtmosphericProfile(
         variable=ua, shape="lin", params=dict(surf_val=2.0, ddz=0.0)
     )
@@ -285,6 +283,6 @@ def test_depcross(tmp_path: Path, machine_conf, simulation_report) -> None:
         info_lines=[f"dales_exec={dales_exec}"],
     )
 
-    assert (
-        run_dir / "depcross.009.nc"
-    ).is_file(), "Expected depcross.009.nc after manual depcross run"
+    assert (run_dir / "depcross.009.nc").is_file(), (
+        "Expected depcross.009.nc after manual depcross run"
+    )

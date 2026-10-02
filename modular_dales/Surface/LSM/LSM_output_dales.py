@@ -1,20 +1,21 @@
 # import matplotlib.pyplot as plt
 import logging
-from typing import Literal, Union
+from typing import Literal
 
 import netCDF4 as nc4
 import numpy as np
 
-from modular_dales.Geometry.geometry_modification import ModifierClass
-from modular_dales.Geometry.geometry_modification import AllGeometry
+from modular_dales.Geometry.geometry_modification import AllGeometry, ModifierClass
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.logging_wrapper import logwrap
 from modular_dales.Surface.LSM.LCZ import get_from_LCZ
 
 # Custom Python scripts/tools/...
-from modular_dales.Surface.LSM.SLuRB.slurb import slbCreatorClass
-from modular_dales.Surface.LSM.SLuRB.slurb import SLURBModification
-from modular_dales.Surface.LSM.SLuRB.slurb import SLURBVariableModification
+from modular_dales.Surface.LSM.SLuRB.slurb import (
+    SLURBModification,
+    SLURBVariableModification,
+    slbCreatorClass,
+)
 from modular_dales.Surface.LSM.translation_tables.vegetation_properties import (
     ifs_vegetation,
 )
@@ -470,11 +471,10 @@ class LSM_output_dales:
             self.LCZ_ds.to_netcdf(lcz_out_path)
             logger.info(f"Saved LCZ dataset to {lcz_out_path}")
 
-        return
 
     @logwrap
     def set_skin_temperature(
-        self, temperature, lu_type: Union[Literal["all"], str] = "all"
+        self, temperature, lu_type: Literal["all"] | str = "all"
     ):
         shape = (self.grid.jtot, self.grid.itot)
         temp_arr = np.full(shape, temperature)
@@ -501,7 +501,7 @@ class LSM_output_dales:
 
     @logwrap
     def set_skin_temperature_array(
-        self, temperature_array, lu_type: Union[Literal["all"], str] = "all"
+        self, temperature_array, lu_type: Literal["all"] | str = "all"
     ):
         shape = (self.grid.jtot, self.grid.itot)
         if temperature_array.shape != shape:

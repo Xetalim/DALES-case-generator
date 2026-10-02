@@ -1,13 +1,13 @@
 # Interpolate fields to DALES domain boundary
 # Creates openboundaries.inp.xxx.nc
+import logging
+from datetime import datetime
+
 import numpy as np
 import xarray as xr
-from datetime import datetime
 from modular_dales.Geometry.GridDales import GridDalesOpenBC
-import logging
-from modular_dales.logging_wrapper import logwrap
-import dask
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
+from modular_dales.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

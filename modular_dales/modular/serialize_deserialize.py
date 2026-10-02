@@ -1,16 +1,15 @@
 import logging
 from dataclasses import asdict, fields, is_dataclass
+from pathlib import Path
 from types import UnionType
 from typing import Any, Union, get_args, get_origin
-
-from pathlib import Path
 
 from modular_dales.MODULE_REGISTRY import (
     MODULE_REGISTRY,
     SINGLETON_REGISTRY,
     SPECIAL_SERIALIZING_REGISTRY,
 )
-from modular_dales.vars import get_var_by_name, VariableDefinition
+from modular_dales.vars import VariableDefinition, get_var_by_name
 
 logger = logging.getLogger(__name__)
 

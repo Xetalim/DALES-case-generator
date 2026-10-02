@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Dict
 
 
 @dataclass(frozen=True)
 class VariableDefinition:
-    """Definition of an atmospheric variable.
+    """Definition of a variable exchanged between modules.
 
     This is the user-facing object you should import and pass to
     AtmosphericProfile / InterpolatedProfile instead of raw strings.
+
+    Where provided data end up follows from the definition:
+
+    * ``is_profile`` and not ``must_only_be_time_dependent`` and not
+      ``init_time_height``: initial profile in ``init.<id>.nc``.
+    * ``time_dependent_name``: series in ``forcings.<id>.nc``.
+    * ``init_time_height``: ``(time, zh)`` field in ``init.<id>.nc`` (nudging).
+    * otherwise: only available to requesting modules (soil, backrad, ...).
     """
 
     name: str
@@ -20,6 +27,23 @@ class VariableDefinition:
     is_profile: bool = True
     time_dependent_name: str | None = None
     can_nudge: bool = False
+    init_time_height: bool = False
+    file_name: str | None = None
+    """Name in ``init.<id>.nc`` when it differs from ``name``."""
+    fallback: str | None = None
+    """Variable to use when this one is not provided (e.g. nudging target -> state)."""
+
+    @property
+    def init_name(self) -> str:
+        return self.file_name or self.name
+
+    @property
+    def is_initial_profile(self) -> bool:
+        return (
+            self.is_profile
+            and not self.must_only_be_time_dependent
+            and not self.init_time_height
+        )
 
 
 thls = VariableDefinition(
@@ -33,7 +57,7 @@ thls = VariableDefinition(
 wtsurf = VariableDefinition(
     "wtsurf",
     "Surface kinematic heat flux",
-    "W/m^2",
+    "K m/s",
     is_profile=False,
     can_be_time_dependent=True,
     time_dependent_name="wtsurf_timedep",
@@ -41,7 +65,7 @@ wtsurf = VariableDefinition(
 wqsurf = VariableDefinition(
     "wqsurf",
     "Surface kinematic moisture flux",
-    "kg/m^2/s",
+    "kg/kg m/s",
     is_profile=False,
     can_be_time_dependent=True,
     time_dependent_name="wqsurf_timedep",
@@ -135,6 +159,9 @@ ua_nudge = VariableDefinition(
     "m/s",
     can_be_time_dependent=True,
     can_nudge=True,
+    init_time_height=True,
+    file_name="ua_nud",
+    fallback="ua",
 )
 va_nudge = VariableDefinition(
     "va_nudge",
@@ -142,6 +169,9 @@ va_nudge = VariableDefinition(
     "m/s",
     can_be_time_dependent=True,
     can_nudge=True,
+    init_time_height=True,
+    file_name="va_nud",
+    fallback="va",
 )
 thl_nudge = VariableDefinition(
     "thl_nudge",
@@ -149,6 +179,9 @@ thl_nudge = VariableDefinition(
     "K",
     can_be_time_dependent=True,
     can_nudge=True,
+    init_time_height=True,
+    file_name="thetal_nud",
+    fallback="thetal",
 )
 wa_nudge = VariableDefinition(
     "wa_nudge",
@@ -156,6 +189,9 @@ wa_nudge = VariableDefinition(
     "m/s",
     can_be_time_dependent=True,
     can_nudge=True,
+    init_time_height=True,
+    file_name="wa_nud",
+    fallback="w",
 )
 qt_nudge = VariableDefinition(
     "qt_nudge",
@@ -163,7 +199,27 @@ qt_nudge = VariableDefinition(
     "kg/kg",
     can_be_time_dependent=True,
     can_nudge=True,
+    init_time_height=True,
+    file_name="qt_nud",
+    fallback="qt",
 )
+
+
+def nudging_timescale(target: str) -> VariableDefinition:
+    return VariableDefinition(
+        f"nudging_constant_{target}",
+        f"Nudging timescale for {target}",
+        "s",
+        can_be_time_dependent=True,
+        init_time_height=True,
+    )
+
+
+nudging_constant_ua = nudging_timescale("ua")
+nudging_constant_va = nudging_timescale("va")
+nudging_constant_wa = nudging_timescale("wa")
+nudging_constant_thetal = nudging_timescale("thetal")
+nudging_constant_qt = nudging_timescale("qt")
 dqtdxls = VariableDefinition(
     "dqtdxls",
     "Eastward gradient of the total water mixing ratio due to advection",
@@ -208,8 +264,36 @@ dvdt_ls = VariableDefinition(
     must_only_be_time_dependent=True,
     time_dependent_name="dvdt_ls_timedep",
 )
+dthldt_ls = VariableDefinition(
+    "dthldt_ls",
+    "Tendency of the liquid water potential temperature due to large-scale forcing",
+    "K/s",
+    can_be_time_dependent=True,
+    must_only_be_time_dependent=True,
+    time_dependent_name="dthldt_ls_timedep",
+)
 
-ALL_VARIABLES: List[VariableDefinition] = [
+# Soil state (dimension ``zs``), requested by the LSM.
+t_soil = VariableDefinition("t_soil", "Soil temperature", "K", is_profile=False)
+theta_soil = VariableDefinition(
+    "theta_soil", "Volumetric soil moisture", "m3/m3", is_profile=False
+)
+type_soil = VariableDefinition("type_soil", "Soil type index", "-", is_profile=False)
+z0m = VariableDefinition("z0m", "Roughness length for momentum", "m", is_profile=False)
+z0h = VariableDefinition("z0h", "Roughness length for heat", "m", is_profile=False)
+
+# Radiation background sounding (dimension ``lev`` = pressure in Pa), requested by radiation.
+backrad_T = VariableDefinition(
+    "backrad_T", "Background temperature for radiation", "K", is_profile=False
+)
+backrad_q = VariableDefinition(
+    "backrad_q", "Background specific humidity for radiation", "kg/kg", is_profile=False
+)
+backrad_o3 = VariableDefinition(
+    "backrad_o3", "Background ozone for radiation", "kg/kg", is_profile=False
+)
+
+ALL_VARIABLES: list[VariableDefinition] = [
     thls,
     ua,
     va,
@@ -227,10 +311,16 @@ ALL_VARIABLES: List[VariableDefinition] = [
     thl_nudge,
     wa_nudge,
     qt_nudge,
+    nudging_constant_ua,
+    nudging_constant_va,
+    nudging_constant_wa,
+    nudging_constant_thetal,
+    nudging_constant_qt,
     dqtdxls,
     dqtdyls,
     tnqt_adv,
     tnthetal_rad,
+    dthldt_ls,
     dudt_ls,
     dvdt_ls,
     wtsurf,
@@ -238,9 +328,17 @@ ALL_VARIABLES: List[VariableDefinition] = [
     qtsurf,
     psurf,
     qnetav,
+    t_soil,
+    theta_soil,
+    type_soil,
+    z0m,
+    z0h,
+    backrad_T,
+    backrad_q,
+    backrad_o3,
 ]
 
-ATMO_VARS_BY_NAME: Dict[str, VariableDefinition] = {v.name: v for v in ALL_VARIABLES}
+ATMO_VARS_BY_NAME: dict[str, VariableDefinition] = {v.name: v for v in ALL_VARIABLES}
 
 
 def register_var(var):
@@ -249,44 +347,67 @@ def register_var(var):
     ATMO_VARS_BY_NAME.update({v.name: v for v in ALL_VARIABLES})
 
 
-def get_var_by_name() -> Dict[str, VariableDefinition]:
+def ensure_var(var: VariableDefinition) -> VariableDefinition:
+    """Register ``var`` unless a variable with that name exists; return the registered one."""
+    if var.name not in ATMO_VARS_BY_NAME:
+        register_var(var)
+    return ATMO_VARS_BY_NAME[var.name]
+
+
+def get_var_by_name() -> dict[str, VariableDefinition]:
     return ATMO_VARS_BY_NAME
 
 
-def get_all_vars() -> List[VariableDefinition]:
+def get_all_vars() -> list[VariableDefinition]:
     return ALL_VARIABLES
 
 
 __all__ = [
-    "VariableDefinition",
-    "thls",
-    "ua",
-    "va",
-    "w",
-    "thetal",
-    "qt",
-    "tke",
-    "ug",
-    "vg",
-    "dpdx",
-    "dpdy",
-    "wa",
-    "ua_nudge",
-    "va_nudge",
-    "thl_nudge",
-    "wa_nudge",
-    "qt_nudge",
-    "dqtdxls",
-    "dqtdyls",
-    "tnqt_adv",
-    "tnthetal_rad",
-    "dudt_ls",
-    "dvdt_ls",
-    "wtsurf",
-    "wqsurf",
-    "qtsurf",
-    "psurf",
-    "qnetav",
     "ALL_VARIABLES",
     "ATMO_VARS_BY_NAME",
+    "VariableDefinition",
+    "backrad_T",
+    "backrad_o3",
+    "backrad_q",
+    "dpdx",
+    "dpdy",
+    "dqtdxls",
+    "dqtdyls",
+    "dthldt_ls",
+    "dudt_ls",
+    "dvdt_ls",
+    "ensure_var",
+    "nudging_constant_qt",
+    "nudging_constant_thetal",
+    "nudging_constant_ua",
+    "nudging_constant_va",
+    "nudging_constant_wa",
+    "nudging_timescale",
+    "psurf",
+    "qnetav",
+    "qt",
+    "qt_nudge",
+    "qtsurf",
+    "t_soil",
+    "theta_soil",
+    "thetal",
+    "thl_nudge",
+    "thls",
+    "tke",
+    "tnqt_adv",
+    "tnthetal_rad",
+    "type_soil",
+    "ua",
+    "ua_nudge",
+    "ug",
+    "va",
+    "va_nudge",
+    "vg",
+    "w",
+    "wa",
+    "wa_nudge",
+    "wqsurf",
+    "wtsurf",
+    "z0h",
+    "z0m",
 ]

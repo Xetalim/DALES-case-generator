@@ -1,11 +1,12 @@
+import logging
+import math
+import os
+import pathlib
+
 import matplotlib.pyplot as plt
 import numpy as np
-import pathlib
 import xarray as xr
-import logging
-import os
-import math
-from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.colors import BoundaryNorm, ListedColormap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -558,7 +559,6 @@ def plot_lsm_cover(lsm_netcdf_path, plot_base_path):
 
     ds.close()
     plt.ion()
-    return
 
 
 if __name__ == "__main__":

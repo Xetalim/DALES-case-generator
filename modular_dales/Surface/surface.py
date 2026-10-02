@@ -43,34 +43,37 @@ class ConstantFluxesModule(SurfaceModule):
     isurf: int = field(
         default=4, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
     )
-    wtsurf: Optional[Union[float, "TimeDependentScalar"]] = field(
+    wtsurf: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "wtsurf",
             "required": True,
             "serialize": True,
+            "forcing_var": "wtsurf",
         },
     )
-    wqsurf: Optional[Union[float, "TimeDependentScalar"]] = field(
+    wqsurf: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "wqsurf",
             "required": True,
             "serialize": True,
+            "forcing_var": "wqsurf",
         },
     )
-    ps: Optional[Union[float, "TimeDependentScalar"]] = field(
+    ps: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "ps",
             "required": True,
             "serialize": True,
+            "forcing_var": "psurf",
         },
     )
-    z0mav: Optional[float] = field(
+    z0mav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -79,7 +82,7 @@ class ConstantFluxesModule(SurfaceModule):
             "serialize": True,
         },
     )
-    z0hav: Optional[float] = field(
+    z0hav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -88,7 +91,7 @@ class ConstantFluxesModule(SurfaceModule):
             "serialize": True,
         },
     )
-    albedoav: Optional[float] = field(
+    albedoav: float | None = field(
         default=None,
         metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
     )
@@ -99,22 +102,22 @@ class ConstantFluxesModule(SurfaceModule):
 
     def do_config(self):
         """Configure surface settings and namelist."""
-        return None
+        return
 
     def prepare_calculation(self):
         return self.prepare_calculations()
 
     def prepare_calculations(self):
         """No additional preparation needed."""
-        return None
+        return
 
     def check_settings(self):
         """Validate constant fluxes settings."""
-        return None
+        return
 
     def write_files(self):
         """No files to write."""
-        return None
+        return
 
 
 @register_module
@@ -140,25 +143,27 @@ class ConstantFluxesWithShearModule(SurfaceModule):
     isurf: int = field(
         default=3, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
     )
-    wtsurf: Optional[Union[float, "TimeDependentScalar"]] = field(
+    wtsurf: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "wtsurf",
             "required": True,
             "serialize": True,
+            "forcing_var": "wtsurf",
         },
     )
-    wqsurf: Optional[Union[float, "TimeDependentScalar"]] = field(
+    wqsurf: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "wqsurf",
             "required": True,
             "serialize": True,
+            "forcing_var": "wqsurf",
         },
     )
-    ustin: Optional[float] = field(
+    ustin: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -167,16 +172,17 @@ class ConstantFluxesWithShearModule(SurfaceModule):
             "serialize": True,
         },
     )
-    ps: Optional[Union[float, "TimeDependentScalar"]] = field(
+    ps: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "ps",
             "required": True,
             "serialize": True,
+            "forcing_var": "psurf",
         },
     )
-    z0mav: Optional[float] = field(
+    z0mav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -185,7 +191,7 @@ class ConstantFluxesWithShearModule(SurfaceModule):
             "serialize": True,
         },
     )
-    z0hav: Optional[float] = field(
+    z0hav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -194,7 +200,7 @@ class ConstantFluxesWithShearModule(SurfaceModule):
             "serialize": True,
         },
     )
-    albedoav: Optional[float] = field(
+    albedoav: float | None = field(
         default=None,
         metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
     )
@@ -205,22 +211,22 @@ class ConstantFluxesWithShearModule(SurfaceModule):
 
     def do_config(self):
         """Configure surface settings and namelist."""
-        return None
+        return
 
     def prepare_calculation(self):
         return self.prepare_calculations()
 
     def prepare_calculations(self):
         """No additional preparation needed."""
-        return None
+        return
 
     def check_settings(self):
         """Validate constant fluxes with shear settings."""
-        return None
+        return
 
     def write_files(self):
         """No files to write."""
-        return None
+        return
 
 
 @register_module
@@ -245,16 +251,17 @@ class ConstantSurfaceTemperatureModule(SurfaceModule):
     isurf: int = field(
         default=2, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
     )
-    thls: Optional[Union[float, "TimeDependentScalar"]] = field(
+    thls: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "thls",
             "required": True,
             "serialize": True,
+            "forcing_var": "thls",
         },
     )
-    z0mav: Optional[float] = field(
+    z0mav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -263,7 +270,7 @@ class ConstantSurfaceTemperatureModule(SurfaceModule):
             "serialize": True,
         },
     )
-    z0hav: Optional[float] = field(
+    z0hav: float | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
@@ -272,16 +279,17 @@ class ConstantSurfaceTemperatureModule(SurfaceModule):
             "serialize": True,
         },
     )
-    ps: Optional[Union[float, "TimeDependentScalar"]] = field(
+    ps: Union[float, "TimeDependentScalar"] | None = field(
         default=None,
         metadata={
             "nml": "NAMSURFACE",
             "key": "ps",
             "required": True,
             "serialize": True,
+            "forcing_var": "psurf",
         },
     )
-    albedoav: Optional[float] = field(
+    albedoav: float | None = field(
         default=None,
         metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
     )
@@ -292,19 +300,19 @@ class ConstantSurfaceTemperatureModule(SurfaceModule):
 
     def do_config(self):
         """Configure surface settings and namelist."""
-        return None
+        return
 
     def prepare_calculation(self):
         return self.prepare_calculations()
 
     def prepare_calculations(self):
         """No additional preparation needed."""
-        return None
+        return
 
     def check_settings(self):
         """Validate constant surface temperature settings."""
-        return None
+        return
 
     def write_files(self):
         """No files to write."""
-        return None
+        return

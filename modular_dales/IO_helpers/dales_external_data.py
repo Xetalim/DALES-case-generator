@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
 import pathlib
 import shutil
 import subprocess
+from dataclasses import dataclass
 
 from modular_dales.IO_helpers.external_data_cache import cache_root
 
@@ -94,7 +94,9 @@ def _is_dales_git_repo(repo: pathlib.Path) -> bool:
     if not (repo / ".git").exists():
         return False
     try:
-        remote_url = _run_git_capture(["config", "--get", "remote.origin.url"], cwd=repo)
+        remote_url = _run_git_capture(
+            ["config", "--get", "remote.origin.url"], cwd=repo
+        )
         return "dalesteam/dales" in remote_url.lower() or "dales" in remote_url.lower()
     except (RuntimeError, subprocess.SubprocessError, OSError):
         return False

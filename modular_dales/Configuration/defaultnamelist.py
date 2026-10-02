@@ -1,12 +1,12 @@
 """Default configuration modules and base surface module."""
 
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
 from typing import Optional
 
-from modular_dales.MODULE_REGISTRY import register_module
-from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.modular.dales_simulation import dales_simulation
+from modular_dales.modular.simulation_module import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -93,12 +93,12 @@ class DefaultNamelistModule(simulation_module):
 
     def check_settings(self):
         """Check defaults validity."""
-        return None
+        return
 
     def prepare_calculation(self):
         """No calculation work needed."""
-        return None
+        return
 
     def write_files(self):
         """No files to write."""
-        return None
+        return
