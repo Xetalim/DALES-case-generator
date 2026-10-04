@@ -8,6 +8,8 @@ from typing import Any, Callable, Sequence
 import pytest
 import yaml
 
+import xarray as xr
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MACHINE_CONF_PATH = PROJECT_ROOT / "machine_conf.yaml"
 
@@ -57,7 +59,17 @@ def assert_dirs_equal(left: Path, right: Path) -> None:
 
             if left_is_file and right_is_file:
                 if not filecmp.cmp(left_entry, right_entry, shallow=False):
-                    differing_files.append(name)
+                    if not left_entry.suffix == ".nc":
+                        differing_files.append(name)
+                    else:
+                        # we want to make sure it differs only on date
+                        ds_left = xr.open_dataset(left_entry)
+                        ds_right = xr.open_dataset(right_entry)
+
+                        del ds_left.attrs["history"]
+                        del ds_right.attrs["history"]
+                        if not ds_left.identical(ds_right):
+                            differing_files.append(name)
                 continue
 
             problematic_names.append(name)

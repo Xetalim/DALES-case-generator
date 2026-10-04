@@ -267,17 +267,6 @@ if __name__ == "__main__":
     #     tracernames=[],
     # )
 
-    # openbc += Nest_in_AtmosphereProfiles(
-    #     atmosphere_module=atmo,  # use the base AtmosphereModule as source for openboundary profiles, which will be injected with LS2D data via the FromLS2D module
-    #     noise_boundaries=["south", "west", "east", "north"],
-    #     noise_variables=["thl"],
-    #     noise_std=0.1,
-    #     noise_seed=0,
-    #     noise_minzt=0,
-    #     noise_maxzt=400,
-    #     add_to_top_thl=0.5,  # add 0.5 K to the top boundary thl to make sure we don't get a downdraft along the top everywhere
-    # )
-    # sim += openbc
     set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "namnetcdfstats", "lsync", True
     )

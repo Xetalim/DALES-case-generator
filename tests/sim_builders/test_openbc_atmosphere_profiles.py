@@ -25,7 +25,7 @@ def _build_openbc_atmo_sim(
 ) -> dales_simulation:
     """Internal helper to construct an open-BC AtmosphereProfiles simulation.
 
-    When ``add_timedep`` is True, time-dependent nudging profiles are
+    When ``add_timedep`` is True, time-dependent boundary profiles are
     added so that open boundary conditions contain multiple time slices.
     """
 
@@ -99,48 +99,43 @@ def _build_openbc_atmo_sim(
     # Configure time so Atmosphere profiles have a reference start
     sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600)
 
-    # External atmosphere module, not registered via sim += as openbc inits it for you.
-    atmo_external = AtmosphereModule()
-    # Simple linear nudging profiles used by open boundaries.
-    atmo_external += AtmosphericProfile(
-        variable=ua_nudge,
+    boundary_u = AtmosphericProfile(
+        variable=ua,
         shape="lin",
         params=dict(surf_val=3.0, ddz=1e-3),
     )
-    atmo_external += AtmosphericProfile(
-        variable=va_nudge,
+    boundary_v = AtmosphericProfile(
+        variable=va,
         shape="lin",
         params=dict(surf_val=0.0, ddz=0),
     )
-    atmo_external += AtmosphericProfile(
-        variable=wa_nudge,
+    boundary_w = AtmosphericProfile(
+        variable=w,
         shape="lin",
         params=dict(surf_val=0.0, ddz=0.0),
     )
-    atmo_external += AtmosphericProfile(
-        variable=thl_nudge,
+    boundary_thl = AtmosphericProfile(
+        variable=thetal,
         shape="lin",
         params=dict(surf_val=293.15, ddz=1e-2),
     )
-    atmo_external += AtmosphericProfile(
-        variable=qt_nudge,
+    boundary_qt = AtmosphericProfile(
+        variable=qt,
         shape="lin",
         params=dict(surf_val=0.01, ddz=0.0),
     )
-    atmo_external += AtmosphericProfile(
+    boundary_e12 = AtmosphericProfile(
         variable=tke,
         shape="lin",
         params=dict(surf_val=0.1, ddz=0.0),
     )
 
     if add_timedep:
-        # Add time-dependent nudging profiles so open boundaries
-        # see two different profiles at t=0 and t=3600 seconds.
-        atmo_external += [
+        boundary_u = [
             TimedAtmosphereProfile(
                 time=0.0,
                 profile=AtmosphericProfile(
-                    variable=ua_nudge,
+                    variable=ua,
                     shape="lin",
                     params=dict(surf_val=3.0, ddz=1e-3),
                 ),
@@ -148,15 +143,17 @@ def _build_openbc_atmo_sim(
             TimedAtmosphereProfile(
                 time=3600.0,
                 profile=AtmosphericProfile(
-                    variable=ua_nudge,
+                    variable=ua,
                     shape="lin",
                     params=dict(surf_val=0.0, ddz=0),
                 ),
             ),
+        ]
+        boundary_v = [
             TimedAtmosphereProfile(
                 time=0.0,
                 profile=AtmosphericProfile(
-                    variable=va_nudge,
+                    variable=va,
                     shape="lin",
                     params=dict(surf_val=0, ddz=0),
                 ),
@@ -164,14 +161,13 @@ def _build_openbc_atmo_sim(
             TimedAtmosphereProfile(
                 time=3600.0,
                 profile=AtmosphericProfile(
-                    variable=va_nudge,
+                    variable=va,
                     shape="lin",
                     params=dict(surf_val=3.0, ddz=1e-3),
                 ),
             ),
         ]
 
-    # Basic openboundary configuration using the external atmosphere
     openbc = do_openboundary(
         time0="2025-01-01T00:00:00",
         start="2025-01-01T00:00:00",
@@ -182,7 +178,12 @@ def _build_openbc_atmo_sim(
     )
 
     openbc += Nest_in_AtmosphereProfiles(
-        atmosphere_module=atmo_external,
+        u=boundary_u,
+        v=boundary_v,
+        w=boundary_w,
+        thl=boundary_thl,
+        qt=boundary_qt,
+        e12=boundary_e12,
         noise_boundaries=["south", "west"],
         noise_std=0.1,
         noise_seed=42,

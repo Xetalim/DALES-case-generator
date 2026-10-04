@@ -264,7 +264,7 @@ def download_harmonie_forecast_pair(
     disk_space_safety_factor: float = 2.0,
     delete_grib_files: bool = True,
     skip_cdo: bool = False,
-    convert_to_netcdf: bool = True,
+    convert_to_netcdf: bool = False,
 ) -> ForecastDownloadResult:
     """Download and convert the KNMI HARMONIE P5/P3 forecast pair.
 
@@ -277,10 +277,12 @@ def download_harmonie_forecast_pair(
     root = Path(target_root)
     root.mkdir(parents=True, exist_ok=True)
 
-    api = OpenDataAPI(api_token=_load_api_key_from_file(api_key_file))
-
-    p5_tar = _download_archive(api, P5_ARCHIVE, forecast_dt, root)
-    p3_tar = _download_archive(api, P3_ARCHIVE, forecast_dt, root)
+    p5_tar = root / _archive_filename(P5_ARCHIVE, forecast_dt)
+    p3_tar = root / _archive_filename(P3_ARCHIVE, forecast_dt)
+    if not p5_tar.is_file() or not p3_tar.is_file():
+        api = OpenDataAPI(api_token=_load_api_key_from_file(api_key_file))
+        p5_tar = _download_archive(api, P5_ARCHIVE, forecast_dt, root)
+        p3_tar = _download_archive(api, P3_ARCHIVE, forecast_dt, root)
 
     p5_extract_dir = root / p5_tar.stem
     p3_extract_dir = root / p3_tar.stem

@@ -7,13 +7,12 @@ import xarray as xr
 
 from modular_dales import (
     AtmosphereModule,
-    InterpolatedProfile,
     AtmosphericProfile,
-    ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
-    NestingTopology,
+    InterpolatedProfile,
     Nest_in_Dales,
+    NestingTopology,
     TimeModule,
     dales_simulation,
     do_openboundary,
@@ -23,79 +22,77 @@ from modular_dales.Configuration.output_modules import (
     CrossSectionOutputModule,
     FielddumpModule,
     LSMCrossModule,
-    StatsModule,
     RadfieldModule,
+    StatsModule,
 )
 from modular_dales.Geometry.geometry_modification import AllGeometry
+from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.Radiation.radiation import RadiationModule
 from modular_dales.Surface.LSM.LSM import (
     FromBofek,
     FromLCZ,
     FromTop10,
-    LSMModule,
     LandUseModification,
-)
-from modular_dales.Surface.LSM.SLuRB.slurb import (
-    SLURBModification,
-    SLURBModule,
-    SLURBVariableModification,
+    LSMModule,
 )
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.vars import *  # noqa: F401,F403
-
+from modular_dales.Surface.LSM.SLuRB.slurb import (
+    SLURBModule,
+)
+from modular_dales.vars import *
 from tests.helpers import run_command_with_report
 
-_GRID_SUPER = dict(
-    itot=64,
-    jtot=64,
-    kmax=40,
-    xsize=640.0,
-    ysize=640.0,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=136173.0 - (640.0 / 2.0),
-    y0=455912.0 - (640.0 / 2.0),
-    proj4="EPSG:28992",
-    alpha=1.0,
-    dz0=30.0,
-)
+_GRID_SUPER = {
+    "itot": 64,
+    "jtot": 64,
+    "kmax": 40,
+    "xsize": 640.0,
+    "ysize": 640.0,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": 136173.0 - (640.0 / 2.0),
+    "y0": 455912.0 - (640.0 / 2.0),
+    "proj4": "EPSG:28992",
+    "alpha": 1.0,
+    "dz0": 30.0,
+}
 
-_GRID_MID = dict(
-    itot=32,
-    jtot=32,
-    kmax=36,
-    xsize=320.0,
-    ysize=320.0,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=136173.0 - (640.0 / 2.0) + 160.0,
-    y0=455912.0 - (640.0 / 2.0) + 160.0,
-    proj4="EPSG:28992",
-    alpha=1.0,
-    dz0=30.0,
-)
+_GRID_MID = {
+    "itot": 32,
+    "jtot": 32,
+    "kmax": 36,
+    "xsize": 320.0,
+    "ysize": 320.0,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": 136173.0 - (640.0 / 2.0) + 160.0,
+    "y0": 455912.0 - (640.0 / 2.0) + 160.0,
+    "proj4": "EPSG:28992",
+    "alpha": 1.0,
+    "dz0": 30.0,
+}
 
-_GRID_INNER = dict(
-    itot=16,
-    jtot=16,
-    kmax=32,
-    xsize=160.0,
-    ysize=160.0,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=136173.0 - (640.0 / 2.0) + 240.0,
-    y0=455912.0 - (640.0 / 2.0) + 240.0,
-    proj4="EPSG:28992",
-    alpha=1.0,
-    dz0=30.0,
-)
+_GRID_INNER = {
+    "itot": 16,
+    "jtot": 16,
+    "kmax": 32,
+    "xsize": 160.0,
+    "ysize": 160.0,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": 136173.0 - (640.0 / 2.0) + 240.0,
+    "y0": 455912.0 - (640.0 / 2.0) + 240.0,
+    "proj4": "EPSG:28992",
+    "alpha": 1.0,
+    "dz0": 30.0,
+}
 
 
 def _new_grid(spec: dict) -> GridDales:
@@ -357,53 +354,112 @@ def openbc_triple_nesting_case(machine_conf: dict) -> dales_simulation:
     return _build_inner_nested_sim(machine_conf, parent_l2)
 
 
-_GRID64_SUPER = dict(
-    itot=64,
-    jtot=64,
-    kmax=72,
-    xsize=6400.0 * 1.5,
-    ysize=6400.0 * 1.5,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=136173.0 - ((6400.0 * 1.5) / 2.0),
-    y0=455912.0 - ((6400.0 * 1.5) / 2.0),
-    proj4="EPSG:28992",
-    alpha=1.02,
-    dz0=10.0,
-)
+def openbc_triple_nesting_case_noparallel(machine_conf: dict) -> dales_simulation:
+    """Create DALES-in-DALES-in-DALES setup using two sequential Nest_in_Dales stages.
 
-_GRID64_MID = dict(
-    itot=64,
-    jtot=64,
-    kmax=48,
-    xsize=1600.0 * 1.5,
-    ysize=1600.0 * 1.5,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=136173.0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
-    y0=455912.0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
-    proj4="EPSG:28992",
-    alpha=1,
-    dz0=10.0,
-)
+    The first two levels are preprocessed and run here so level 3 can generate
+    open boundaries from level 2. The returned simulation is the level-3 run,
+    executed by test_simulation_runs via generic test runner.
+    """
 
-_GRID64_INNER = dict(
-    itot=64,
-    jtot=64,
-    kmax=40,
-    xsize=400.0 * 1.5,
-    ysize=400.0 * 1.5,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=136173.0 - ((6400.0 * 1.5) / 2.0) + (3000.0 * 1.5),
-    y0=455912.0 - ((6400.0 * 1.5) / 2.0) + (3000.0 * 1.5),
-    proj4="EPSG:28992",
-    alpha=1,
-    dz0=10.0,
-)
+    # machine_conf.setdefault("job_conf", {})["numcores"] = 1
+
+    parent_l1 = _build_outer_parent_sim(machine_conf)
+    set_nml_section(
+        parent_l1.nml,
+        parent_l1.nml_docs,
+        "set_serial",
+        "namnetcdfstats",
+        "lparallel",
+        False,
+    )
+    parent_l1.sim_preprocessing_pipeline()
+    run_command_with_report(
+        ["./job.001"],
+        stage="job_001_level1",
+        case_dir=parent_l1.output_path,
+        title="openbc triple nesting level-1 job.001 crash",
+    )
+    # run_command_with_report(
+    #     ["combine.sh", "run_001"],
+    #     stage="combine_run_001_level1",
+    #     case_dir=parent_l1.output_path,
+    #     title="openbc triple nesting level-1 combine crash",
+    # )
+
+    parent_l2 = _build_middle_nested_sim(machine_conf, parent_l1)
+    set_nml_section(
+        parent_l2.nml,
+        parent_l2.nml_docs,
+        "set_serial",
+        "namnetcdfstats",
+        "lparallel",
+        False,
+    )
+    parent_l2.sim_preprocessing_pipeline()
+    run_command_with_report(
+        ["./job.001"],
+        stage="job_001_level2",
+        case_dir=parent_l2.output_path,
+        title="openbc triple nesting level-2 job.001 crash",
+    )
+    # run_command_with_report(
+    #     ["combine.sh", "run_001"],
+    #     stage="combine_run_001_level2",
+    #     case_dir=parent_l2.output_path,
+    #     title="openbc triple nesting level-2 combine crash",
+    # )
+
+    return _build_inner_nested_sim(machine_conf, parent_l2)
+
+
+_GRID64_SUPER = {
+    "itot": 64,
+    "jtot": 64,
+    "kmax": 72,
+    "xsize": 6400.0 * 1.5,
+    "ysize": 6400.0 * 1.5,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": 136173.0 - ((6400.0 * 1.5) / 2.0),
+    "y0": 455912.0 - ((6400.0 * 1.5) / 2.0),
+    "proj4": "EPSG:28992",
+    "alpha": 1.02,
+    "dz0": 10.0,
+}
+
+_GRID64_MID = {
+    "itot": 64,
+    "jtot": 64,
+    "kmax": 48,
+    "xsize": 1600.0 * 1.5,
+    "ysize": 1600.0 * 1.5,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": 136173.0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
+    "y0": 455912.0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
+    "proj4": "EPSG:28992",
+    "alpha": 1,
+    "dz0": 10.0,
+}
+
+_GRID64_INNER = {
+    "itot": 64,
+    "jtot": 64,
+    "kmax": 40,
+    "xsize": 400.0 * 1.5,
+    "ysize": 400.0 * 1.5,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": 136173.0 - ((6400.0 * 1.5) / 2.0) + (3000.0 * 1.5),
+    "y0": 455912.0 - ((6400.0 * 1.5) / 2.0) + (3000.0 * 1.5),
+    "proj4": "EPSG:28992",
+    "alpha": 1,
+    "dz0": 10.0,
+}
 
 
 def _build_outer_parent_sim_scaled64(machine_conf: dict) -> dales_simulation:
@@ -412,8 +468,7 @@ def _build_outer_parent_sim_scaled64(machine_conf: dict) -> dales_simulation:
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
-    midgrid.zt = supergrid.zt[: midgrid.kmax + 1]
-    midgrid.zm = supergrid.zm[: midgrid.kmax + 1]
+    midgrid.inherit_vertical_grid(supergrid)
 
     sim += supergrid
 
@@ -435,11 +490,9 @@ def _build_middle_nested_sim_scaled64(
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
-    midgrid.zt = supergrid.zt[: midgrid.kmax + 1]
-    midgrid.zm = supergrid.zm[: midgrid.kmax + 1]
+    midgrid.inherit_vertical_grid(supergrid)
     innergrid = _new_grid(_GRID64_INNER)
-    innergrid.zt = midgrid.zt[: innergrid.kmax + 1]
-    innergrid.zm = midgrid.zm[: innergrid.kmax + 1]
+    innergrid.inherit_vertical_grid(midgrid)
 
     sim += midgrid
 
@@ -485,11 +538,9 @@ def _build_inner_nested_sim_scaled64(
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
-    midgrid.zt = supergrid.zt[: midgrid.kmax + 1]
-    midgrid.zm = supergrid.zm[: midgrid.kmax + 1]
+    midgrid.inherit_vertical_grid(supergrid)
     innergrid = _new_grid(_GRID64_INNER)
-    innergrid.zt = midgrid.zt[: innergrid.kmax + 1]
-    innergrid.zm = midgrid.zm[: innergrid.kmax + 1]
+    innergrid.inherit_vertical_grid(midgrid)
 
     sim += innergrid
 
@@ -990,8 +1041,8 @@ def _plot_refinement_value_overlays(
     import matplotlib
 
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
     import matplotlib.colors as mcolors
+    import matplotlib.pyplot as plt
 
     cross_patterns = {
         "crossyz": "crossyz.*.*.nc",

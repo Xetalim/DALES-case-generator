@@ -1,4 +1,5 @@
 from pathlib import Path
+from functools import partial
 
 import numpy as np
 import pytest
@@ -15,8 +16,11 @@ from modular_dales import (
 )
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.LBC import NestingTopology
+from modular_dales.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
+    _promote_boundary_stagger_dims,
+)
 from modular_dales.vars import *  # noqa: F401,F403
-
+from modular_dales.modular.simulation_module import set_nml_section
 from tests.openbc_test_input.openbc_fixtures import (
     atmo_netcdf_file,
     surface_netcdf_file,
@@ -198,9 +202,20 @@ def _assert_crosssection_matches_fielddump(
     numerically equal within the provided tolerances.
     """
 
-    with xr.open_dataset(fielddump_path) as ds_ref, xr.open_dataset(
-        crosssection_path
-    ) as ds_other:
+    with (
+        xr.open_mfdataset(
+            str(fielddump_path), combine="by_coords", join="outer"
+        ) as ds_ref,
+        xr.open_mfdataset(
+            str(crosssection_path),
+            combine="by_coords",
+            join="outer",
+            preprocess=partial(
+                _promote_boundary_stagger_dims,
+                boundary={"xt": "west", "xm": "west", "yt": "south", "ym": "south", "zt": "top", "zm": "top"}[cs_coord_dim],
+            ),
+        ) as ds_other,
+    ):
         if var not in ds_ref or var not in ds_other:
             raise AssertionError(f"Variable '{var}' not found in both datasets")
 
@@ -313,9 +328,14 @@ def _assert_crosssection_matches_fielddump_scalar_slice_coord(
     (no ``isel`` on the slice coord is needed).
     """
 
-    with xr.open_dataset(fielddump_path) as ds_ref, xr.open_dataset(
-        crosssection_path
-    ) as ds_other:
+    with (
+        xr.open_mfdataset(
+            str(fielddump_path), combine="by_coords", join="outer"
+        ) as ds_ref,
+        xr.open_mfdataset(
+            str(crosssection_path), combine="by_coords", join="outer"
+        ) as ds_other,
+    ):
         if var not in ds_ref or var not in ds_other:
             raise AssertionError(f"Variable '{var}' not found in both datasets")
 
@@ -394,7 +414,7 @@ def core_changer(request):
     return request.param
 
 
-@pytest.mark.xfail
+# @pytest.mark.xfail
 def test_crosssection_matches_fielddump_at_grid_index(
     machine_conf, core_changer, simulation_report
 ) -> None:
@@ -405,14 +425,21 @@ def test_crosssection_matches_fielddump_at_grid_index(
     cross-section NetCDF file against ``fielddump.nc`` at a coordinate index
     taken from the cross-section grid.
     """
-    pytest.skip("")
+    # pytest.skip("")
     conf = machine_conf("openbc_crosssection_fielddump")
     conf["job_conf"]["numcores"] = core_changer
     sim = _build_nested_sim_with_easyoutput(
         conf, casename="openbc_crosssection_fielddump"
     )
     sim.sim_preprocessing_pipeline()
-
+    set_nml_section(
+        sim.nml,
+        sim.nml_docs,
+        "openbc_crosssection_fielddump",
+        "namnetcdfstats",
+        "lparallel",
+        False,
+    )
     outdir = sim.output_path
 
     # Run the DALES job and combine script to generate diagnostic files.
@@ -424,36 +451,38 @@ def test_crosssection_matches_fielddump_at_grid_index(
         add_report=simulation_report,
         info_lines=[f"numcores={core_changer}"],
     )
-    run_command_with_report(
-        ["combine.sh", "run_001"],
-        stage="combine_run_001",
-        case_dir=outdir,
-        title="openbc crosssection fielddump combine crash",
-        add_report=simulation_report,
-        info_lines=[f"numcores={core_changer}"],
-    )
+    # run_command_with_report(
+    #     ["combine.sh", "run_001"],
+    #     stage="combine_run_001",
+    #     case_dir=outdir,
+    #     title="openbc crosssection fielddump combine crash",
+    #     add_report=simulation_report,
+    #     info_lines=[f"numcores={core_changer}"],
+    # )
 
-    fielddump_file = outdir / "run_001" / "fielddump.001.nc"
-    if not fielddump_file.is_file():
+    fielddump_file = outdir / "run_001" / "fielddump*.nc"
+    if not list(fielddump_file.parent.glob(fielddump_file.name)):
         pytest.skip("fielddump.001.nc not found; DALES run did not produce fielddump")
 
     # Prefer a yz cross-section at fixed x if available, fall back to others.
     candidates = [
-        outdir / "run_001" / "crossyz.001.nc",
-        outdir / "run_001" / "crossxz.001.nc",
-        outdir / "run_001" / "crossxy.001.nc",
+        outdir / "run_001" / "crossyz*.nc",
+        outdir / "run_001" / "crossxz*.nc",
+        outdir / "run_001" / "crossxy*.nc",
     ]
     var = "thl"
     for crosssection_file in candidates:
+        if not list(crosssection_file.parent.glob(crosssection_file.name)):
+            raise AssertionError(f"No cross-section files match {crosssection_file}")
         # Choose which coordinate dimension is held constant in the cross-section.
-        if crosssection_file.name == "crossyz.001.nc":
+        if crosssection_file.name.startswith("crossyz"):
             if var == "u":
                 fd_coord_dim = "xm"
                 cs_coord_dim = "xm"
             else:
                 fd_coord_dim = "xt"
                 cs_coord_dim = "xt"
-        elif crosssection_file.name == "crossxz.001.nc":
+        elif crosssection_file.name.startswith("crossxz"):
             if var == "v":
                 fd_coord_dim = "ym"
                 cs_coord_dim = "ym"
@@ -495,6 +524,14 @@ def test_crosssection_matches_fielddump_at_grid_index_no_combine(
     sim = _build_nested_sim_with_easyoutput(
         conf, casename="openbc_crosssection_fielddump_no_combine"
     )
+    set_nml_section(
+        sim.nml,
+        sim.nml_docs,
+        "openbc_crosssection_fielddump",
+        "namnetcdfstats",
+        "lparallel",
+        True,
+    )
     sim.sim_preprocessing_pipeline()
 
     outdir = sim.output_path
@@ -510,8 +547,8 @@ def test_crosssection_matches_fielddump_at_grid_index_no_combine(
         info_lines=[f"numcores={core_changer}"],
     )
 
-    fielddump_file = run_dir / "fielddump.001.nc"
-    if not fielddump_file.is_file():
+    fielddump_file = run_dir / "fielddump*.nc"
+    if not list(run_dir.glob(fielddump_file.name)):
         pytest.skip(
             "fielddump.001.nc not found in run_001/; DALES run did not produce fielddump"
         )
@@ -519,17 +556,18 @@ def test_crosssection_matches_fielddump_at_grid_index_no_combine(
     # Prefer a yz cross-section at fixed x if available, fall back to others.
     # Files are named with pattern: cross{yz|xz|xy}.<index>.001.nc where <index> is from namelist
     cross_patterns = [
-        ("crossyz.*.001.nc", "crossyz.nc"),
-        ("crossxz.*.001.nc", "crossxz.nc"),
-        ("crossxy.*.001.nc", "crossxy.nc"),
+        ("crossyz.*.nc", "crossyz.nc"),
+        ("crossxz.*.nc", "crossxz.nc"),
+        ("crossxy.*.nc", "crossxy.nc"),
     ]
 
     var = "thl"
     for pattern, canonical_name in cross_patterns:
-        matching_files = list(run_dir.glob(pattern))
+        matching_files = sorted(run_dir.glob(pattern))
         if not matching_files:
             continue
-        crosssection_file = matching_files[0]
+        section_prefix = ".".join(matching_files[0].name.split(".")[:2])
+        crosssection_file = run_dir / f"{section_prefix}.*.nc"
 
         # Choose which coordinate is the fixed scalar slice coord in the cross-section.
         if canonical_name == "crossyz.nc":

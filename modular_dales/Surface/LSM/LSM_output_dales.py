@@ -123,8 +123,6 @@ class LSM_output_dales:
             raise ValueError(
                 "Need a valid projection to get LSM data from a real world map!"
             )
-        print(self.grid.crs)
-        print("Hello world")
 
         # cog = get_from_LCZ.get_cog(self.grid)
 
@@ -471,11 +469,8 @@ class LSM_output_dales:
             self.LCZ_ds.to_netcdf(lcz_out_path)
             logger.info(f"Saved LCZ dataset to {lcz_out_path}")
 
-
     @logwrap
-    def set_skin_temperature(
-        self, temperature, lu_type: Literal["all"] | str = "all"
-    ):
+    def set_skin_temperature(self, temperature, lu_type: Literal["all"] | str = "all"):
         shape = (self.grid.jtot, self.grid.itot)
         temp_arr = np.full(shape, temperature)
         if lu_type == "all":

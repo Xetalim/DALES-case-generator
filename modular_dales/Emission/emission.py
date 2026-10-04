@@ -11,15 +11,16 @@ This module mirrors the IBM module pattern:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Self
 
-from modular_dales import register_module, simulation_module
 from modular_dales.Emission.create_emis import (
     PointSource,
     TracerInfo,
     emissions,
     get_emis_sim_hours,
 )
+from modular_dales.modular import simulation_module
+from modular_dales.MODULE_REGISTRY import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,7 @@ class EmissionModule(simulation_module):
             )
         return self
 
-    def __iadd__(self, item: Any) -> "EmissionModule":
+    def __iadd__(self, item: Any) -> Self:
         """In-place addition for ``+=`` syntax."""
 
         return self.__add__(item)

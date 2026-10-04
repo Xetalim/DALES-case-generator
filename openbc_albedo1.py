@@ -240,15 +240,6 @@ if __name__ == "__main__":
     #     dxint=domain_info.xsize / domain_info.itot,
     #     dyint=domain_info.ysize / domain_info.jtot,
     # )
-    # openbc += Nest_in_AtmosphereProfiles(
-    #     atmosphere_module=atmo,
-    #     noise_boundaries=["south", "west", "east", "north"],
-    #     noise_std=0.1,
-    #     noise_seed=42,
-    #     noise_variables=["thl"],
-    # )
-    # sim += openbc
-
     set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "namnetcdfstats", "lsync", True
     )

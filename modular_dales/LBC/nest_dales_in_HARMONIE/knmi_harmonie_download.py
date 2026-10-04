@@ -96,7 +96,7 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
         metadata={"serialize": True},
     )
     convert_to_netcdf: bool = field(
-        default=True,
+        default=False,
         init=True,
         repr=True,
         metadata={"serialize": True},

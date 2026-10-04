@@ -255,15 +255,29 @@ if __name__ == "__main__":
         enable_output=True,
     )
 
-    # External atmosphere module, not registered via sim += as openbc inits it for you.
-    atmo_external = AtmosphereModule()
-    for prof in atmo.shaped_profiles:
-        if prof.variable != co2:
-            atmo_external.shaped_profiles.append(prof)
-    for prof in atmo.interpolated_profiles:
-        if prof.variable != co2:
-            atmo_external.interpolated_profiles.append(prof)
-    atmo_external += InterpolatedProfile(
+    boundary_u = AtmosphericProfile(
+        variable=ua, shape="lin", params=dict(surf_val=3, ddz=0)
+    )
+    boundary_v = AtmosphericProfile(
+        variable=va, shape="lin", params=dict(surf_val=3, ddz=0)
+    )
+    boundary_w = AtmosphericProfile(
+        variable=w, shape="lin", params=dict(surf_val=0, ddz=0)
+    )
+    boundary_thl = InterpolatedProfile(
+        variable=thetal,
+        z=[0, 400, 410, 1600],
+        points=[293.15, 293.15, 298.15, 301.15],
+    )
+    boundary_qt = AtmosphericProfile(
+        variable=qt, shape="lin", params=dict(surf_val=0.0018, ddz=0)
+    )
+    boundary_e12 = InterpolatedProfile(
+        variable=tke,
+        z=[0, 4000, 5000],
+        points=[1, 1e-8, 1e-8],
+    )
+    boundary_co2 = InterpolatedProfile(
         variable=co2,
         z=[0, 400, 410, 1600],
         points=[
@@ -274,7 +288,6 @@ if __name__ == "__main__":
         ],
     )
 
-    # Basic openboundary configuration using the external atmosphere
     openbc = do_openboundary(
         time0="2023-01-01T12:00:00",
         start="2023-01-01T12:00:00",
@@ -288,8 +301,13 @@ if __name__ == "__main__":
     )
 
     openbc += Nest_in_AtmosphereProfiles(
-        atmosphere_module=atmo_external,
-        variable_mapping={"other": "other"},
+        u=boundary_u,
+        v=boundary_v,
+        w=boundary_w,
+        thl=boundary_thl,
+        qt=boundary_qt,
+        e12=boundary_e12,
+        tracers={"other": boundary_co2},
         noise_boundaries=["south", "west", "east", "north"],
         noise_variables=["thl"],
         noise_std=1,

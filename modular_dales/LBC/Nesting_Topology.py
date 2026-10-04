@@ -2,8 +2,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
-import numpy as np
-
 from modular_dales.Geometry import GridDales, GridDalesOpenBC
 from modular_dales.LBC.nesting_idx import NestingIndices
 from modular_dales.LBC.openbc import do_openboundary
@@ -98,21 +96,14 @@ class NestingTopology(simulation_module):
     def prepare_calculation(self):
         """Return nesting info for a specific index if available."""
 
+        if self.my_idx is None or not 0 <= self.my_idx < len(self.nestings):
+            raise ValueError("NestingTopology.my_idx must identify a grid in nestings")
         if len(self.nestings) > self.my_idx + 1:
             # another grid is nested inside us, we need to set up the indices for the cross sections in the namelist
             subnest_subgrid = self.nestings[self.my_idx + 1].as_openbc()
             subnest_supergrid = self.grid
 
-            ixwest, ixeast = (
-                list(subnest_supergrid.xm).index(np.min(subnest_subgrid.xm)),
-                list(subnest_supergrid.xm).index(np.max(subnest_subgrid.xm)),
-            )
-
-            iysouth, iynorth = (
-                list(subnest_supergrid.ym).index(np.min(subnest_subgrid.ym)),
-                list(subnest_supergrid.ym).index(np.max(subnest_subgrid.ym)),
-            )
-            iztop = list(subnest_supergrid.zt).index(np.max(subnest_subgrid.zt))
+            child_indices = NestingIndices.from_grids(subnest_supergrid, subnest_subgrid)
 
             existing_height = list(
                 self.nml.get("namcrosssection", {}).get("crossheight", [])
@@ -124,12 +115,12 @@ class NestingTopology(simulation_module):
                 self.nml.get("namcrosssection", {}).get("crossortho", [])
             )
 
-            merged_height = list(dict.fromkeys(existing_height + [iztop + 2]))
+            merged_height = list(dict.fromkeys(existing_height + [child_indices.iz_top + 1]))
             merged_plane = list(
-                dict.fromkeys(existing_plane + [iysouth + 1, iynorth + 1])
+                dict.fromkeys(existing_plane + [child_indices.iy_south + 1, child_indices.iy_north + 1])
             )
             merged_ortho = list(
-                dict.fromkeys(existing_ortho + [ixwest + 1, ixeast + 1])
+                dict.fromkeys(existing_ortho + [child_indices.ix_west + 1, child_indices.ix_east + 1])
             )
 
             self.set_nml_section("namcrosssection", "crossheight", merged_height)
@@ -140,34 +131,14 @@ class NestingTopology(simulation_module):
             supernest_subgrid = self.grid.as_openbc()
             supernest_supergrid = self.nestings[self.my_idx - 1]
 
-            ixwest, ixeast = (
-                list(supernest_supergrid.xm).index(np.min(supernest_subgrid.xm)),
-                list(supernest_supergrid.xm).index(np.max(supernest_subgrid.xm)),
-            )
-
-            iysouth, iynorth = (
-                list(supernest_supergrid.ym).index(np.min(supernest_subgrid.ym)),
-                list(supernest_supergrid.ym).index(np.max(supernest_subgrid.ym)),
-            )
-
-            iztop = list(supernest_supergrid.zt).index(np.max(supernest_subgrid.zt))
-
             if self.module_exists(do_openboundary):
                 self.openbc_module = self.retrieve_module(do_openboundary)
             else:
                 raise ValueError(
                     "Nesting_Topology requires a do_openboundary module to set indices for boundary condition interpolation."
                 )
-            self.openbc_module.indices = NestingIndices(
-                supergrid=supernest_supergrid,
-                ix_west=ixwest,
-                ix_east=ixeast,
-                iy_south=iysouth,
-                iy_north=iynorth,
-                subgrid_x0=supernest_subgrid.x0,
-                subgrid_y0=supernest_subgrid.y0,
-                supergrid_x0=supernest_supergrid.x0,
-                supergrid_y0=supernest_supergrid.y0,
+            self.openbc_module.indices = NestingIndices.from_grids(
+                supernest_supergrid, supernest_subgrid
             )
 
     def write_files(self):

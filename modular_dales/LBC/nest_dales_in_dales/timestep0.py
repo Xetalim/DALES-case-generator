@@ -1,5 +1,6 @@
 import glob
 import logging
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -211,31 +212,35 @@ def boundaries_timestep0(
     # Get initial boundary fields from previous simulation, specifically,
     # the last time step in the output of the previous simulation
     else:
+        from modular_dales.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
+            _prepare_boundary_variable,
+            _select_boundary_files,
+        )
+
         boundary_dict = get_boundary_dict(input_json.outpath_coarse_old, grid, indices)
 
         all_ls = []
         for boundary, (boundaryfile, sel_index) in boundary_dict.items():
-            with xr.open_mfdataset(
-                glob.glob(boundaryfile.as_posix()),
-                chunks=crosssection_chunks,
-                join="outer",
-            ) as ds:
-                for var in [
-                    "u",
-                    "v",
-                    "w",
-                    "thl",
-                    "qt",
-                    "e12",
-                    *input_json.tracernames,
-                ]:
-                    if var == "e12":
-                        var_postfix = "0"
-                    else:
-                        var_postfix = ""
+            boundary_files = _select_boundary_files(
+                sorted(glob.glob(boundaryfile.as_posix())), sel_index, boundary
+            )
+            for var in ["u", "v", "w", "thl", "qt", "e12", *input_json.tracernames]:
+                var_postfix = "0" if var == "e12" else ""
+                with xr.open_mfdataset(
+                    boundary_files,
+                    combine="by_coords",
+                    chunks=crosssection_chunks,
+                    join="outer",
+                    data_vars="all",
+                    preprocess=partial(
+                        _prepare_boundary_variable,
+                        boundary=boundary,
+                        variable=f"{var}{var_postfix}",
+                    ),
+                ) as ds:
                     all_ls.append(
                         load_any_boundary_var(
-                            ds.sel(sel_index),
+                            ds.sel({dim: value for dim, value in sel_index.items() if dim in ds.dims}),
                             var,
                             boundary=boundary,
                             grid=grid,

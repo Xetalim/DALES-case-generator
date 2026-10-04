@@ -77,6 +77,14 @@ def _promote_boundary_stagger_dims(ds: xr.Dataset, boundary: str) -> xr.Dataset:
     return ds_out
 
 
+def _prepare_boundary_variable(
+    ds: xr.Dataset, boundary: str, variable: str
+) -> xr.Dataset:
+    """Combine one staggered field without aligning it along other fields' axes."""
+    selected = ds[[variable]]
+    return _promote_boundary_stagger_dims(selected, boundary).reset_coords(drop=True)
+
+
 def _file_matches_boundary_selection(file_path: str, sel_index: dict) -> bool:
     """Return True when a cross-section file contains the requested section coords."""
 
@@ -94,8 +102,8 @@ def _file_matches_boundary_selection(file_path: str, sel_index: dict) -> bool:
                     np.isclose(coord_vals, float(target_value), rtol=0.0, atol=1e-8)
                 ):
                     return False
-    except Exception:
-        return False
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"Cannot inspect boundary file '{file_path}' for coordinates {sel_index}") from exc
 
     return True
 
@@ -112,12 +120,11 @@ def _select_boundary_files(
     ]
 
     if not selected_files:
-        logger.warning(
-            "No boundary files matched requested section coordinates for %s; "
-            "falling back to all files.",
-            boundary,
+        raise ValueError(
+            f"No cross-section files match the {boundary} boundary coordinates {sel_index}; "
+            f"inspected {len(boundary_files)} candidate files. Regenerate and rerun the parent "
+            "case with the matching NestingTopology cross-sections."
         )
-        return boundary_files
 
     return selected_files
 
@@ -207,30 +214,23 @@ def get_all_dales_boundaries(
     for boundary, (boundaryfile, sel_index) in boundary_dict.items():
         boundary_files = sorted(glob.glob(boundaryfile.as_posix()))
         boundary_files = _select_boundary_files(boundary_files, sel_index, boundary)
-        preprocess = partial(_promote_boundary_stagger_dims, boundary=boundary)
-        with xr.open_mfdataset(
-            boundary_files,
-            combine="by_coords",
-            chunks=crosssection_chunks,
-            join="outer",
-            preprocess=preprocess,
-        ) as ds:
-            for var in [
-                "u",
-                "v",
-                "w",
-                "thl",
-                "qt",
-                "e12",
-                *input_json.tracernames,
-            ]:
-                if var == "e12":
-                    var_postfix = "0"
-                else:
-                    var_postfix = ""
+        for var in ["u", "v", "w", "thl", "qt", "e12", *input_json.tracernames]:
+            var_postfix = "0" if var == "e12" else ""
+            with xr.open_mfdataset(
+                boundary_files,
+                combine="by_coords",
+                chunks=crosssection_chunks,
+                join="outer",
+                data_vars="all",
+                preprocess=partial(
+                    _prepare_boundary_variable,
+                    boundary=boundary,
+                    variable=f"{var}{var_postfix}",
+                ),
+            ) as ds:
                 all_ls.append(
                     load_any_boundary_var(
-                        ds.sel(sel_index),
+                        ds.sel({dim: value for dim, value in sel_index.items() if dim in ds.dims}),
                         var,
                         boundary=boundary,
                         grid=grid,

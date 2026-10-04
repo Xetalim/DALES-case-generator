@@ -83,7 +83,7 @@ class OpenBCKNMIWorker:
                 sfc_glob = download_module.sfc_glob
             if use_grib is None and (
                 getattr(download_module, "skip_cdo", False)
-                or not getattr(download_module, "convert_to_netcdf", True)
+                or not getattr(download_module, "convert_to_netcdf", False)
             ):
                 use_grib = True
 

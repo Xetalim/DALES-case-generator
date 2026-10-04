@@ -210,8 +210,8 @@ def get_boundary_dict(path, grid: GridDalesOpenBC, indices: "NestingIndices"):
         "top": (
             Path(path) / "crossxy.*.*.nc",
             {
-                "zt": indices.supergrid.zt[grid.kmax],
-                "zm": indices.supergrid.zm[grid.kmax],
+                "zt": indices.supergrid.zt[indices.iz_top],
+                "zm": indices.supergrid.zm[indices.iz_top],
             },
         ),
     }

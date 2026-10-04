@@ -7,7 +7,11 @@ from typing import Optional
 import dask
 import xarray as xr
 
-from modular_dales.Atmosphere import AtmosphereModule
+from modular_dales.Atmosphere import (
+    AtmosphericProfile,
+    InterpolatedProfile,
+    TimedAtmosphereProfile,
+)
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales import (
     boundary_fields_fine,
@@ -172,46 +176,68 @@ class Nest_in_Dales:
 
 @dataclass
 class Nest_in_AtmosphereProfiles:
-    """Nest DALES in a horizontally homogeneous atmosphere from profiles.
+    """Explicit homogeneous boundary and initialization profiles.
 
-    This mode does not require a separate coarse DALES or HARMONIE run.
-    Instead, it reuses the vertical profiles configured in the
-    :class:`AtmosphereModule` of the *same* simulation to construct
-    open boundary fields that are uniform in x and y.
-
-    By default, the following mapping is used between open-boundary
-    variables and atmospheric profile variables (see ``vars.ATMO_VARS_BY_NAME``):
-
-        - u   <- ug
-        - v   <- vg
-        - w   <- w
-        - thl <- thetal
-        - qt  <- qt
-        - e12 <- tke
-
-    You can override this mapping via ``variable_mapping`` if needed.
-
-        This mode does *not* use any existing ``AtmosphereModule`` that is
-        part of the :class:`dales_simulation` modules. Instead, you must
-        provide an explicit :class:`AtmosphereModule` instance via
-        ``atmosphere_module``. This instance does not need to be added to
-        the simulation's module list, but it must have a valid ``sim`` with
-        a grid attached.
+    All six fields are required: u (ua), v (va), w (w), thl (thetal),
+    qt (qt), e12 (tke). Each accepts an AtmosphericProfile,
+    InterpolatedProfile, or a list of TimedAtmosphereProfile entries including
+    time zero. Scalar profile parameters may use independent time axes.
+    No simulation providers, nudging targets or default profiles are consulted.
     """
 
-    variable_mapping: dict[str, str] = field(
-        default_factory=lambda: {
+    u: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    v: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    w: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    thl: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    qt: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    e12: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    tracers: dict[
+        str, AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    ] = field(default_factory=dict)
+
+    def __post_init__(self):
+        expected = {
             "u": "ua",
             "v": "va",
             "w": "w",
             "thl": "thetal",
             "qt": "qt",
             "e12": "tke",
-        },
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
+        }
+        if set(self.tracers) & set(expected):
+            raise ValueError("Tracer names must not replace u, v, w, thl, qt or e12")
+        inputs = {name: getattr(self, name) for name in expected}
+        inputs.update(self.tracers)
+        for name, source in inputs.items():
+            if not isinstance(source, (AtmosphericProfile, InterpolatedProfile, list)):
+                raise TypeError(
+                    f"Boundary profile '{name}' requires a profile or a list of timed profiles"
+                )
+            entries = source if isinstance(source, list) else [source]
+            if not entries:
+                raise ValueError(f"Boundary profile '{name}' must not be empty")
+            if isinstance(source, list) and not all(
+                isinstance(entry, TimedAtmosphereProfile) for entry in entries
+            ):
+                raise TypeError(
+                    f"Boundary profile '{name}' lists require TimedAtmosphereProfile entries"
+                )
+            for entry in entries:
+                profile = (
+                    entry.profile
+                    if isinstance(entry, TimedAtmosphereProfile)
+                    else entry
+                )
+                if not isinstance(profile, (AtmosphericProfile, InterpolatedProfile)):
+                    raise TypeError(
+                        f"Boundary profile '{name}' requires AtmosphericProfile or InterpolatedProfile"
+                    )
+                required = expected.get(name, name)
+                if profile.variable.name != required:
+                    raise ValueError(
+                        f"Boundary field '{name}' requires variable '{required}', got '{profile.variable.name}'"
+                    )
+
     add_to_top_thl: float | None = field(
         default=None,
         repr=True,
@@ -251,18 +277,6 @@ class Nest_in_AtmosphereProfiles:
     noise_maxzt: float | None = field(
         default=None,
         repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    atmosphere_module_name: str | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    atmosphere_module: AtmosphereModule | None = field(
-        default=None,
-        repr=False,
         metadata={"serialize": True},
         init=True,
     )
@@ -640,8 +654,6 @@ class do_openboundary(simulation_module):
         )
 
     def _prepare_from_atmosphere(self) -> None:
-        if self.nest_in_atmosphere.atmosphere_module.sim is None:
-            self.nest_in_atmosphere.atmosphere_module._initialize_from_sim(self.sim)
         worker = OpenBCAtmosphereWorker(self)
         self.boundaries, self.initfields = worker.prepare()
 

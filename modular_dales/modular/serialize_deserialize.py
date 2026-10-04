@@ -185,6 +185,10 @@ def _deserialize_value(field_type: Any, value: Any) -> Any:
 
     if is_union(field_type):
         for subtype in field_type.__args__:
+            if get_origin(subtype) in (list, tuple) and isinstance(
+                value, (list, tuple)
+            ):
+                return _deserialize_value(subtype, value)
             if is_dataclass(subtype) and isinstance(value, dict):
                 try:
                     return _deserialize_dataclass(subtype, value)
@@ -209,6 +213,9 @@ def _deserialize_value(field_type: Any, value: Any) -> Any:
                 # Otherwise use type-aware deserialization
                 result.append(_deserialize_value(elem_type, v))
         return result
+
+    if origin is dict and isinstance(value, dict) and len(args) == 2:
+        return {key: _deserialize_value(args[1], item) for key, item in value.items()}
 
     # Optional[T] / Union[...] handling (including PEP 604 "|" unions).
     # At this point we've already handled list/tuple container types, so any
