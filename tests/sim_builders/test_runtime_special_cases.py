@@ -76,10 +76,6 @@ def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
     return sim
 
 
-def _reference_backrad_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "extra_data" / "backrad.inp.001.nc"
-
-
 def radiation_type_4_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "radiation_type_4_case")
     sim += ConstantSurfaceTemperatureModule(

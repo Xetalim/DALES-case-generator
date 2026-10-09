@@ -250,14 +250,7 @@ def profile_from_path(path: pathlib.Path) -> BackradPressureProfile:
 
 
 def default_profile() -> BackradPressureProfile:
-    """Return a default profile, preferring pre-existing repository files."""
-    candidates = (
-        pathlib.Path.cwd() / "extra_data" / "backrad.inp.001.nc",
-        pathlib.Path.cwd() / "extra_data" / "backrad.inp.001",
-    )
-    for candidate in candidates:
-        if candidate.exists():
-            return profile_from_path(candidate)
+    """Return a default profile."""
 
     pressure = [100000.0, 92500.0, 85000.0, 70000.0, 50000.0, 30000.0, 10000.0]
     temperature = [290.0, 285.0, 279.0, 265.0, 250.0, 230.0, 210.0]
