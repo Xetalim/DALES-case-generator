@@ -103,7 +103,9 @@ def _file_matches_boundary_selection(file_path: str, sel_index: dict) -> bool:
                 ):
                     return False
     except (OSError, ValueError) as exc:
-        raise ValueError(f"Cannot inspect boundary file '{file_path}' for coordinates {sel_index}") from exc
+        raise ValueError(
+            f"Cannot inspect boundary file '{file_path}' for coordinates {sel_index}"
+        ) from exc
 
     return True
 
@@ -230,7 +232,13 @@ def get_all_dales_boundaries(
             ) as ds:
                 all_ls.append(
                     load_any_boundary_var(
-                        ds.sel({dim: value for dim, value in sel_index.items() if dim in ds.dims}),
+                        ds.sel(
+                            {
+                                dim: value
+                                for dim, value in sel_index.items()
+                                if dim in ds.dims
+                            }
+                        ),
                         var,
                         boundary=boundary,
                         grid=grid,

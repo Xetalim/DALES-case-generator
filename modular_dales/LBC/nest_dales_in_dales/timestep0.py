@@ -240,7 +240,13 @@ def boundaries_timestep0(
                 ) as ds:
                     all_ls.append(
                         load_any_boundary_var(
-                            ds.sel({dim: value for dim, value in sel_index.items() if dim in ds.dims}),
+                            ds.sel(
+                                {
+                                    dim: value
+                                    for dim, value in sel_index.items()
+                                    if dim in ds.dims
+                                }
+                            ),
                             var,
                             boundary=boundary,
                             grid=grid,

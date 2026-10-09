@@ -103,7 +103,9 @@ class NestingTopology(simulation_module):
             subnest_subgrid = self.nestings[self.my_idx + 1].as_openbc()
             subnest_supergrid = self.grid
 
-            child_indices = NestingIndices.from_grids(subnest_supergrid, subnest_subgrid)
+            child_indices = NestingIndices.from_grids(
+                subnest_supergrid, subnest_subgrid
+            )
 
             existing_height = list(
                 self.nml.get("namcrosssection", {}).get("crossheight", [])
@@ -115,12 +117,20 @@ class NestingTopology(simulation_module):
                 self.nml.get("namcrosssection", {}).get("crossortho", [])
             )
 
-            merged_height = list(dict.fromkeys(existing_height + [child_indices.iz_top + 1]))
+            merged_height = list(
+                dict.fromkeys(existing_height + [child_indices.iz_top + 1])
+            )
             merged_plane = list(
-                dict.fromkeys(existing_plane + [child_indices.iy_south + 1, child_indices.iy_north + 1])
+                dict.fromkeys(
+                    existing_plane
+                    + [child_indices.iy_south + 1, child_indices.iy_north + 1]
+                )
             )
             merged_ortho = list(
-                dict.fromkeys(existing_ortho + [child_indices.ix_west + 1, child_indices.ix_east + 1])
+                dict.fromkeys(
+                    existing_ortho
+                    + [child_indices.ix_west + 1, child_indices.ix_east + 1]
+                )
             )
 
             self.set_nml_section("namcrosssection", "crossheight", merged_height)

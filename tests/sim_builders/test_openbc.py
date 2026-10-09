@@ -212,7 +212,14 @@ def _assert_crosssection_matches_fielddump(
             join="outer",
             preprocess=partial(
                 _promote_boundary_stagger_dims,
-                boundary={"xt": "west", "xm": "west", "yt": "south", "ym": "south", "zt": "top", "zm": "top"}[cs_coord_dim],
+                boundary={
+                    "xt": "west",
+                    "xm": "west",
+                    "yt": "south",
+                    "ym": "south",
+                    "zt": "top",
+                    "zm": "top",
+                }[cs_coord_dim],
             ),
         ) as ds_other,
     ):

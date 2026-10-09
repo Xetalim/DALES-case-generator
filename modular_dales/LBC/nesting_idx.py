@@ -25,7 +25,11 @@ class NestingIndices:
         for label, grid in (("parent", parent), ("child", child)):
             for name, expected in (("zt", grid.kmax), ("zm", grid.kmax + 1)):
                 values = np.asarray(getattr(grid, name), dtype=float)
-                if values.shape != (expected,) or not np.isfinite(values).all() or np.any(np.diff(values) <= 0):
+                if (
+                    values.shape != (expected,)
+                    or not np.isfinite(values).all()
+                    or np.any(np.diff(values) <= 0)
+                ):
                     raise ValueError(
                         f"Nesting {label} grid.{name} must contain {expected} finite, increasing levels; got shape {values.shape}"
                     )
@@ -46,9 +50,13 @@ class NestingIndices:
         iy_north = aligned(parent_bc.ym, child_bc.ym[-1], "north")
         iz_top = aligned(parent.zm, child.zm[-1], "top")
         if ix_east >= len(parent.xt) or iy_north >= len(parent.yt):
-            raise ValueError("Child east/north boundaries must lie inside the parent domain to select output-cell coordinates")
+            raise ValueError(
+                "Child east/north boundaries must lie inside the parent domain to select output-cell coordinates"
+            )
         if iz_top >= len(parent.zt):
-            raise ValueError("Child top must lie below the parent top to select a cross-section with both zt and zm coordinates")
+            raise ValueError(
+                "Child top must lie below the parent top to select a cross-section with both zt and zm coordinates"
+            )
         return cls(
             ix_west=ix_west,
             ix_east=ix_east,

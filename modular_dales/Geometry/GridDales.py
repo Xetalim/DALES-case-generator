@@ -267,9 +267,13 @@ class GridDales(simulation_module):
     def inherit_vertical_grid(self, parent: "GridDales") -> None:
         """Use the parent's lowest kmax layers with consistent full/interface levels."""
         if not 0 < self.kmax < parent.kmax:
-            raise ValueError("A nested grid must have fewer vertical levels than its parent")
+            raise ValueError(
+                "A nested grid must have fewer vertical levels than its parent"
+            )
         if len(parent.zt) != parent.kmax or len(parent.zm) != parent.kmax + 1:
-            raise ValueError("Parent grid must have kmax full levels and kmax + 1 interfaces")
+            raise ValueError(
+                "Parent grid must have kmax full levels and kmax + 1 interfaces"
+            )
         self.alpha = parent.alpha
         self.dz0 = parent.dz0
         self.zt = np.asarray(parent.zt[: self.kmax], dtype=float).copy()
