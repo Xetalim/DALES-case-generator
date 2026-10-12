@@ -33,6 +33,7 @@ cp = 1004.0  # Specific heat at constant pressure (dry air)
 Lv = 2.53e6  # Latent heat for vaporisation
 grav = 9.81  # Gravitational constant
 kappa = 0.4  # Von Karman constant
+omega = 7.2921e-5  # Earth's angular velocity
 
 
 class harmoniePrepper:
@@ -83,6 +84,8 @@ class harmoniePrepper:
         self.exnr = None
         self.thl = None
         self.backrad_profile = None
+        self.ug = None
+        self.vg = None
 
     def load_data(self):
         variables = ["ua", "va", "wa", "ta", "hus", "clw", "ps", "tas", "huss"]
@@ -148,6 +151,8 @@ class harmoniePrepper:
 
         # Calculate qt
         self.data = self.data.assign({"qt": self.data["clwc"] + self.data["q"]})
+
+        self.ug, self.vg = calculate_geostrophic_wind(self.data, self.grid)
 
         # Calculate base profiles and exnr function
         self.ps, self.exnrs, self.thls, self.exnr = calc_base_exner(
@@ -240,6 +245,28 @@ def _build_backrad_profile_from_harmonie(data: xr.Dataset) -> xr.Dataset:
         },
         coords={"lev": ("lev", p_vals)},
     )
+
+
+@logwrap
+def calculate_geostrophic_wind(data, grid: GridDalesOpenBC):
+    """Geostrophic wind on ``(time, z, y, x)`` from horizontal pressure gradients on height levels."""
+    if DATA_LAT_VAR in data.coords:
+        lat = data[DATA_LAT_VAR]
+    elif getattr(grid, "xlat", None) is not None:
+        lat = float(grid.xlat)
+    else:
+        raise ValueError(
+            "Cannot compute geostrophic wind: no latitude in HARMONIE data and grid.xlat is not set"
+        )
+    fc = 2.0 * omega * np.sin(np.deg2rad(lat))
+    rho = data["p"] / (
+        Rd
+        * data["t"]
+        * (1 + (Rv / Rd - 1) * (data["q"] + data["clwc"]) - Rv / Rd * data["clwc"])
+    )
+    ug = -data["p"].differentiate("y") / (rho * fc)
+    vg = data["p"].differentiate("x") / (rho * fc)
+    return ug.rename("ug"), vg.rename("vg")
 
 
 @logwrap

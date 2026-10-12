@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass, field
 
+import dask
 import numpy as np
 import xarray as xr
 
@@ -68,12 +69,6 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
     )
 
     use_harmonie_vertical_velocity: bool = field(
-        default=True,
-        init=True,
-        repr=True,
-        metadata={"serialize": True},
-    )
-    use_wind_as_geostrophic: bool = field(
         default=True,
         init=True,
         repr=True,
@@ -209,10 +204,15 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
         else:
             wls = xr.zeros_like(u)
 
-        if self.use_wind_as_geostrophic:
-            ug, vg = self._geostrophic_wind_at_heights(data, prepper, u, v)
-        else:
-            ug, vg = xr.zeros_like(u), xr.zeros_like(v)
+        ug_mean, vg_mean = dask.compute(
+            prepper.ug.mean(["x", "y"]), prepper.vg.mean(["x", "y"])
+        )
+        ug, vg = (
+            _to_heights(g, "z", self.zt)
+            .assign_coords(time=times_sec)
+            .transpose(*u.dims)
+            for g in (ug_mean, vg_mean)
+        )
 
         fields = {"u": u, "v": v, "thl": thl, "qt": qt, "wls": wls, "ug": ug, "vg": vg}
         for name in ("u", "v", "thl", "qt"):
@@ -241,143 +241,6 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
                 attrs={"long_name": "Seconds since simulation start", "units": "s"},
             )
         )
-
-    def _coriolis_parameter(self) -> float | None:
-        lat = self.central_lat
-        if lat is None and self.grid is not None:
-            lat = getattr(self.grid, "xlat", None)
-        if lat is None:
-            return None
-        fc = 2.0 * 7.2921e-5 * np.sin(np.deg2rad(float(lat)))
-        return None if np.isclose(fc, 0.0) else fc
-
-    def _geostrophic_wind_at_heights(
-        self,
-        data: xr.Dataset,
-        prepper: prep_harmonie.harmoniePrepper,
-        u: xr.DataArray,
-        v: xr.DataArray,
-    ) -> tuple[xr.DataArray, xr.DataArray]:
-        """Geostrophic wind on ``(time, zt)``; falls back to ``u``/``v``."""
-        geostrophic = self._compute_geostrophic_profiles_constant_pressure(prepper)
-        if geostrophic is None:
-            geostrophic = self._compute_geostrophic_profiles(data)
-            if geostrophic is not None:
-                geostrophic = tuple(_to_heights(g, "z", self.zt) for g in geostrophic)
-        if geostrophic is None:
-            logger.warning(
-                "HarmonieAtmosphereModule: could not derive geostrophic wind from Harmonie geopotential; falling back to u/v"
-            )
-            return u.copy(), v.copy()
-        if any(g.sizes["time"] != u.sizes["time"] for g in geostrophic):
-            logger.warning(
-                "HarmonieAtmosphereModule: geostrophic wind has %d times, expected %d; falling back to u/v",
-                geostrophic[0].sizes["time"],
-                u.sizes["time"],
-            )
-            return u.copy(), v.copy()
-        ug, vg = (
-            g.transpose("time", "z").assign_coords(time=u["time"]) for g in geostrophic
-        )
-        return ug, vg
-
-    def _compute_geostrophic_profiles_constant_pressure(
-        self,
-        prepper: prep_harmonie.harmoniePrepper,
-    ) -> tuple[xr.DataArray, xr.DataArray] | None:
-        """Compute geostrophic wind on constant-pressure levels, then map to :attr:`zt`.
-
-        This follows the LS2D idea more closely than a direct model-level
-        geopotential gradient: compute gradients on pressure surfaces first.
-        """
-
-        p_da = getattr(prepper, "p", None)
-        z_da = getattr(prepper, "z", None)
-        required_dims = {"time", "lev", "y", "x"}
-        if not isinstance(p_da, xr.DataArray) or not isinstance(z_da, xr.DataArray):
-            return None
-        if not (required_dims <= set(p_da.dims) and required_dims <= set(z_da.dims)):
-            return None
-        if "x" not in p_da.coords or "y" not in p_da.coords:
-            return None
-        if p_da.sizes["x"] < 2 or p_da.sizes["y"] < 2:
-            return None
-        fc = self._coriolis_parameter()
-        if fc is None:
-            return None
-
-        p_da = p_da.astype(float).compute()
-        z_da = z_da.astype(float).compute()
-        p_ref = p_da.mean(["time", "y", "x"]).dropna("lev")
-        if p_ref.size < 3:
-            return None
-
-        # Column heights on common pressure surfaces.
-        z_on_p = xr.apply_ufunc(
-            _interp_column,
-            p_da,
-            z_da,
-            input_core_dims=[["lev"], ["lev"]],
-            output_core_dims=[["p_ref"]],
-            kwargs={"target": p_ref.values, "outside": np.nan},
-            vectorize=True,
-        ).assign_coords(p_ref=p_ref.values)
-        if not z_on_p.notnull().any():
-            return None
-
-        ug_p, vg_p = _geostrophic_wind(z_on_p, fc)
-        z_p = z_on_p.mean(["y", "x"])
-
-        def to_heights(values: xr.DataArray) -> xr.DataArray:
-            return xr.apply_ufunc(
-                _interp_column,
-                z_p,
-                values,
-                input_core_dims=[["p_ref"], ["p_ref"]],
-                output_core_dims=[["z"]],
-                kwargs={"target": self.zt, "outside": None},
-                vectorize=True,
-            ).assign_coords(z=self.zt)
-
-        ug_tz = to_heights(ug_p)
-        vg_tz = to_heights(vg_p)
-
-        # Fill occasional NaN time rows by the nearest valid profile.
-        valid = (ug_tz.notnull().all("z") & vg_tz.notnull().all("z")).values
-        if not valid.any():
-            return None
-        valid_idx = np.flatnonzero(valid)
-        nearest = valid_idx[
-            np.abs(valid_idx[:, None] - np.arange(valid.size)).argmin(axis=0)
-        ]
-        return tuple(
-            da.isel(time=nearest).assign_coords(time=da["time"])
-            for da in (ug_tz, vg_tz)
-        )
-
-    def _compute_geostrophic_profiles(
-        self,
-        data: xr.Dataset,
-    ) -> tuple[xr.DataArray, xr.DataArray] | None:
-        """Compute geostrophic wind from horizontal geopotential gradients.
-
-        This mirrors the LS2D strategy: derive geostrophic wind from height
-        gradients and Coriolis, then average over the target area. The result
-        stays on the source ``z`` levels.
-        """
-
-        if "z3d" not in data:
-            return None
-        if "x" not in data.coords or "y" not in data.coords:
-            return None
-        if not {"time", "z", "y", "x"} <= set(data["z3d"].dims):
-            return None
-        if data.sizes["x"] < 2 or data.sizes["y"] < 2:
-            return None
-        fc = self._coriolis_parameter()
-        if fc is None:
-            return None
-        return _geostrophic_wind(data["z3d"].astype(float), fc)
 
 
 def _surface_fluxes(
@@ -412,21 +275,3 @@ def _to_heights(da: xr.DataArray, z_dim: str, z_target: np.ndarray) -> xr.DataAr
     return da.interp({z_dim: np.clip(z_target, z_src[0], z_src[-1])}).assign_coords(
         {z_dim: z_target}
     )
-
-
-def _interp_column(x: np.ndarray, y: np.ndarray, target: np.ndarray, outside):
-    """1D interpolation of ``y(x)`` onto ``target`` ignoring NaNs; ``outside=None`` holds end values."""
-    mask = np.isfinite(x) & np.isfinite(y)
-    x_unique, first = np.unique(x[mask], return_index=True)
-    if x_unique.size < 3:
-        return np.full(np.shape(target), np.nan)
-    return np.interp(target, x_unique, y[mask][first], left=outside, right=outside)
-
-
-def _geostrophic_wind(
-    height: xr.DataArray, fc: float
-) -> tuple[xr.DataArray, xr.DataArray]:
-    """Area-mean geostrophic wind from geopotential height on a horizontal ``(y, x)`` grid."""
-    ug = -(9.81 / fc) * height.differentiate("y")
-    vg = (9.81 / fc) * height.differentiate("x")
-    return ug.mean(["y", "x"]), vg.mean(["y", "x"])
