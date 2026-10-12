@@ -72,7 +72,7 @@ def resolve_time_axis(
 ) -> np.ndarray:
     """Common time axis: ``explicit`` if given, else the union of all series times.
 
-    Time 0 and ``runtime`` (when beyond the last point) are always included.
+    Time 0 and ``runtime`` are always included, including inside the source range.
     """
 
     explicit_list = [float(t) for t in explicit] if explicit is not None else []
@@ -81,7 +81,7 @@ def resolve_time_axis(
     else:
         times = {float(t) for s in series for t in s[TIME_DIM].values}
     times.add(0.0)
-    if runtime is not None and max(times) < float(runtime):
+    if runtime is not None:
         times.add(float(runtime))
     return np.asarray(sorted(times), dtype=float)
 

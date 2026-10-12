@@ -273,6 +273,32 @@ def _detect_source_crs(ds):
     )
 
 
+def _rotate_winds_to_crs(u, v, src_crs, dst_crs):
+    """Rotate (u, v) from source-grid axes to destination-grid axes."""
+    fwd = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
+    xx, yy = np.meshgrid(u["x"].values, u["y"].values)
+    eps = 1e-4 * float(np.abs(u["x"].diff("x")).median())
+    x0, y0 = fwd.transform(xx, yy)
+    x1, y1 = fwd.transform(xx + eps, yy)
+    x2, y2 = fwd.transform(xx, yy + eps)
+
+    def axis_angle(dx, dy):
+        return xr.DataArray(
+            np.arctan2(dy, dx), dims=("y", "x"), coords={"y": u["y"], "x": u["x"]}
+        )
+
+    theta_x = axis_angle(x1 - x0, y1 - y0)
+    theta_y = axis_angle(x2 - x0, y2 - y0)
+    logger.info(
+        "Rotating winds to target CRS axes (angle %.2f to %.2f deg)",
+        float(np.rad2deg(theta_x.min())),
+        float(np.rad2deg(theta_x.max())),
+    )
+    u_dst = u * np.cos(theta_x) + v * np.cos(theta_y)
+    v_dst = u * np.sin(theta_x) + v * np.sin(theta_y)
+    return u_dst, v_dst
+
+
 def _build_target_grid(grid, buffer, resolution):
     """Build 1-D x/y coordinate arrays for the target Lambert grid.
 
@@ -735,6 +761,12 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
         ds_3d_clean = ds_3d_clean.load()
         sfc_ds = sfc_ds.load()
 
+        if src_crs != dst_crs:
+            u_rot, v_rot = _rotate_winds_to_crs(
+                ds_3d_clean["u"], ds_3d_clean["v"], src_crs, dst_crs
+            )
+            ds_3d_clean = ds_3d_clean.assign(u=u_rot, v=v_rot)
+
         # Reproject 3D model-level fields
         logger.info("Reprojecting model-level fields to Lambert grid")
         ds_3d_clean = _reproject_dataset(
@@ -973,7 +1005,7 @@ def _open_knmi_grib_dataset(glob_pattern, chunks=None):
 
             if sp_lat is not None and sp_lon is not None:
                 np_lat = -float(sp_lat)
-                np_lon = (float(sp_lon) + 180.0) % 360.0 - 180.0
+                np_lon = (float(sp_lon) + 360.0) % 360.0 - 180.0
                 src_crs = CRS.from_cf(
                     {
                         "grid_mapping_name": "rotated_latitude_longitude",
@@ -1008,7 +1040,17 @@ def _open_knmi_grib_dataset(glob_pattern, chunks=None):
             )
             rot_x = np.mean(rot_x_2d, axis=0)
             rot_y = np.mean(rot_y_2d, axis=1)
+            # A wrong source CRS makes the 2D coordinates non-rectilinear; collapsing them silently distorts distances.
+            spread = max(np.ptp(rot_x_2d, axis=0).max(), np.ptp(rot_y_2d, axis=1).max())
+            spacing = min(np.abs(np.diff(rot_x)).min(), np.abs(np.diff(rot_y)).min())
+            if spread > 0.01 * spacing:
+                raise ValueError(
+                    f"GRIB lat/lon do not map to a rectilinear grid in {src_crs.to_proj4()} "
+                    f"(spread {spread:.3g} vs spacing {spacing:.3g}); check the rotated-pole metadata."
+                )
             dataset = dataset.assign_coords(x=("x", rot_x), y=("y", rot_y))
+        except ValueError:
+            raise
         except Exception as exc:
             logger.warning("Could not transform lat/lon to 1D x/y: %s", exc)
 
