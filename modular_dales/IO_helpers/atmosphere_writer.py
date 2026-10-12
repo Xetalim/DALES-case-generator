@@ -14,7 +14,7 @@ FILE_Z_DIM = "zh"
 def _to_netcdf(ds: xr.Dataset, path) -> None:
     ds = ds.rename({Z_DIM: FILE_Z_DIM}) if Z_DIM in ds.dims else ds
     encoding = {name: {"_FillValue": None, "dtype": "f8"} for name in ds.variables}
-    ds.to_netcdf(path, format="NETCDF3_CLASSIC", encoding=encoding)
+    ds.to_netcdf(path, encoding=encoding)
 
 
 class AtmosphereProfileWriter:
