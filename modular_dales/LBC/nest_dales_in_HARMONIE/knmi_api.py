@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 import tarfile
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -147,7 +148,7 @@ def _download_file(
     target_path: Path,
     chunk_size: int = 1024 * 1024,
     timeout: int = 60,
-    max_retries: int = 2,
+    max_retries: int = 5,
 ) -> None:
     target_path.parent.mkdir(parents=True, exist_ok=True)
     partial_path = target_path.with_suffix(target_path.suffix + ".part")
@@ -166,21 +167,53 @@ def _download_file(
             ) as response:
                 response.raise_for_status()
 
-                # A 206 response means the server accepted the range request.
-                # A 200 response means it ignored Range; restart from zero.
                 if offset and response.status_code == 206:
                     content_range = response.headers.get("Content-Range", "")
-                    if not content_range.startswith(f"bytes {offset}-"):
+                    try:
+                        range_unit, range_spec = content_range.split(" ", 1)
+                        byte_range, total_text = range_spec.split("/", 1)
+                        start_text, end_text = byte_range.split("-", 1)
+                        range_start = int(start_text)
+                        range_end = int(end_text)
+                        total_size = int(total_text) if total_text != "*" else None
+                    except (ValueError, TypeError):
+                        range_start = -1
+                        range_end = -1
+                        total_size = None
+
+                    if (
+                        range_unit != "bytes"
+                        or range_start != offset
+                        or range_end < range_start
+                        or (total_size is not None and range_end >= total_size)
+                    ):
+                        partial_path.unlink(missing_ok=True)
                         raise IOError(f"Unexpected Content-Range: {content_range!r}")
+                    expected_bytes = range_end - range_start + 1
+                    if total_size is not None:
+                        expected_bytes = total_size - offset
                     mode = "ab"
-                else:
+                elif response.status_code == 200:
                     offset = 0
                     mode = "wb"
+                    content_length = response.headers.get("Content-Length")
+                    expected_bytes = int(content_length) if content_length else None
+                else:
+                    raise IOError(
+                        f"Unexpected HTTP status for download: {response.status_code}"
+                    )
 
+                received_bytes = 0
                 with partial_path.open(mode) as handle:
                     for chunk in response.iter_content(chunk_size=chunk_size):
                         if chunk:
                             handle.write(chunk)
+                            received_bytes += len(chunk)
+
+                if expected_bytes is not None and received_bytes < expected_bytes:
+                    raise IOError(
+                        f"Incomplete download response: received {received_bytes} of {expected_bytes} bytes"
+                    )
 
             partial_path.replace(target_path)
             logger.info("Downloaded %s", target_path.name)
@@ -196,6 +229,7 @@ def _download_file(
                 attempt + 1,
                 max_retries,
             )
+            time.sleep(min(2**attempt, 30))
 
 
 def _download_temporary_url(download_url: str, target_path: Path) -> None:
