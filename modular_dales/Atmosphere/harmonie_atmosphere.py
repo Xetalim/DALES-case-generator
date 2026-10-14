@@ -215,12 +215,14 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
         )
 
         fields = {"u": u, "v": v, "thl": thl, "qt": qt, "wls": wls, "ug": ug, "vg": vg}
-        for name in ("u", "v", "thl", "qt"):
-            fields[f"dt{name}_advec"] = (
-                fields[name].differentiate("time")
-                if self.infer_adv_tendencies
-                else xr.zeros_like(fields[name])
+        fields.update(
+            _advective_tendencies_from_harmonie(
+                data=data,
+                z_target=self.zt,
+                times_sec=times_sec,
+                infer_adv_tendencies=self.infer_adv_tendencies,
             )
+        )
 
         surface = u.isel(z=0, drop=True)
         ps_value = float(prepper.ps) if prepper.ps is not None else 101325.0
@@ -241,6 +243,50 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
                 attrs={"long_name": "Seconds since simulation start", "units": "s"},
             )
         )
+
+
+def _advective_tendencies_from_harmonie(
+    data: xr.Dataset,
+    z_target: np.ndarray,
+    times_sec: np.ndarray,
+    infer_adv_tendencies: bool,
+) -> dict[str, xr.DataArray]:
+    """Compute domain-mean advective tendencies from horizontal gradients."""
+    names = ("u", "v", "thl", "qt")
+    if not infer_adv_tendencies:
+        profile_ds = data.mean([d for d in ("x", "y") if d in data.dims], skipna=True)
+        out = {}
+        for name in names:
+            out[f"dt{name}_advec"] = xr.zeros_like(
+                _to_heights(profile_ds[name], "z", z_target).assign_coords(
+                    time=times_sec
+                )
+            )
+        return out
+
+    required = {"time", "z", "x", "y", *names}
+    missing = [name for name in required if name not in data and name not in data.dims]
+    if missing:
+        raise ValueError(
+            "Cannot compute advective tendencies from Harmonie fields; missing: "
+            + ", ".join(sorted(missing))
+        )
+    if data.sizes["x"] < 2 or data.sizes["y"] < 2:
+        raise ValueError(
+            "Cannot compute advective tendencies: need at least 2 points in both x and y"
+        )
+
+    wind_u = data["u"]
+    wind_v = data["v"]
+    out = {}
+    for name in names:
+        var = data[name]
+        tendency = -(wind_u * var.differentiate("x") + wind_v * var.differentiate("y"))
+        profile = tendency.mean(["x", "y"], skipna=True)
+        out[f"dt{name}_advec"] = _to_heights(profile, "z", z_target).assign_coords(
+            time=times_sec
+        )
+    return out
 
 
 def _surface_fluxes(

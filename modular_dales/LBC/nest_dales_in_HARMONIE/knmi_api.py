@@ -142,14 +142,60 @@ def _archive_filename(product: DatasetConfig, forecast_datetime: dt.datetime) ->
     return f"{product.archive_prefix}_{forecast_datetime.strftime('%Y%m%d%H')}.tar"
 
 
-def _download_file(download_url: str, target_path: Path) -> None:
+def _download_file(
+    download_url: str,
+    target_path: Path,
+    chunk_size: int = 1024 * 1024,
+    timeout: int = 60,
+    max_retries: int = 2,
+) -> None:
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    with requests.get(download_url, stream=True, timeout=60) as response:
-        response.raise_for_status()
-        with target_path.open("wb") as handle:
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    handle.write(chunk)
+    partial_path = target_path.with_suffix(target_path.suffix + ".part")
+
+    for attempt in range(max_retries):
+        offset = partial_path.stat().st_size if partial_path.exists() else 0
+
+        headers = {"Range": f"bytes={offset}-"} if offset else {}
+
+        try:
+            with requests.get(
+                download_url,
+                headers=headers,
+                stream=True,
+                timeout=timeout,
+            ) as response:
+                response.raise_for_status()
+
+                # A 206 response means the server accepted the range request.
+                # A 200 response means it ignored Range; restart from zero.
+                if offset and response.status_code == 206:
+                    content_range = response.headers.get("Content-Range", "")
+                    if not content_range.startswith(f"bytes {offset}-"):
+                        raise IOError(f"Unexpected Content-Range: {content_range!r}")
+                    mode = "ab"
+                else:
+                    offset = 0
+                    mode = "wb"
+
+                with partial_path.open(mode) as handle:
+                    for chunk in response.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            handle.write(chunk)
+
+            partial_path.replace(target_path)
+            logger.info("Downloaded %s", target_path.name)
+            return
+
+        except (requests.RequestException, OSError, IOError):
+            if attempt == max_retries - 1:
+                raise
+
+            logger.warning(
+                "Download interrupted for %s; retrying (%d/%d)",
+                target_path.name,
+                attempt + 1,
+                max_retries,
+            )
 
 
 def _download_temporary_url(download_url: str, target_path: Path) -> None:
