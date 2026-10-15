@@ -22,6 +22,8 @@ P5_DATASET = ("harmonie_arome_cy43_p5", "1.0")
 P3_DATASET = ("harmonie_arome_cy43_p3", "1.0")
 DEFAULT_API_KEY_FILE = ".knmiapirc"
 GB = 1024**3
+MB = 1000**2
+DOWNLOAD_PROGRESS_INTERVAL = 500 * MB
 
 
 @dataclass(frozen=True)
@@ -148,13 +150,45 @@ def _download_file(
     target_path: Path,
     chunk_size: int = 1024 * 1024,
     timeout: int = 60,
-    max_retries: int = 5,
+    max_retries: int = 10,
 ) -> None:
     target_path.parent.mkdir(parents=True, exist_ok=True)
     partial_path = target_path.with_suffix(target_path.suffix + ".part")
+    started_at = time.monotonic()
+    transferred_bytes = 0
+    total_bytes: int | None = None
+
+    def format_progress() -> str:
+        elapsed = max(time.monotonic() - started_at, 0.0)
+        completed = partial_path.stat().st_size if partial_path.exists() else 0
+        average_speed = transferred_bytes / MB / elapsed if elapsed else 0.0
+        if total_bytes is None:
+            remaining_text = "unknown"
+            eta_text = "unknown"
+            total_text = "unknown"
+        else:
+            remaining = max(total_bytes - completed, 0)
+            remaining_text = f"{remaining / MB:.1f} MB"
+            total_text = f"{total_bytes / MB:.1f} MB"
+            eta_text = (
+                f"{remaining / (average_speed * MB):.1f}s"
+                if average_speed > 0
+                else "unknown"
+            )
+
+        completed_text = (
+            f"{completed / MB:.1f} MB" if completed >= MB else f"{completed} B"
+        )
+        return (
+            f"done={completed_text}, total={total_text}, remaining={remaining_text}, "
+            f"elapsed={elapsed:.1f}s, average={average_speed:.2f} MB/s, ETA={eta_text}"
+        )
 
     for attempt in range(max_retries):
         offset = partial_path.stat().st_size if partial_path.exists() else 0
+        next_progress_bytes = (
+            offset // DOWNLOAD_PROGRESS_INTERVAL + 1
+        ) * DOWNLOAD_PROGRESS_INTERVAL
 
         headers = {"Range": f"bytes={offset}-"} if offset else {}
 
@@ -192,12 +226,14 @@ def _download_file(
                     expected_bytes = range_end - range_start + 1
                     if total_size is not None:
                         expected_bytes = total_size - offset
+                        total_bytes = total_size
                     mode = "ab"
                 elif response.status_code == 200:
                     offset = 0
                     mode = "wb"
                     content_length = response.headers.get("Content-Length")
                     expected_bytes = int(content_length) if content_length else None
+                    total_bytes = expected_bytes
                 else:
                     raise IOError(
                         f"Unexpected HTTP status for download: {response.status_code}"
@@ -209,6 +245,15 @@ def _download_file(
                         if chunk:
                             handle.write(chunk)
                             received_bytes += len(chunk)
+                            transferred_bytes += len(chunk)
+                            completed = offset + received_bytes
+                            while completed >= next_progress_bytes:
+                                logger.info(
+                                    "Download progress for %s: %s",
+                                    target_path.name,
+                                    format_progress(),
+                                )
+                                next_progress_bytes += DOWNLOAD_PROGRESS_INTERVAL
 
                 if expected_bytes is not None and received_bytes < expected_bytes:
                     raise IOError(
@@ -219,17 +264,27 @@ def _download_file(
             logger.info("Downloaded %s", target_path.name)
             return
 
-        except (requests.RequestException, OSError, IOError):
+        except (requests.RequestException, OSError, IOError) as exc:
             if attempt == max_retries - 1:
+                logger.warning(
+                    "Download interrupted for %s (%s); %s; no retries remaining",
+                    target_path.name,
+                    exc,
+                    format_progress(),
+                )
                 raise
 
+            retry_delay = min(2**attempt, 30)
             logger.warning(
-                "Download interrupted for %s; retrying (%d/%d)",
+                "Download interrupted for %s (%s); %s; retrying in %.1fs (%d/%d)",
                 target_path.name,
+                exc,
+                format_progress(),
+                retry_delay,
                 attempt + 1,
                 max_retries,
             )
-            time.sleep(min(2**attempt, 30))
+            time.sleep(retry_delay)
 
 
 def _download_temporary_url(download_url: str, target_path: Path) -> None:
