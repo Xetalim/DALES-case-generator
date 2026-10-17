@@ -3,6 +3,7 @@ from .atmosphere import (
     AtmosphericProfile,
     InterpolatedProfile,
     TimedAtmosphereProfile,
+    profiles_to_forcings,
 )
 from .external_forcing import ExternalForcingModule
 from .harmonie_atmosphere import HarmonieAtmosphereModule
@@ -21,6 +22,7 @@ __all__ = [
     "SHAPE_FUNCTIONS",
     "AtmosphereModule",
     "AtmosphericProfile",
+    "profiles_to_forcings",
     "ExternalForcingModule",
     "FieldSpec",
     "FromLS2D",

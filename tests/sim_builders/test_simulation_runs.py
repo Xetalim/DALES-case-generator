@@ -1,20 +1,22 @@
-import pytest
 import subprocess
+
+import pytest
+
 from modular_dales import (
-    DefaultNamelistModule,
-    GridDales,
-    NestingTopology,
-    TimeModule,
     AtmosphereModule,
     AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
+    DefaultNamelistModule,
+    GridDales,
+    Nest_in_Dales,
+    NestingTopology,
+    TimeModule,
     dales_simulation,
     do_openboundary,
-    Nest_in_Dales,
 )
-from modular_dales.Atmosphere.atmosphere import InterpolatedProfile
+from modular_dales.Atmosphere import InterpolatedProfile, lin
 from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.vars import *
 
 
 @pytest.mark.slow
@@ -76,26 +78,14 @@ def test_triple_nested_simulation_setup(machine_conf):
         sim += DefaultNamelistModule()
 
         atmo = AtmosphereModule()
-        atmo += AtmosphericProfile(
-            variable=ua, shape="lin", params=dict(surf_val=3, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=ug, shape="lin", params=dict(surf_val=3, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=va, shape="lin", params=dict(surf_val=3, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=vg, shape="lin", params=dict(surf_val=3, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=ua_nudge, shape="lin", params=dict(surf_val=3, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=va_nudge, shape="lin", params=dict(surf_val=3, ddz=0)
-        )
+        atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=0))
+        atmo += AtmosphericProfile(variable=ug, shape=lin(surf_val=3, ddz=0))
+        atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=3, ddz=0))
+        atmo += AtmosphericProfile(variable=vg, shape=lin(surf_val=3, ddz=0))
+        atmo += AtmosphericProfile(variable=ua_nudge, shape=lin(surf_val=3, ddz=0))
+        atmo += AtmosphericProfile(variable=va_nudge, shape=lin(surf_val=3, ddz=0))
         # atmo += AtmosphericProfile(
-        #     variable=thetal, shape="lin", params=dict(surf_val=293.15, ddz=1e-2)
+        #     variable=thetal, shape=lin(surf_val=293.15,ddz=1e-2)
         # )
         atmo += InterpolatedProfile(
             variable=thetal,
@@ -107,18 +97,10 @@ def test_triple_nested_simulation_setup(machine_conf):
             z=[0, 400, 410, 1600],
             points=[293.15, 293.15, 298.15, 301.15],
         )
-        atmo += AtmosphericProfile(
-            variable=qt, shape="lin", params=dict(surf_val=0.0018, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=qt_nudge, shape="lin", params=dict(surf_val=0.0018, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=wa, shape="lin", params=dict(surf_val=0, ddz=0)
-        )
-        atmo += AtmosphericProfile(
-            variable=wa_nudge, shape="lin", params=dict(surf_val=0, ddz=0)
-        )
+        atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0018, ddz=0))
+        atmo += AtmosphericProfile(variable=qt_nudge, shape=lin(surf_val=0.0018, ddz=0))
+        atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
+        atmo += AtmosphericProfile(variable=wa_nudge, shape=lin(surf_val=0, ddz=0))
         atmo += InterpolatedProfile(
             variable=tke,
             z=[0, 4000, 5000],
@@ -126,8 +108,7 @@ def test_triple_nested_simulation_setup(machine_conf):
         )
         atmo += AtmosphericProfile(
             variable=w,
-            shape="lin",
-            params=dict(surf_val=0.0, ddz=0.0),
+            shape=lin(surf_val=0.0, ddz=0.0),
         )
         sim += atmo
 
@@ -157,8 +138,8 @@ def test_triple_nested_simulation_setup(machine_conf):
 
         if idx != 0:
             openbc = do_openboundary(
-                time0=f"2023-01-01T12:00:00",
-                start=f"2023-01-01T12:00:00",
+                time0="2023-01-01T12:00:00",
+                start="2023-01-01T12:00:00",
                 end="2023-01-02T12:00:00",
                 e12=0.01,
                 dxint=grid.xsize / grid.itot,

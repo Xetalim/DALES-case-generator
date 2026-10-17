@@ -105,26 +105,16 @@ def _attach_common_physics(
     center_vertical_crosssections: bool = False,
 ) -> None:
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=1.0, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=va, shape="lin", params=dict(surf_val=1.5, ddz=1e-3)
-    )
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=1.0, ddz=0.0))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=1.5, ddz=1e-3))
     atmo += InterpolatedProfile(
         variable=thetal,
         z=[0, 400, 410, 1600],
         points=[293.15, 293.15, 298.15, 301.15],
     )
-    atmo += AtmosphericProfile(
-        variable=qt, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=wa, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=tke, shape="lin", params=dict(surf_val=0.1, ddz=0.0)
-    )
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
+    atmo += AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0))
     sim += atmo
 
     sim += TimeModule(

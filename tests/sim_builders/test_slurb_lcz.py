@@ -1,31 +1,33 @@
 from __future__ import annotations
 
-import numpy as np
-
 from modular_dales import dales_simulation
 from modular_dales.Atmosphere import (
     AtmosphereModule,
     AtmosphericProfile,
     InterpolatedProfile,
+    exp,
+    expsinw,
+    lin,
+    linmlsurf,
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Configuration.run_and_time import TimeModule
+from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LSM import FromLCZ, LSMModule, LandUseModification
-from modular_dales.Surface.LSM.SLuRB.slurb import (
-    SLURBModification,
-    SLURBModule,
-    SLURBVariableModification,
-)
-from modular_dales.Geometry.geometry_modification import AllGeometry
+from modular_dales.Surface.LSM.LSM import FromLCZ, LandUseModification, LSMModule
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.Surface.LSM.SLuRB.slurb import (
+    SLURBModification,
+    SLURBModule,
+    SLURBVariableModification,
+)
+from modular_dales.vars import *
 
 
 def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
@@ -52,22 +54,18 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=3, ddz=1e-3)
-    )
-    atmo += AtmosphericProfile(variable=va, shape="lin", params=dict(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
     atmo += AtmosphericProfile(
         variable=thetal,
-        shape="linmlsurf",
-        params=dict(surf_val=293, offset_val=1.25, lapse_rate=1e-3, z_ml=0),
+        shape=linmlsurf(surf_val=293, offset_val=1.25, lapse_rate=1e-3, z_ml=0),
     )
     atmo += AtmosphericProfile(
-        variable=qt, shape="exp", params=dict(surf_val=0.016, lambda_val=1500, z_ml=0)
+        variable=qt, shape=exp(surf_val=0.016, lambda_val=1500, z_ml=0)
     )
     atmo += AtmosphericProfile(
         variable=wa,
-        shape="expsinw",
-        params=dict(surf_val=4.0e-3, amp=0, H=2500, Hp=5300),
+        shape=expsinw(surf_val=4.0e-3, amp=0, H=2500, Hp=5300),
     )
     atmo += InterpolatedProfile(
         variable=tke,
@@ -127,13 +125,13 @@ def assert_slurb_lcz_files_written(machine_conf) -> None:
     assert len(slurb_files) == 1, f"Expected 1 SLURB file, found {len(slurb_files)}"
     for slurb_file in slurb_files:
         assert slurb_file.is_file(), f"Expected SLURB file {slurb_file} to exist"
-        assert (
-            slurb_file.stat().st_size > 0
-        ), f"Expected SLURB file {slurb_file} to be non-empty"
+        assert slurb_file.stat().st_size > 0, (
+            f"Expected SLURB file {slurb_file} to be non-empty"
+        )
     lsm_files = list(sim.output_path.glob("input/lsm.inp_*.nc"))
     assert len(lsm_files) == 1, f"Expected 1 LSM file, found {len(lsm_files)}"
     for lsm_file in lsm_files:
         assert lsm_file.is_file(), f"Expected LSM file {lsm_file} to exist"
-        assert (
-            lsm_file.stat().st_size > 0
-        ), f"Expected LSM file {lsm_file} to be non-empty"
+        assert lsm_file.stat().st_size > 0, (
+            f"Expected LSM file {lsm_file} to be non-empty"
+        )

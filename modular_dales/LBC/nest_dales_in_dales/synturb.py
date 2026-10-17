@@ -1,5 +1,6 @@
 import numpy as np
 import xarray as xr
+
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.logging_wrapper import logwrap
 

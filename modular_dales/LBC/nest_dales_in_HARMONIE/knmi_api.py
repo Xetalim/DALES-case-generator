@@ -222,7 +222,7 @@ def _download_file(
                         or (total_size is not None and range_end >= total_size)
                     ):
                         partial_path.unlink(missing_ok=True)
-                        raise IOError(f"Unexpected Content-Range: {content_range!r}")
+                        raise OSError(f"Unexpected Content-Range: {content_range!r}")
                     expected_bytes = range_end - range_start + 1
                     if total_size is not None:
                         expected_bytes = total_size - offset
@@ -235,7 +235,7 @@ def _download_file(
                     expected_bytes = int(content_length) if content_length else None
                     total_bytes = expected_bytes
                 else:
-                    raise IOError(
+                    raise OSError(
                         f"Unexpected HTTP status for download: {response.status_code}"
                     )
 
@@ -256,7 +256,7 @@ def _download_file(
                                 next_progress_bytes += DOWNLOAD_PROGRESS_INTERVAL
 
                 if expected_bytes is not None and received_bytes < expected_bytes:
-                    raise IOError(
+                    raise OSError(
                         f"Incomplete download response: received {received_bytes} of {expected_bytes} bytes"
                     )
 
@@ -264,7 +264,7 @@ def _download_file(
             logger.info("Downloaded %s", target_path.name)
             return
 
-        except (requests.RequestException, OSError, IOError) as exc:
+        except (requests.RequestException, OSError) as exc:
             if attempt == max_retries - 1:
                 logger.warning(
                     "Download interrupted for %s (%s); %s; no retries remaining",

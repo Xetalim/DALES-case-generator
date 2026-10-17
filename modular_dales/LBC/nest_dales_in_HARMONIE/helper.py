@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 import xarray as xr
+
 from modular_dales.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)

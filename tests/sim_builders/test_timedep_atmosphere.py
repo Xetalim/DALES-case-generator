@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import netCDF4
 
 from modular_dales import dales_simulation
@@ -9,6 +8,7 @@ from modular_dales.Atmosphere import (
     AtmosphericProfile,
     InterpolatedProfile,
     TimedAtmosphereProfile,
+    lin,
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.output_modules import EasyOutputModule
@@ -19,7 +19,7 @@ from modular_dales.modular.time_dependent import (
 )
 from modular_dales.modular.time_dependent_scalars import TimeDependentScalar
 from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.vars import *
 
 
 def timedep_atmosphere_case(machine_conf: dict) -> dales_simulation:
@@ -44,17 +44,11 @@ def timedep_atmosphere_case(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=1.0, ddz=1e-3)
-    )
-    atmo += AtmosphericProfile(variable=wa, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=va, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(
-        variable=thetal, shape="lin", params=dict(surf_val=293.15, ddz=1e-2)
-    )
-    atmo += AtmosphericProfile(
-        variable=qt, shape="lin", params=dict(surf_val=0.01, ddz=0)
-    )
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=1.0, ddz=1e-3))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.01, ddz=0))
     atmo += InterpolatedProfile(
         variable=tke,
         z=[0, 4000, 5000],
@@ -64,20 +58,18 @@ def timedep_atmosphere_case(machine_conf: dict) -> dales_simulation:
         TimedAtmosphereProfile(
             time=0.0,
             profile=AtmosphericProfile(
-                variable=dpdx, shape="lin", params=dict(surf_val=1.0, ddz=1e-3)
+                variable=dpdx, shape=lin(surf_val=1.0, ddz=1e-3)
             ),
         ),
         TimedAtmosphereProfile(
             time=30.0,
             profile=AtmosphericProfile(
-                variable=dpdx, shape="lin", params=dict(surf_val=2.0, ddz=1e-3)
+                variable=dpdx, shape=lin(surf_val=2.0, ddz=1e-3)
             ),
         ),
         TimedAtmosphereProfile(
             time=60.0,
-            profile=AtmosphericProfile(
-                variable=dpdx, shape="lin", params=dict(surf_val=3, ddz=1e-3)
-            ),
+            profile=AtmosphericProfile(variable=dpdx, shape=lin(surf_val=3, ddz=1e-3)),
         ),
     ]
 
@@ -105,9 +97,9 @@ def assert_timedep_atmosphere_files_written(machine_conf) -> None:
     sim.sim_preprocessing_pipeline()
 
     timedep_files = list(sim.output_path.glob("input/forcings.*.nc"))
-    assert (
-        len(timedep_files) == 1
-    ), f"Expected 1 timedep atmosphere file, found {len(timedep_files)}"
+    assert len(timedep_files) == 1, (
+        f"Expected 1 timedep atmosphere file, found {len(timedep_files)}"
+    )
 
     with netCDF4.Dataset(timedep_files[0], "r") as ds:
         assert "zh" in ds.dimensions

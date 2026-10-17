@@ -1,30 +1,29 @@
 from __future__ import annotations
 
-import numpy as np
-
 from modular_dales import dales_simulation
 from modular_dales.Atmosphere import (
     AtmosphereModule,
     AtmosphericProfile,
     InterpolatedProfile,
+    lin,
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.run_and_time import TimeModule
+from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LSM import LSMModule, LandUseModification
-from modular_dales.Surface.LSM.SLuRB.slurb import (
-    SLURBModification,
-    SLURBModule,
-    SLURBVariableModification,
-)
-from modular_dales.Geometry.geometry_modification import AllGeometry
+from modular_dales.Surface.LSM.LSM import LandUseModification, LSMModule
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.Surface.LSM.SLuRB.slurb import (
+    SLURBModification,
+    SLURBModule,
+    SLURBVariableModification,
+)
+from modular_dales.vars import *
 
 
 def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
@@ -50,15 +49,11 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=3, ddz=1e-3)
-    )
-    atmo += AtmosphericProfile(variable=va, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(
-        variable=thetal, shape="lin", params=dict(surf_val=293.15, ddz=1e-2)
-    )
-    atmo += AtmosphericProfile(variable=qt, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=wa, shape="lin", params=dict(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
     atmo += InterpolatedProfile(
         variable=tke,
         z=[0, 4000, 5000],
@@ -107,6 +102,6 @@ def assert_slurb_files_written(machine_conf) -> None:
     assert len(slurb_files) == 1, f"Expected 1 SLURB file, found {len(slurb_files)}"
     for slurb_file in slurb_files:
         assert slurb_file.is_file(), f"Expected SLURB file {slurb_file} to exist"
-        assert (
-            slurb_file.stat().st_size > 0
-        ), f"Expected SLURB file {slurb_file} to be non-empty"
+        assert slurb_file.stat().st_size > 0, (
+            f"Expected SLURB file {slurb_file} to be non-empty"
+        )

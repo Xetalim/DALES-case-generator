@@ -1,5 +1,5 @@
-from pathlib import Path
 from functools import partial
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -14,17 +14,14 @@ from modular_dales import (
     TimeModule,
     dales_simulation,
 )
+from modular_dales.Atmosphere import lin
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.LBC import NestingTopology
 from modular_dales.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
     _promote_boundary_stagger_dims,
 )
-from modular_dales.vars import *  # noqa: F401,F403
 from modular_dales.modular.simulation_module import set_nml_section
-from tests.openbc_test_input.openbc_fixtures import (
-    atmo_netcdf_file,
-    surface_netcdf_file,
-)
+from modular_dales.vars import *
 from tests.helpers import run_command_with_report
 
 
@@ -116,28 +113,23 @@ def _build_nested_sim_with_easyoutput(
     atmo = AtmosphereModule()
     atmo += AtmosphericProfile(
         variable=ua,
-        shape="lin",
-        params=dict(surf_val=3.0, ddz=1e-3),
+        shape=lin(surf_val=3.0, ddz=1e-3),
     )
     atmo += AtmosphericProfile(
         variable=va,
-        shape="lin",
-        params=dict(surf_val=0.0, ddz=0.0),
+        shape=lin(surf_val=0.0, ddz=0.0),
     )
     atmo += AtmosphericProfile(
         variable=w,
-        shape="lin",
-        params=dict(surf_val=0.0, ddz=0.0),
+        shape=lin(surf_val=0.0, ddz=0.0),
     )
     atmo += AtmosphericProfile(
         variable=thetal,
-        shape="lin",
-        params=dict(surf_val=293.15, ddz=1e-2),
+        shape=lin(surf_val=293.15, ddz=1e-2),
     )
     atmo += AtmosphericProfile(
         variable=qt,
-        shape="lin",
-        params=dict(surf_val=0.01, ddz=0.0),
+        shape=lin(surf_val=0.01, ddz=0.0),
     )
 
     sim += atmo

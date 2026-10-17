@@ -1,12 +1,12 @@
 import logging
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Optional
 
 import numpy as np
 import xarray as xr
 
-from modular_dales.Atmosphere.shapes import SHAPE_FUNCTIONS
+from modular_dales.Atmosphere.shapes import ShapeFunction
 from modular_dales.IO_helpers import AtmosphereProfileWriter
 from modular_dales.modular.forcing import (
     ForcingSet,
@@ -25,7 +25,12 @@ from modular_dales.modular.time_dependent_scalars import (
     stack_in_time,
 )
 from modular_dales.MODULE_REGISTRY import register_module
-from modular_dales.vars import VariableDefinition, get_all_vars, get_var_by_name
+from modular_dales.vars import (
+    ProfileVariable,
+    VariableDefinition,
+    get_all_vars,
+    get_var_by_name,
+)
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -48,53 +53,85 @@ def _union_of_times(values: Iterable) -> list[float]:
     )
 
 
+@dataclass
+class Profile:
+    """Base class for atmospheric profiles."""
+
+    variable: VariableDefinition
+    """Variable definition (see modular_dales.Atmosphere.vars)."""
+
+    def evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
+        raise NotImplementedError("Subclasses must implement the evaluate method.")
+
+    def profile_at(self, time_value: float = 0.0) -> "TimedAtmosphereProfile":
+        raise NotImplementedError("Subclasses must implement the profile_at method.")
+
+    def times(self) -> list[float]:
+        raise NotImplementedError("Subclasses must implement the times method.")
+
+    def timed_forcing_series(self) -> list["TimedAtmosphereProfile"]:
+        times = self.times()
+        if not times:
+            times = [0.0]
+        return [self.profile_at(t) for t in times]
+
+
 @register_module
 @dataclass
-class AtmosphericProfile:
+class AtmosphericProfile(Profile):
     """Single atmospheric profile configuration.
+    Provide a variable name (VariableDefinition) and a shape function (ShapeFunction) to define the atmospheric profile.
+    Parameters for the shape function may be ``TimeDependentScalar`` objects.
 
     Parameters may be ``TimeDependentScalar`` objects, each with its own time
     points; the profile is then evaluated on the union of those times, with
     every parameter linearly interpolated in time.
     """
 
-    variable: VariableDefinition
-    """Variable definition (see modular_dales.Atmosphere.vars)."""
-    shape: str
-    """Shape function (lin, exp, linmlsurf, expsinw, etc.)"""
-    params: dict[str, float | TimeDependentScalar]
-    """Shape-specific parameters"""
+    shape: ShapeFunction
+    """Shape type (lin, exp, linmlsurf, expsinw, etc.)"""
 
-    def evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
-        if self.shape not in SHAPE_FUNCTIONS:
-            raise ValueError(
-                f"Unknown shape function '{self.shape}' for variable '{self.variable.name}'"
+    def _evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
+        if not isinstance(self.shape, ShapeFunction):
+            raise TypeError(
+                f"Shape must be an instance of ShapeFunction for variable '{self.variable.name}'"
             )
-        params = {
-            key: _value_at(value, time_value) for key, value in self.params.items()
-        }
+        params = self.shape.params_at(time_value)
+
         z_arr = np.asarray(z, dtype=float)
         return profile(
-            SHAPE_FUNCTIONS[self.shape](z_arr, **params),
+            self.shape.evaluate(z=z_arr, **params),
             z_arr,
             name=self.variable.name,
             attrs=var_attrs(self.variable),
         )
 
-    def timed_forcing_series(self, z) -> xr.DataArray | None:
-        times = _union_of_times(self.params.values())
-        if not times:
-            return None
-        return stack_in_time(times, [self.evaluate(z, t) for t in times])
+    def evaluate(self, z):
+        z_arr = np.asarray(z, dtype=float)
+        return profile(
+            self.shape.evaluate(z=z_arr, **self.shape.params),
+            z_arr,
+            name=self.variable.name,
+            attrs=var_attrs(self.variable),
+        )
+
+    def times(self) -> list[float]:
+        return _union_of_times(self.shape.__dict__.values())
+
+    def profile_at(self, time_value: float = 0.0) -> "TimedAtmosphereProfile":
+        """Return the profile at a specific time as a TimedAtmosphereProfile."""
+        prof = AtmosphericProfile(
+            variable=self.variable, shape=self.shape.at_time(time_value)
+        )
+        return TimedAtmosphereProfile(time=time_value, profile=prof)
 
 
 @register_module
 @dataclass
-class InterpolatedProfile:
-    """Profile interpolated between points; points may be ``TimeDependentScalar``."""
+class InterpolatedProfile(Profile):
+    """Profile interpolated between points; points --but not z-- may be ``TimeDependentScalar``.
+    Values are interpolated to the used DALES grid automatically."""
 
-    variable: VariableDefinition
-    """Variable definition (see modular_dales.Atmosphere.vars)."""
     z: list[float]
     """list of z coordinates for interpolation"""
     points: list[float | TimeDependentScalar]
@@ -102,7 +139,7 @@ class InterpolatedProfile:
     fill_value: float | str = "extrapolate"
     """Value to use for beyond the provided z range, or 'extrapolate' to extrapolate."""
 
-    def evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
+    def _evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
         points = xr.DataArray(
             [_value_at(point, time_value) for point in self.points],
             dims=(Z_DIM,),
@@ -115,26 +152,119 @@ class InterpolatedProfile:
             kwargs={"fill_value": self.fill_value},
         )
 
-    def timed_forcing_series(self, z) -> xr.DataArray | None:
-        times = _union_of_times(self.points)
-        if not times:
-            return None
-        return stack_in_time(times, [self.evaluate(z, t) for t in times])
+    def evaluate(self, z):
+        points = xr.DataArray(
+            self.points,
+            dims=(Z_DIM,),
+            coords={Z_DIM: np.asarray(self.z, dtype=float)},
+            name=self.variable.name,
+            attrs=var_attrs(self.variable),
+        )
+        return points.interp(
+            {Z_DIM: np.asarray(z, dtype=float)},
+            kwargs={"fill_value": self.fill_value},
+        )
+
+    def times(self) -> list[float]:
+        return _union_of_times(self.points)
+
+    def profile_at(self, time_value: float = 0) -> "TimedAtmosphereProfile":
+        prof = InterpolatedProfile(
+            z=self.z,
+            points=[_value_at(point, time_value) for point in self.points],
+            fill_value=self.fill_value,
+            variable=self.variable,
+        )
+        return TimedAtmosphereProfile(time=time_value, profile=prof)
 
 
 @register_module
 @dataclass
 class TimedAtmosphereProfile:
-    """Profile assignment at a specific simulation time (seconds)."""
+    """Profile assignment at a specific simulation time (seconds).
+    The profile may not contain time-dependent values."""
 
     time: float
     profile: AtmosphericProfile | InterpolatedProfile
+
+    def __post_init__(self):
+        if isinstance(self.profile, InterpolatedProfile):
+            for point in self.profile.points:
+                if isinstance(point, TimeDependentScalar):
+                    raise TypeError(
+                        "TimedAtmosphereProfile cannot contain time-dependent values."
+                    )
+        if isinstance(self.profile, AtmosphericProfile):
+            for var in self.profile.shape.__dict__.values():
+                if isinstance(var, TimeDependentScalar):
+                    raise TypeError(
+                        "TimedAtmosphereProfile cannot contain time-dependent values."
+                    )
+
+
+def profiles_to_forcings(
+    z: np.ndarray | list[float], profiles: list[TimedAtmosphereProfile]
+) -> ForcingSet:
+    """Evaluate the user-configured profiles on the grid."""
+
+    z = np.asarray(z, dtype=float)
+    forcings = ForcingSet()
+
+    timed_by_var: dict[VariableDefinition, dict[float, xr.DataArray]] = {}
+    for timed_profile in profiles:
+        configured = timed_profile.profile
+        _validate_profile_variable(configured)
+        time_value = float(timed_profile.time)
+        timed_by_var.setdefault(configured.variable, {})[time_value] = (
+            configured.evaluate(z)
+        )
+
+    for var_definition, values_by_time in timed_by_var.items():
+        times = sorted(values_by_time)
+        if (
+            len(times) == 1
+            and times[0] == 0.0
+            and not var_definition.must_only_be_time_dependent
+        ):
+            # Only one time point at t=0, treat as initial profile
+            forcings.initial[var_definition.name] = values_by_time[times[0]]
+            continue
+        if len(times) == 1 and times[0] != 0.0:
+            raise ValueError(
+                f"'{var_definition.name}' has no time=0 entry but is required to have one. Did you mean to only add a time at {times[0]}?"
+            )
+        _require_time_dependent(var_definition)
+        forcings.series[var_definition.name] = stack_in_time(
+            times, [values_by_time[t] for t in times]
+        )
+
+    return forcings
+
+
+def _require_time_dependent(var_definition: VariableDefinition) -> None:
+    if not var_definition.can_be_time_dependent:
+        raise ValueError(f"Variable '{var_definition.name}' cannot be time-dependent")
+
+
+def _validate_profile_variable(
+    configured: AtmosphericProfile | InterpolatedProfile,
+):
+    variable = configured.variable
+    if variable not in get_all_vars() or not variable.is_profile:
+        raise ValueError(f"Unknown atmospheric variable '{variable.name}'")
 
 
 @register_module
 @dataclass
 class AtmosphereModule(simulation_module):
-    """Atmosphere module for profile setup.
+    """Main atmosphere module to add to the dales_simulation.
+    Add physical profiles with an explicit destination:
+    ```python
+    atmo = AtmosphereModule()
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=5, ddz=0)),
+             nudging=True)
+    ```
 
     User-configured profiles take precedence over profiles provided by other
     modules (e.g. :class:`LS2DAtmosphereModule`); missing variables are filled
@@ -143,16 +273,14 @@ class AtmosphereModule(simulation_module):
 
     Args:
         sim: Parent simulation instance
-        shaped_profiles: Mapping of variable name to shaped profile configuration
-        interpolated_profiles: Mapping of variable name to interpolated profile configuration
-        timed_profiles: Profiles at specific times; per variable these form a
-            time series (each variable may use its own time points)
+        profiles: Regular profiles at specific simulation times.
+        nudging_profiles: Physical profiles used as nudging targets, independently
+            of the initial state. No state-to-nudging fallback is applied.
     """
 
     sim: Optional["simulation_module"] = field(default=None, repr=False)
-    shaped_profiles: list[AtmosphericProfile] = field(default_factory=list)
-    interpolated_profiles: list[InterpolatedProfile] = field(default_factory=list)
-    timed_profiles: list[TimedAtmosphereProfile] = field(default_factory=list)
+    profiles: list[TimedAtmosphereProfile] = field(default_factory=list)
+    nudging_profiles: list[TimedAtmosphereProfile] = field(default_factory=list)
     profile_writer: AtmosphereProfileWriter = field(
         default_factory=AtmosphereProfileWriter,
         init=False,
@@ -176,106 +304,65 @@ class AtmosphereModule(simulation_module):
         sim.has_atmosphere_module = True
         return super()._initialize_from_sim(sim)
 
-    # Generic add method
-    def __add__(
+    def add(
         self,
         other: AtmosphericProfile
         | InterpolatedProfile
         | TimedAtmosphereProfile
         | list
         | tuple,
+        *,
+        nudging: bool = False,
     ):
-        if isinstance(other, AtmosphericProfile):
-            self.shaped_profiles.append(other)
-        elif isinstance(other, InterpolatedProfile):
-            self.interpolated_profiles.append(other)
+        """Add profiles, optionally to nudging instead of the regular destination."""
+        destination = self.nudging_profiles if nudging else self.profiles
+        if isinstance(other, (AtmosphericProfile, InterpolatedProfile)):
+            destination.extend(other.timed_forcing_series())
         elif isinstance(other, TimedAtmosphereProfile):
-            self.timed_profiles.append(other)
+            destination.append(other)
         elif (
             isinstance(other, tuple)
             and len(other) == 2
             and isinstance(other[0], (int, float))
             and isinstance(other[1], (AtmosphericProfile, InterpolatedProfile))
         ):
-            self.timed_profiles.append(
+            destination.append(
                 TimedAtmosphereProfile(time=float(other[0]), profile=other[1])
             )
         elif isinstance(other, (list, tuple)):
             for item in other:
-                self += item  # recursive
+                self.add(item, nudging=nudging)
         else:
             raise TypeError(
                 f"Cannot add object of type {type(other)} to AtmosphereModule"
             )
         return self
 
-    def __iadd__(self, other):
-        return self.__add__(other)
-
-    def _validate_profile_variable(
-        self, configured: AtmosphericProfile | InterpolatedProfile
-    ):
-        variable = configured.variable
-        if variable not in get_all_vars() or not variable.is_profile:
-            raise ValueError(f"Unknown atmospheric variable '{variable.name}'")
-
-    @staticmethod
-    def _require_time_dependent(var_definition: VariableDefinition) -> None:
-        if not var_definition.can_be_time_dependent:
-            raise ValueError(
-                f"Variable '{var_definition.name}' cannot be time-dependent"
-            )
-
     def provide_forcings(self) -> ForcingSet:
         """Evaluate the user-configured profiles on the grid."""
 
         if self.grid is None:
             raise ValueError("AtmosphereModule requires a simulation grid")
-        z = np.asarray(self.grid.zt, dtype=float)
-        forcings = ForcingSet()
-
-        base_profiles = {}
-        for configured in self.shaped_profiles + self.interpolated_profiles:
-            self._validate_profile_variable(configured)
-            base_profiles[configured.variable] = configured
-
-        param_series_vars = set()
-        for var_definition, configured in base_profiles.items():
-            name = var_definition.name
-            values = configured.evaluate(z)
-            series = configured.timed_forcing_series(z)
-            if series is not None:
-                self._require_time_dependent(var_definition)
-                forcings.series[name] = series
-                param_series_vars.add(var_definition)
-            if var_definition.must_only_be_time_dependent:
-                if series is None:
-                    forcings.series[name] = values.expand_dims({TIME_DIM: [0.0]})
-            else:
-                forcings.initial[name] = values
-
-        timed_by_var: dict[VariableDefinition, dict[float, xr.DataArray]] = {}
-        for timed_profile in self.timed_profiles:
-            configured = timed_profile.profile
-            self._validate_profile_variable(configured)
-            self._require_time_dependent(configured.variable)
-            time_value = float(timed_profile.time)
-            timed_by_var.setdefault(configured.variable, {})[time_value] = (
-                configured.evaluate(z, time_value)
+        nudging_profiles = []
+        for entry in self.nudging_profiles:
+            entries = (
+                [entry]
+                if isinstance(entry, TimedAtmosphereProfile)
+                else entry.timed_forcing_series()
             )
-
-        for var_definition, values_by_time in timed_by_var.items():
-            if var_definition in param_series_vars:
-                raise ValueError(
-                    f"'{var_definition.name}' has both TimeDependentScalar parameters and "
-                    "TimedAtmosphereProfile entries; use only one of the two"
+            for timed in entries:
+                variable = timed.profile.variable
+                if not isinstance(variable, ProfileVariable):
+                    raise TypeError("Nudging requires an atmospheric state profile")
+                nudging_profiles.append(
+                    replace(
+                        timed,
+                        profile=replace(timed.profile, variable=variable.nudger),
+                    )
                 )
-            times = sorted(values_by_time)
-            forcings.series[var_definition.name] = stack_in_time(
-                times, [values_by_time[t] for t in times]
-            )
-
-        return forcings
+        return profiles_to_forcings(
+            np.asarray(self.grid.zt, dtype=float), self.profiles + nudging_profiles
+        )
 
     def prepare_calculation(self):
         """Merge own profiles with those of other providers (e.g. LS2D)."""

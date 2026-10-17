@@ -7,23 +7,22 @@ import pytest
 import xarray as xr
 
 from modular_dales import dales_simulation
-from modular_dales.modular.time_dependent import TimedependentModule
-from modular_dales.Atmosphere import AtmosphereModule, LS2DAtmosphereModule, FromLS2D
+from modular_dales.Atmosphere import AtmosphereModule, FromLS2D, LS2DAtmosphereModule
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.Configuration.output_modules import (
     CheckSimulationModule,
     EasyOutputModule,
 )
 from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.modular.simulation_module import set_nml_section
+from modular_dales.modular.time_dependent import TimedependentModule
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
 from modular_dales.Surface.LSM import (
     LSMModule,
     UniformSkinTemperature,
-    UniformSoilTemperature,
     UniformSoilMoisture,
+    UniformSoilTemperature,
 )
 
 

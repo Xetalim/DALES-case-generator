@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from collections.abc import Callable
 
 import pytest
@@ -8,7 +9,6 @@ from modular_dales.modular import dales_simulation
 from .generic_testers import (
     assert_roundtrip_simulation_outputs_identical,
     run_simulation_and_check_job,
-    assert_files_written,
 )
 from .sim_builders.test_basic import _build_basic_sim
 from .sim_builders.test_emission import emission_case
@@ -16,40 +16,25 @@ from .sim_builders.test_ibm import (
     IBM_case,
     assert_ibm_files_written,
 )
+from .sim_builders.test_knmi_download_workflow import knmi_download_workflow_case
+from .sim_builders.test_lsm import simple_LSM_case
 from .sim_builders.test_lsm_harmonie_soil import (
     LSM_with_HARM_soil,
-    assert_lsm_HARM_files_written,
-)
-from .sim_builders.test_lsm import simple_LSM_case, assert_lsm_files_written
-from .sim_builders.test_sim2 import sim_2_case
-from .sim_builders.test_slurb import (
-    assert_slurb_files_written,
-    simple_SLURB_case,
-)
-from .sim_builders.test_slurb_lcz import (
-    SLURB_LCZ_case,
-    assert_slurb_lcz_files_written,
-)
-from .sim_builders.test_timedep_atmosphere import (
-    timedep_atmosphere_case,
-    assert_timedep_atmosphere_files_written,
-)
-from .sim_builders.test_timedep_atmosphere_params import (
-    timedep_atmosphere_with_params_case,
-    assert_timedep_atmosphere_with_params_files_written,
-)
-from .sim_builders.test_timedep_atmosphere_params_long import (
-    timedep_atmosphere_with_params_case_long,
 )
 from .sim_builders.test_openbc_atmosphere_profiles import (
-    openbc_atmosphere_profiles_case,
-    openbc_atmosphere_profiles_timedep_case,
     assert_openbc_atmosphere_profiles_files_written,
     assert_openbc_atmosphere_profiles_timedep_files_written,
+    openbc_atmosphere_profiles_case,
+    openbc_atmosphere_profiles_timedep_case,
 )
-from .sim_builders.test_openbc_triple_nesting import openbc_triple_nesting_case
+from .sim_builders.test_openbc_harmonie_cached import (
+    openbc_harmonie_cached_case,
+    openbc_harmonie_cached_case_timedep,
+)
 from .sim_builders.test_openbc_triple_nesting import (
     assert_openbc_triple_nesting_scaled64_plots,
+    openbc_triple_nesting_case,
+    openbc_triple_nesting_case_noparallel,
     openbc_triple_nesting_scaled64_case,
 )
 from .sim_builders.test_runtime_special_cases import (
@@ -62,7 +47,23 @@ from .sim_builders.test_runtime_special_cases import (
     radiation_type_5_case,
     spraying_runtime_case,
 )
-from .sim_builders.test_knmi_download_workflow import knmi_download_workflow_case
+from .sim_builders.test_sim2 import sim_2_case
+from .sim_builders.test_slurb import (
+    assert_slurb_files_written,
+    simple_SLURB_case,
+)
+from .sim_builders.test_slurb_lcz import (
+    SLURB_LCZ_case,
+    assert_slurb_lcz_files_written,
+)
+from .sim_builders.test_timedep_atmosphere import (
+    assert_timedep_atmosphere_files_written,
+    timedep_atmosphere_case,
+)
+from .sim_builders.test_timedep_atmosphere_params import (
+    assert_timedep_atmosphere_with_params_files_written,
+    timedep_atmosphere_with_params_case,
+)
 
 
 @pytest.fixture(
@@ -122,6 +123,10 @@ def sim_builder(request) -> Callable[[dict], dales_simulation]:
             id="openbc_triple_nesting_case",
         ),
         pytest.param(
+            openbc_triple_nesting_case_noparallel,
+            id="openbc_triple_nesting_case_noparallel",
+        ),
+        pytest.param(
             (
                 openbc_triple_nesting_scaled64_case,
                 assert_openbc_triple_nesting_scaled64_plots,
@@ -154,6 +159,16 @@ def sim_builder(request) -> Callable[[dict], dales_simulation]:
             knmi_download_workflow_case,
             id="knmi_download_workflow_case",
             marks=[pytest.mark.slow, pytest.mark.serial],
+        ),
+        pytest.param(
+            openbc_harmonie_cached_case,
+            id="openbc_harmonie_cached_case",
+            marks=pytest.mark.serial,
+        ),
+        pytest.param(
+            openbc_harmonie_cached_case_timedep,
+            id="openbc_harmonie_cached_case_timedep",
+            marks=pytest.mark.serial,
         ),
     ]
 )

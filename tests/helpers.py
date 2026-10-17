@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import filecmp
 import subprocess
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any
 
 import pytest
-import yaml
-
 import xarray as xr
+import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MACHINE_CONF_PATH = PROJECT_ROOT / "machine_conf.yaml"

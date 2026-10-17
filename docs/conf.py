@@ -8,8 +8,8 @@ and cross-referencing with external documentation sources.
 
 import os
 import sys
-from datetime import datetime
 from dataclasses import fields, is_dataclass
+from datetime import datetime
 
 # Ensure the project root is on sys.path so `modular_dales` can be imported
 sys.path.insert(0, os.path.abspath(".."))
@@ -128,7 +128,7 @@ def _append_namelist_field_docs(what, obj, lines):
             lines.append(f"  - ``{entry['key']}`` (field ``{entry['field']}``){suffix}")
 
 
-def setup(app):  # noqa: D401 - Sphinx hook
+def setup(app):
     """Sphinx extension hook to enhance autodoc output.
 
     Currently this adds explicit lists of namelist parameters for modules

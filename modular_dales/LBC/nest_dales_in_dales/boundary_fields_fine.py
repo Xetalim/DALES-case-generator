@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
+
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
     get_all_dales_boundaries,

@@ -5,7 +5,6 @@ from modular_dales.Configuration import (
     SprayingModule,
     VirtualMeasurementOutputModule,
 )
-
 from tests.sim_builders.test_basic import _build_basic_sim
 
 

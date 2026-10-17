@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import numpy as np
-
-from modular_dales.modular import dales_simulation
 from modular_dales.Atmosphere import (
     AtmosphereModule,
     AtmosphericProfile,
     InterpolatedProfile,
+    lin,
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.modular import dales_simulation
 from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.vars import *
 
 
 def _build_basic_sim(machine_conf: dict) -> dales_simulation:
@@ -38,15 +37,11 @@ def _build_basic_sim(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=3, ddz=1e-3)
-    )
-    atmo += AtmosphericProfile(variable=va, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(
-        variable=thetal, shape="lin", params=dict(surf_val=293.15, ddz=1e-2)
-    )
-    atmo += AtmosphericProfile(variable=qt, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=wa, shape="lin", params=dict(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
     atmo += InterpolatedProfile(
         variable=tke,
         z=[0, 4000, 5000],

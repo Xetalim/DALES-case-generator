@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import html
+from collections.abc import Callable
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-import pytest
 import matplotlib
+import pytest
 
 matplotlib.use("Agg")
 
@@ -27,8 +28,8 @@ def _flatten_payload(content: Any) -> str:
 def _render_payload_html(title: str, content: Any) -> str:
     if not isinstance(content, dict):
         return (
-            "<details open><summary>{title}</summary><pre>{content}</pre></details>"
-        ).format(title=html.escape(title), content=html.escape(str(content)))
+            f"<details open><summary>{html.escape(title)}</summary><pre>{html.escape(str(content))}</pre></details>"
+        )
 
     info = html.escape(str(content.get("info_and_location", "<empty>")))
     crash = html.escape(str(content.get("crash_message", "<empty>")))

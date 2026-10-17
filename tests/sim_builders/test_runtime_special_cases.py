@@ -21,8 +21,8 @@ from modular_dales import (
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import InterpolatedProfile
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.Atmosphere import InterpolatedProfile, lin
+from modular_dales.vars import *
 
 
 def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
@@ -44,23 +44,11 @@ def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
     )
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=2.0, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=va, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=thetal,
-        shape="lin",
-        params=dict(surf_val=293.15, ddz=5e-3),
-    )
-    atmo += AtmosphericProfile(
-        variable=qt, shape="lin", params=dict(surf_val=0.008, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=wa, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=2.0, ddz=0.0))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=5e-3))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.008, ddz=0.0))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
     atmo += InterpolatedProfile(
         variable=tke, z=[0, 1000, 3000], points=[0.2, 0.02, 0.01]
     )

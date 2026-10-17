@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-
 from modular_dales import dales_simulation
 from modular_dales.Atmosphere import (
     AtmosphereModule,
@@ -9,21 +7,20 @@ from modular_dales.Atmosphere import (
     InterpolatedProfile,
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Configuration.output_modules import (
     CheckSimulationModule,
     EasyOutputModule,
 )
+from modular_dales.Configuration.run_and_time import TimeModule
+from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LSM import LSMModule, LandUseModification
-from modular_dales.Geometry.geometry_modification import AllGeometry
+from modular_dales.Surface.LSM.LSM import LandUseModification, LSMModule
 from modular_dales.Surface.LSM.modular_temps_moisture import (
-    UniformSkinTemperature,
     SoilTemperatureMoistureFromHarmonie,
-    UniformSoilTemperature,
+    UniformSkinTemperature,
 )
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.vars import *
 
 
 def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
@@ -50,15 +47,11 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=3, ddz=1e-3)
-    )
-    atmo += AtmosphericProfile(variable=va, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(
-        variable=thetal, shape="lin", params=dict(surf_val=305.15, ddz=1e-2)
-    )
-    atmo += AtmosphericProfile(variable=qt, shape="lin", params=dict(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=wa, shape="lin", params=dict(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=305.15, ddz=1e-2))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
     atmo += InterpolatedProfile(
         variable=tke,
         z=[0, 4000, 5000],
@@ -107,6 +100,6 @@ def assert_lsm_HARM_files_written(machine_conf) -> None:
     assert len(lsm_files) == 1, f"Expected 1 LSM file, found {len(lsm_files)}"
     for lsm_file in lsm_files:
         assert lsm_file.is_file(), f"Expected LSM file {lsm_file} to exist"
-        assert (
-            lsm_file.stat().st_size > 0
-        ), f"Expected LSM file {lsm_file} to be non-empty"
+        assert lsm_file.stat().st_size > 0, (
+            f"Expected LSM file {lsm_file} to be non-empty"
+        )

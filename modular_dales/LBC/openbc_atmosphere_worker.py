@@ -13,6 +13,7 @@ from modular_dales.Atmosphere import (
     AtmosphericProfile,
     InterpolatedProfile,
     TimedAtmosphereProfile,
+    profiles_to_forcings,
 )
 from modular_dales.LBC.nest_dales_in_dales import boundary_fields_fine
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
@@ -38,8 +39,9 @@ class OpenBCAtmosphereWorker:
         self.module = module
 
     def prepare(self) -> tuple[xr.Dataset, xr.Dataset]:
-        profiles_1d, series = self._evaluate_profiles()
+        initial, series = self._evaluate_profiles()
         ds, boundaries, base_vars = self._build_atmosphere_boundaries_dataset(
+            initial,
             series,
         )
         ds = self._apply_atmosphere_boundary_noise(ds, boundaries, base_vars)
@@ -54,7 +56,7 @@ class OpenBCAtmosphereWorker:
             end=self.module.end,
         )
 
-        initfields = self._build_initfields_dataset(profiles_1d)
+        initfields = self._build_initfields_dataset(initial)
         boundaries_ds = boundary_fields_fine.set_openboundary_attrs(
             config,
             ds,
@@ -71,7 +73,7 @@ class OpenBCAtmosphereWorker:
             "w0": ("w", ("zm", "yt", "xt")),
             "thl0": ("thl", ("zt", "yt", "xt")),
             "qt0": ("qt", ("zt", "yt", "xt")),
-            "e120": ("e12", ("zt", "yt", "xt")),
+            "e120": ("e120", ("zt", "yt", "xt")),
         }
         initfields = xr.Dataset(
             {
@@ -124,71 +126,15 @@ class OpenBCAtmosphereWorker:
     def _evaluate_profiles(
         self,
     ) -> tuple[dict[str, xr.DataArray], dict[str, xr.DataArray]]:
-        configured = self.module.nest_in_atmosphere
-        expected = {
-            "u": "ua",
-            "v": "va",
-            "w": "w",
-            "thl": "thetal",
-            "qt": "qt",
-            "e12": "tke",
-        }
-        inputs = {name: getattr(configured, name) for name in expected}
-        if set(configured.tracers) & set(expected):
-            raise ValueError("Tracer names must not replace u, v, w, thl, qt or e12")
-        inputs.update(configured.tracers)
         initial = {}
         series = {}
         heights = self._grid_coord(Z_DIM).values
-        for name, source in inputs.items():
-            entries = source if isinstance(source, list) else [source]
-            if not entries:
-                raise ValueError(f"Boundary profile '{name}' must not be empty")
-            for entry in entries:
-                profile = (
-                    entry.profile
-                    if isinstance(entry, TimedAtmosphereProfile)
-                    else entry
-                )
-                if not isinstance(profile, (AtmosphericProfile, InterpolatedProfile)):
-                    raise TypeError(
-                        f"Boundary profile '{name}' must be a shaped or interpolated profile"
-                    )
-                required_name = expected.get(name, name)
-                if profile.variable.name != required_name:
-                    raise ValueError(
-                        f"Boundary field '{name}' requires variable '{required_name}', got '{profile.variable.name}'"
-                    )
-            if isinstance(source, list):
-                if not all(
-                    isinstance(entry, TimedAtmosphereProfile) for entry in entries
-                ):
-                    raise TypeError(
-                        f"Boundary profile '{name}' lists must contain TimedAtmosphereProfile entries"
-                    )
-                times = [float(entry.time) for entry in entries]
-                if 0.0 not in times or any(time < 0 for time in times):
-                    raise ValueError(
-                        f"Timed boundary profile '{name}' requires time zero and nonnegative times"
-                    )
-                values = [
-                    entry.profile.evaluate(heights, entry.time) for entry in entries
-                ]
-                series[name] = stack_in_time(times, values).rename(name)
-                initial[name] = series[name].sel({TIME_DIM: 0.0}, drop=True)
-            else:
-                initial[name] = source.evaluate(heights, 0.0).rename(name)
-                timed = source.timed_forcing_series(heights)
-                if timed is not None:
-                    if 0.0 not in timed[TIME_DIM].values or bool(
-                        (timed[TIME_DIM] < 0).any()
-                    ):
-                        raise ValueError(
-                            f"Timed boundary profile '{name}' requires time zero and nonnegative times"
-                        )
-                    series[name] = timed.rename(name)
-                else:
-                    series[name] = initial[name].expand_dims({TIME_DIM: [0.0]})
+        profiles: list[TimedAtmosphereProfile] = (
+            self.module.nest_in_atmosphere.provide_profiles()
+        )
+        forcings = profiles_to_forcings(heights, profiles)
+        initial = forcings.initial
+        series = forcings.series
         return initial, series
 
     def _boundary_dims(self, var: str, bnd: str) -> tuple[str, ...]:
@@ -208,8 +154,15 @@ class OpenBCAtmosphereWorker:
 
     def _build_atmosphere_boundaries_dataset(
         self,
+        initial_by_var: dict[str, xr.DataArray],
         series_by_var: dict[str, xr.DataArray],
     ) -> tuple[xr.Dataset, list[str], list[str]]:
+        # for var, series in series_by_var.items():
+        #     if series is None:
+        #         series_by_var[var] = initial_by_var[var].expand_dims({TIME_DIM: [0.0]})
+        for var, initial in initial_by_var.items():
+            if var not in series_by_var:
+                series_by_var[var] = initial.expand_dims({TIME_DIM: [0.0]})
         all_times = resolve_time_axis(series_by_var.values())
 
         base_time_str = self.module.time0

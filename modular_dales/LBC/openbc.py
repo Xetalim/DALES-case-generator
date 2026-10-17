@@ -11,6 +11,7 @@ from modular_dales.Atmosphere import (
     AtmosphericProfile,
     InterpolatedProfile,
     TimedAtmosphereProfile,
+    profiles_to_forcings,
 )
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales import (
@@ -190,53 +191,70 @@ class Nest_in_AtmosphereProfiles:
     w: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
     thl: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
     qt: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    e12: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+    e120: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
     tracers: dict[
         str, AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
     ] = field(default_factory=dict)
 
     def __post_init__(self):
-        expected = {
-            "u": "ua",
-            "v": "va",
-            "w": "w",
-            "thl": "thetal",
-            "qt": "qt",
-            "e12": "tke",
-        }
+        expected = ["u", "v", "w", "thl", "qt", "e120"]
+        # make sure tracers do not overlap
         if set(self.tracers) & set(expected):
-            raise ValueError("Tracer names must not replace u, v, w, thl, qt or e12")
-        inputs = {name: getattr(self, name) for name in expected}
+            raise ValueError("Tracer names must not replace u, v, w, thl, qt or e120")
+
+        inputs: dict[
+            str, AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+        ] = {name: getattr(self, name) for name in expected}
         inputs.update(self.tracers)
+
         for name, source in inputs.items():
             if not isinstance(source, (AtmosphericProfile, InterpolatedProfile, list)):
                 raise TypeError(
                     f"Boundary profile '{name}' requires a profile or a list of timed profiles"
                 )
-            entries = source if isinstance(source, list) else [source]
+
+            # get list of TimedAtmosphereProfile here
+            entries = (
+                source if isinstance(source, list) else source.timed_forcing_series()
+            )
+            # list empty or none, error
             if not entries:
                 raise ValueError(f"Boundary profile '{name}' must not be empty")
+            # double check list if correct
             if isinstance(source, list) and not all(
                 isinstance(entry, TimedAtmosphereProfile) for entry in entries
             ):
                 raise TypeError(
                     f"Boundary profile '{name}' lists require TimedAtmosphereProfile entries"
                 )
+
             for entry in entries:
-                profile = (
-                    entry.profile
-                    if isinstance(entry, TimedAtmosphereProfile)
-                    else entry
-                )
-                if not isinstance(profile, (AtmosphericProfile, InterpolatedProfile)):
+                if not isinstance(
+                    entry.profile, (AtmosphericProfile, InterpolatedProfile)
+                ):
                     raise TypeError(
                         f"Boundary profile '{name}' requires AtmosphericProfile or InterpolatedProfile"
                     )
-                required = expected.get(name, name)
-                if profile.variable.name != required:
+                required = name
+                if entry.profile.variable.name != required:
                     raise ValueError(
-                        f"Boundary field '{name}' requires variable '{required}', got '{profile.variable.name}'"
+                        f"Boundary field '{name}' requires variable '{required}', got '{entry.profile.variable.name}'"
                     )
+
+    def provide_profiles(self) -> list[TimedAtmosphereProfile]:
+        expected = ["u", "v", "w", "thl", "qt", "e120"]
+        inputs: dict[
+            str, AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
+        ] = {name: getattr(self, name) for name in expected}
+        inputs.update(self.tracers)
+
+        profiles: list[TimedAtmosphereProfile] = []
+        for source in inputs.values():
+            entries = (
+                source if isinstance(source, list) else source.timed_forcing_series()
+            )
+            profiles.extend(entries)
+        return profiles
 
     add_to_top_thl: float | None = field(
         default=None,

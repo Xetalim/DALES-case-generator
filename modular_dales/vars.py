@@ -10,32 +10,37 @@ class VariableDefinition:
     This is the user-facing object you should import and pass to
     AtmosphericProfile / InterpolatedProfile instead of raw strings.
 
-    Where provided data end up follows from the definition:
-
-    * ``is_profile`` and not ``must_only_be_time_dependent`` and not
-      ``init_time_height``: initial profile in ``init.<id>.nc``.
-    * ``time_dependent_name``: series in ``forcings.<id>.nc``.
-    * ``init_time_height``: ``(time, zh)`` field in ``init.<id>.nc`` (nudging).
-    * otherwise: only available to requesting modules (soil, backrad, ...).
+        Subclasses describe the physical kind and output role. A
+        ``time_dependent_name`` selects a series in ``forcings.<id>.nc``;
+        time-height variables instead write to ``init.<id>.nc``.
     """
 
     name: str
     long_name: str
     unit: str
-    can_be_time_dependent: bool = False
-    must_only_be_time_dependent: bool = False
-    is_profile: bool = True
     time_dependent_name: str | None = None
-    can_nudge: bool = False
-    init_time_height: bool = False
     file_name: str | None = None
     """Name in ``init.<id>.nc`` when it differs from ``name``."""
-    fallback: str | None = None
-    """Variable to use when this one is not provided (e.g. nudging target -> state)."""
 
     @property
     def init_name(self) -> str:
         return self.file_name or self.name
+
+    @property
+    def is_profile(self) -> bool:
+        return isinstance(self, ProfileVariable)
+
+    @property
+    def can_be_time_dependent(self) -> bool:
+        return self.is_profile or self.time_dependent_name is not None
+
+    @property
+    def must_only_be_time_dependent(self) -> bool:
+        return isinstance(self, SeriesOnlyVariable)
+
+    @property
+    def init_time_height(self) -> bool:
+        return isinstance(self, TimeHeightVariable)
 
     @property
     def is_initial_profile(self) -> bool:
@@ -46,172 +51,241 @@ class VariableDefinition:
         )
 
 
-thls = VariableDefinition(
+@dataclass(frozen=True)
+class ProfileVariable(VariableDefinition):
+    """An atmospheric height profile."""
+
+    @property
+    def physical_variable(self) -> ProfileVariable:
+        return self
+
+    @property
+    def nudger(self) -> NudgingVariable:
+        """Return the registered nudging definition for this physical field."""
+        target = self.physical_variable
+        if not target.is_initial_profile:
+            raise TypeError("Nudging requires an atmospheric state profile")
+        for variable in get_all_vars():
+            if isinstance(variable, NudgingVariable) and variable.target == target:
+                return variable
+        nudger = NudgingVariable(target)
+        register_var(nudger)
+        return nudger
+
+    @property
+    def boundary_name(self) -> str:
+        return self.name
+
+
+class SeriesOnlyVariable(ProfileVariable):
+    """A forcing profile with no initial-state output."""
+
+
+class TimeHeightVariable(ProfileVariable):
+    """A profile written on time and height axes in the initialization file."""
+
+
+@dataclass(frozen=True, init=False)
+class NudgingVariable(TimeHeightVariable):
+    """A time-height nudging target linked to its physical state variable."""
+
+    target: ProfileVariable
+
+    def __init__(
+        self,
+        target: ProfileVariable,
+        *,
+        name: str | None = None,
+        file_name: str | None = None,
+        long_name: str | None = None,
+    ) -> None:
+        if not isinstance(target, ProfileVariable) or isinstance(target, NudgingVariable):
+            raise TypeError("A nudging target requires a non-nudging profile variable")
+        super().__init__(
+            name=name or f"{target.name}_nudge",
+            long_name=long_name or f"Nudging target for {target.long_name}",
+            unit=target.unit,
+            file_name=file_name or f"{target.name}_nud",
+        )
+        object.__setattr__(self, "target", target)
+
+    @property
+    def physical_variable(self) -> ProfileVariable:
+        return self.target.physical_variable
+
+    @property
+    def boundary_name(self) -> str:
+        return self.target.boundary_name
+
+
+@dataclass(frozen=True)
+class SurfaceVariable(VariableDefinition):
+    """A surface value, optionally varying in time."""
+
+
+@dataclass(frozen=True)
+class SoilVariable(VariableDefinition):
+    """A soil-layer value requested by the land-surface model."""
+
+
+@dataclass(frozen=True)
+class RadiationBackgroundVariable(VariableDefinition):
+    """A radiation sounding on pressure levels rather than atmospheric heights."""
+
+
+class UVariable(ProfileVariable):
+    """An eastward wind profile."""
+
+    @property
+    def boundary_name(self) -> str:
+        return "u"
+
+
+class VVariable(ProfileVariable):
+    """A northward wind profile."""
+
+    @property
+    def boundary_name(self) -> str:
+        return "v"
+
+
+class WVariable(ProfileVariable):
+    """A vertical velocity profile."""
+
+    @property
+    def boundary_name(self) -> str:
+        return "w"
+
+
+class ThetalVariable(ProfileVariable):
+    """A liquid water potential temperature profile."""
+
+    @property
+    def boundary_name(self) -> str:
+        return "thl"
+
+
+class QtVariable(ProfileVariable):
+    """A total water mixing ratio profile."""
+
+
+class TkeVariable(ProfileVariable):
+    """A square-root turbulence kinetic energy profile."""
+
+    @property
+    def boundary_name(self) -> str:
+        return "e120"
+
+
+thls = SurfaceVariable(
     "thls",
     "Surface liquid water potential temperature",
     "K",
-    is_profile=False,
-    can_be_time_dependent=True,
     time_dependent_name="thlsurf_timedep",
 )
-wtsurf = VariableDefinition(
+wtsurf = SurfaceVariable(
     "wtsurf",
     "Surface kinematic heat flux",
     "K m/s",
-    is_profile=False,
-    can_be_time_dependent=True,
     time_dependent_name="wtsurf_timedep",
 )
-wqsurf = VariableDefinition(
+wqsurf = SurfaceVariable(
     "wqsurf",
     "Surface kinematic moisture flux",
     "kg/kg m/s",
-    is_profile=False,
-    can_be_time_dependent=True,
     time_dependent_name="wqsurf_timedep",
 )
-qtsurf = VariableDefinition(
+qtsurf = SurfaceVariable(
     "qtsurf",
     "Surface total water mixing ratio",
     "kg/kg",
-    is_profile=False,
-    can_be_time_dependent=True,
     time_dependent_name="qtsurf_timedep",
 )
-psurf = VariableDefinition(
+psurf = SurfaceVariable(
     "psurf",
     "Surface pressure",
     "Pa",
-    is_profile=False,
-    can_be_time_dependent=True,
     time_dependent_name="psurf_timedep",
 )
-qnetav = VariableDefinition(
+qnetav = SurfaceVariable(
     "qnetav",
     "Net radiative flux at the surface",
     "W/m^2",
-    is_profile=False,
-    can_be_time_dependent=True,
     time_dependent_name="qnetavsurf_timedep",
 )
-ua = VariableDefinition(
-    "ua", "Initial eastward velocity profile", "m/s", can_nudge=True
+ua = UVariable(
+    "ua", "Initial eastward velocity profile", "m/s"
 )
-va = VariableDefinition(
-    "va", "Initial northward velocity profile", "m/s", can_nudge=True
+va = VVariable(
+    "va", "Initial northward velocity profile", "m/s"
 )
-w = VariableDefinition("w", "Vertical velocity profile", "m/s")
-thetal = VariableDefinition(
+w = WVariable("w", "Vertical velocity profile", "m/s")
+thetal = ThetalVariable(
     "thetal",
     "Initial liquid water potential temperature profile",
     "K",
-    can_nudge=True,
 )
-qt = VariableDefinition(
+qt = QtVariable(
     "qt",
     "Initial total water mixing ratio profile.",
     "kg/kg",
-    can_nudge=True,
 )
-tke = VariableDefinition(
+tke = TkeVariable(
     "tke",
     "Initial profile of the square root of the turbulence kinetic energy (TKE)",
     "m/s",
 )
-ug = VariableDefinition(
+ug = UVariable(
     "ug",
     "Geostrophic eastward wind",
     "m/s",
-    can_be_time_dependent=True,
     time_dependent_name="ug_timedep",
 )
-vg = VariableDefinition(
+vg = VVariable(
     "vg",
     "Geostrophic northward wind",
     "m/s",
-    can_be_time_dependent=True,
     time_dependent_name="vg_timedep",
 )
-dpdx = VariableDefinition(
+dpdx = ProfileVariable(
     "dpdx",
     "Eastward pressure gradient",
     "Pa/m",
-    can_be_time_dependent=True,
     time_dependent_name="dpdx_ls_timedep",
 )
-dpdy = VariableDefinition(
+dpdy = ProfileVariable(
     "dpdy",
     "Northward pressure gradient",
     "Pa/m",
-    can_be_time_dependent=True,
     time_dependent_name="dpdy_ls_timedep",
 )
-wa = VariableDefinition(
+wa = WVariable(
     "wa",
     "Large-scale subsidence.",
     "m/s",
-    can_be_time_dependent=True,
     time_dependent_name="wf_ls_timedep",
 )
-ua_nudge = VariableDefinition(
-    "ua_nudge",
-    "Nudging target for eastward wind",
-    "m/s",
-    can_be_time_dependent=True,
-    can_nudge=True,
-    init_time_height=True,
-    file_name="ua_nud",
-    fallback="ua",
+ua_nudge = NudgingVariable(ua, long_name="Nudging target for eastward wind")
+va_nudge = NudgingVariable(va, long_name="Nudging target for northward wind")
+thl_nudge = NudgingVariable(
+    thetal,
+    name="thl_nudge",
+    long_name="Nudging target for liquid water potential temperature",
 )
-va_nudge = VariableDefinition(
-    "va_nudge",
-    "Nudging target for northward wind",
-    "m/s",
-    can_be_time_dependent=True,
-    can_nudge=True,
-    init_time_height=True,
-    file_name="va_nud",
-    fallback="va",
-)
-thl_nudge = VariableDefinition(
-    "thl_nudge",
-    "Nudging target for liquid water potential temperature",
-    "K",
-    can_be_time_dependent=True,
-    can_nudge=True,
-    init_time_height=True,
-    file_name="thetal_nud",
-    fallback="thetal",
-)
-wa_nudge = VariableDefinition(
-    "wa_nudge",
-    "Nudging target for vertical velocity",
-    "m/s",
-    can_be_time_dependent=True,
-    can_nudge=True,
-    init_time_height=True,
+wa_nudge = NudgingVariable(
+    w,
+    name="wa_nudge",
     file_name="wa_nud",
-    fallback="w",
+    long_name="Nudging target for vertical velocity",
 )
-qt_nudge = VariableDefinition(
-    "qt_nudge",
-    "Nudging target for total water specific humidity",
-    "kg/kg",
-    can_be_time_dependent=True,
-    can_nudge=True,
-    init_time_height=True,
-    file_name="qt_nud",
-    fallback="qt",
-)
+qt_nudge = NudgingVariable(qt, long_name="Nudging target for total water specific humidity")
 
 
 def nudging_timescale(target: str) -> VariableDefinition:
-    return VariableDefinition(
+    return TimeHeightVariable(
         f"nudging_constant_{target}",
         f"Nudging timescale for {target}",
         "s",
-        can_be_time_dependent=True,
-        init_time_height=True,
     )
 
 
@@ -220,77 +294,67 @@ nudging_constant_va = nudging_timescale("va")
 nudging_constant_wa = nudging_timescale("wa")
 nudging_constant_thetal = nudging_timescale("thetal")
 nudging_constant_qt = nudging_timescale("qt")
-dqtdxls = VariableDefinition(
+dqtdxls = ProfileVariable(
     "dqtdxls",
     "Eastward gradient of the total water mixing ratio due to advection",
     "kg/kg/m",
-    can_be_time_dependent=True,
     time_dependent_name="dqtdx_ls_timedep",
 )
-dqtdyls = VariableDefinition(
+dqtdyls = ProfileVariable(
     "dqtdyls",
     "Northward gradient of the total water mixing ratio due to advection",
     "kg/kg/m",
-    can_be_time_dependent=True,
     time_dependent_name="dqtdy_ls_timedep",
 )
-tnqt_adv = VariableDefinition(
+tnqt_adv = ProfileVariable(
     "tnqt_adv",
     "Tendency of the total water mixing ratio",
     "kg/kg/s",
-    can_be_time_dependent=True,
     time_dependent_name="dqtdt_ls_timedep",
 )
-tnthetal_rad = VariableDefinition(
+tnthetal_rad = ProfileVariable(
     "tnthetal_rad",
     "Tendency of the liquid water potential temperature due to radiative heating",
     "K/s",
-    can_be_time_dependent=True,
     time_dependent_name="dthl_rad_timedep",
 )
-dudt_ls = VariableDefinition(
+dudt_ls = SeriesOnlyVariable(
     "dudt_ls",
     "Tendency of the eastward velocity due to large-scale forcing",
     "m/s^2",
-    can_be_time_dependent=True,
-    must_only_be_time_dependent=True,
     time_dependent_name="dudt_ls_timedep",
 )
-dvdt_ls = VariableDefinition(
+dvdt_ls = SeriesOnlyVariable(
     "dvdt_ls",
     "Tendency of the northward velocity due to large-scale forcing",
     "m/s^2",
-    can_be_time_dependent=True,
-    must_only_be_time_dependent=True,
     time_dependent_name="dvdt_ls_timedep",
 )
-dthldt_ls = VariableDefinition(
+dthldt_ls = SeriesOnlyVariable(
     "dthldt_ls",
     "Tendency of the liquid water potential temperature due to large-scale forcing",
     "K/s",
-    can_be_time_dependent=True,
-    must_only_be_time_dependent=True,
     time_dependent_name="dthldt_ls_timedep",
 )
 
 # Soil state (dimension ``zs``), requested by the LSM.
-t_soil = VariableDefinition("t_soil", "Soil temperature", "K", is_profile=False)
-theta_soil = VariableDefinition(
-    "theta_soil", "Volumetric soil moisture", "m3/m3", is_profile=False
+t_soil = SoilVariable("t_soil", "Soil temperature", "K")
+theta_soil = SoilVariable(
+    "theta_soil", "Volumetric soil moisture", "m3/m3"
 )
-type_soil = VariableDefinition("type_soil", "Soil type index", "-", is_profile=False)
-z0m = VariableDefinition("z0m", "Roughness length for momentum", "m", is_profile=False)
-z0h = VariableDefinition("z0h", "Roughness length for heat", "m", is_profile=False)
+type_soil = SoilVariable("type_soil", "Soil type index", "-")
+z0m = SurfaceVariable("z0m", "Roughness length for momentum", "m")
+z0h = SurfaceVariable("z0h", "Roughness length for heat", "m")
 
 # Radiation background sounding (dimension ``lev`` = pressure in Pa), requested by radiation.
-backrad_T = VariableDefinition(
-    "backrad_T", "Background temperature for radiation", "K", is_profile=False
+backrad_T = RadiationBackgroundVariable(
+    "backrad_T", "Background temperature for radiation", "K"
 )
-backrad_q = VariableDefinition(
-    "backrad_q", "Background specific humidity for radiation", "kg/kg", is_profile=False
+backrad_q = RadiationBackgroundVariable(
+    "backrad_q", "Background specific humidity for radiation", "kg/kg"
 )
-backrad_o3 = VariableDefinition(
-    "backrad_o3", "Background ozone for radiation", "kg/kg", is_profile=False
+backrad_o3 = RadiationBackgroundVariable(
+    "backrad_o3", "Background ozone for radiation", "kg/kg"
 )
 
 ALL_VARIABLES: list[VariableDefinition] = [
@@ -365,7 +429,20 @@ def get_all_vars() -> list[VariableDefinition]:
 __all__ = [
     "ALL_VARIABLES",
     "ATMO_VARS_BY_NAME",
+    "NudgingVariable",
+    "ProfileVariable",
+    "QtVariable",
+    "RadiationBackgroundVariable",
+    "SeriesOnlyVariable",
+    "SoilVariable",
+    "SurfaceVariable",
+    "ThetalVariable",
+    "TimeHeightVariable",
+    "TkeVariable",
+    "UVariable",
+    "VVariable",
     "VariableDefinition",
+    "WVariable",
     "backrad_T",
     "backrad_o3",
     "backrad_q",

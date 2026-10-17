@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
+
 from modular_dales.Geometry.GridDales import GridDalesOpenBC
 from modular_dales.logging_wrapper import logwrap
 

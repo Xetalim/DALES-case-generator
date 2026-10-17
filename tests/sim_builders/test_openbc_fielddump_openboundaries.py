@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -10,21 +9,19 @@ from modular_dales import (
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
-    NestingTopology,
     Nest_in_Dales,
+    NestingTopology,
     TimeModule,
     dales_simulation,
     do_openboundary,
 )
-from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.vars import *  # noqa: F401,F403
-
+from modular_dales.modular.simulation_module import set_nml_section
+from modular_dales.vars import *
+from tests.helpers import run_command_with_report
 from tests.sim_builders.test_openbc import (
-    _assert_crosssection_matches_fielddump,
     _assert_crosssection_matches_fielddump_scalar_slice_coord,
 )
-from tests.helpers import run_command_with_report
 
 
 @pytest.fixture
@@ -91,21 +88,11 @@ def _build_coarse_sim_with_easyoutput(
     sim += nesting
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=0.5, ddz=0)
-    )
-    atmo += AtmosphericProfile(
-        variable=va, shape="lin", params=dict(surf_val=3.0, ddz=1e-3)
-    )
-    atmo += AtmosphericProfile(
-        variable=thetal, shape="lin", params=dict(surf_val=293.15, ddz=1e-2)
-    )
-    atmo += AtmosphericProfile(
-        variable=qt, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=wa, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=0.5, ddz=0))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=3.0, ddz=1e-3))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
     sim += atmo
 
     sim += TimeModule(
@@ -152,21 +139,11 @@ def _build_nested_openbc_sim_from_coarse(
     sim2 += subgrid
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=0.5, ddz=0)
-    )
-    atmo += AtmosphericProfile(
-        variable=va, shape="lin", params=dict(surf_val=3.0, ddz=1e-3)
-    )
-    atmo += AtmosphericProfile(
-        variable=thetal, shape="lin", params=dict(surf_val=293.15, ddz=1e-2)
-    )
-    atmo += AtmosphericProfile(
-        variable=qt, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
-    atmo += AtmosphericProfile(
-        variable=wa, shape="lin", params=dict(surf_val=0.0, ddz=0.0)
-    )
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=0.5, ddz=0))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=3.0, ddz=1e-3))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0))
+    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
     sim2 += atmo
 
     sim2 += TimeModule(
@@ -363,9 +340,10 @@ def test_openboundaries_match_fielddump_and_crosssection(
     #    compute total divergence.
     total_divergence = 0.0
 
-    with xr.open_dataset(fielddump_file) as ds_fd_all_z, xr.open_dataset(
-        openboundaries_file
-    ) as ds_ob:
+    with (
+        xr.open_dataset(fielddump_file) as ds_fd_all_z,
+        xr.open_dataset(openboundaries_file) as ds_ob,
+    ):
         ds_fd = ds_fd_all_z.sel(zt=nested_sim.grid.zt, zm=nested_sim.grid.zm)
         pairs = [
             ("uwest", "u", "xm", "yt", "west"),

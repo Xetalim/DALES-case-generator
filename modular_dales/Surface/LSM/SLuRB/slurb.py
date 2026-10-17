@@ -4,6 +4,7 @@ from typing import Any, Literal, Optional
 
 import netCDF4
 import numpy as np
+
 from modular_dales.Geometry.geometry_modification import (
     GeometricModification,
     ModifierClass,

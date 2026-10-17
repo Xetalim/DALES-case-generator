@@ -1,6 +1,7 @@
 from __future__ import annotations
-import numpy as np
+
 import netCDF4
+import numpy as np
 
 from modular_dales import (
     AtmosphereModule,
@@ -13,9 +14,9 @@ from modular_dales import (
     dales_simulation,
     do_openboundary,
 )
-from modular_dales.Atmosphere import TimedAtmosphereProfile
+from modular_dales.Atmosphere import TimedAtmosphereProfile, lin
 from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.vars import *
 
 
 def _build_openbc_atmo_sim(
@@ -56,33 +57,27 @@ def _build_openbc_atmo_sim(
     # Simple linear profiles for u, v, w, thetal, qt, tke
     atmo += AtmosphericProfile(
         variable=ua,
-        shape="lin",
-        params=dict(surf_val=3.0, ddz=1e-3),
+        shape=lin(surf_val=3.0, ddz=1e-3),
     )
     atmo += AtmosphericProfile(
         variable=va,
-        shape="lin",
-        params=dict(surf_val=0.0, ddz=0.0),
+        shape=lin(surf_val=0.0, ddz=0.0),
     )
     atmo += AtmosphericProfile(
         variable=w,
-        shape="lin",
-        params=dict(surf_val=0.0, ddz=0.0),
+        shape=lin(surf_val=0.0, ddz=0.0),
     )
     atmo += AtmosphericProfile(
         variable=thetal,
-        shape="lin",
-        params=dict(surf_val=293.15, ddz=1e-2),
+        shape=lin(surf_val=293.15, ddz=1e-2),
     )
     atmo += AtmosphericProfile(
         variable=qt,
-        shape="lin",
-        params=dict(surf_val=0.01, ddz=0.0),
+        shape=lin(surf_val=0.01, ddz=0.0),
     )
     atmo += AtmosphericProfile(
         variable=tke,
-        shape="lin",
-        params=dict(surf_val=0.1, ddz=0.0),
+        shape=lin(surf_val=0.1, ddz=0.0),
     )
 
     sim += atmo
@@ -101,33 +96,27 @@ def _build_openbc_atmo_sim(
 
     boundary_u = AtmosphericProfile(
         variable=ua,
-        shape="lin",
-        params=dict(surf_val=3.0, ddz=1e-3),
+        shape=lin(surf_val=3.0, ddz=1e-3),
     )
     boundary_v = AtmosphericProfile(
         variable=va,
-        shape="lin",
-        params=dict(surf_val=0.0, ddz=0),
+        shape=lin(surf_val=0.0, ddz=0),
     )
     boundary_w = AtmosphericProfile(
         variable=w,
-        shape="lin",
-        params=dict(surf_val=0.0, ddz=0.0),
+        shape=lin(surf_val=0.0, ddz=0.0),
     )
     boundary_thl = AtmosphericProfile(
         variable=thetal,
-        shape="lin",
-        params=dict(surf_val=293.15, ddz=1e-2),
+        shape=lin(surf_val=293.15, ddz=1e-2),
     )
     boundary_qt = AtmosphericProfile(
         variable=qt,
-        shape="lin",
-        params=dict(surf_val=0.01, ddz=0.0),
+        shape=lin(surf_val=0.01, ddz=0.0),
     )
     boundary_e12 = AtmosphericProfile(
         variable=tke,
-        shape="lin",
-        params=dict(surf_val=0.1, ddz=0.0),
+        shape=lin(surf_val=0.1, ddz=0.0),
     )
 
     if add_timedep:
@@ -136,16 +125,14 @@ def _build_openbc_atmo_sim(
                 time=0.0,
                 profile=AtmosphericProfile(
                     variable=ua,
-                    shape="lin",
-                    params=dict(surf_val=3.0, ddz=1e-3),
+                    shape=lin(surf_val=3.0, ddz=1e-3),
                 ),
             ),
             TimedAtmosphereProfile(
                 time=3600.0,
                 profile=AtmosphericProfile(
                     variable=ua,
-                    shape="lin",
-                    params=dict(surf_val=0.0, ddz=0),
+                    shape=lin(surf_val=0.0, ddz=0),
                 ),
             ),
         ]
@@ -154,16 +141,14 @@ def _build_openbc_atmo_sim(
                 time=0.0,
                 profile=AtmosphericProfile(
                     variable=va,
-                    shape="lin",
-                    params=dict(surf_val=0, ddz=0),
+                    shape=lin(surf_val=0, ddz=0),
                 ),
             ),
             TimedAtmosphereProfile(
                 time=3600.0,
                 profile=AtmosphericProfile(
                     variable=va,
-                    shape="lin",
-                    params=dict(surf_val=3.0, ddz=1e-3),
+                    shape=lin(surf_val=3.0, ddz=1e-3),
                 ),
             ),
         ]
@@ -183,11 +168,11 @@ def _build_openbc_atmo_sim(
         w=boundary_w,
         thl=boundary_thl,
         qt=boundary_qt,
-        e12=boundary_e12,
+        e120=boundary_e12,
         noise_boundaries=["south", "west"],
         noise_std=0.1,
         noise_seed=42,
-        noise_variables=["ua", "va"],
+        noise_variables=["u", "v"],
     )
     sim += openbc
 

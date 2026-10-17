@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-
 from modular_dales import dales_simulation
 from modular_dales.Atmosphere import (
     AtmosphereModule,
@@ -17,7 +15,7 @@ from modular_dales.Emission.emission import (
 )
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
-from modular_dales.vars import *  # noqa: F401,F403
+from modular_dales.vars import *
 
 
 def emission_case(machine_conf: dict) -> dales_simulation:
@@ -47,18 +45,10 @@ def emission_case(machine_conf: dict) -> dales_simulation:
     sim += time_module
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua, shape="lin", params=dict(surf_val=0.0, ddz=0)
-    )
-    atmo += AtmosphericProfile(
-        variable=va, shape="lin", params=dict(surf_val=0.0, ddz=0)
-    )
-    atmo += AtmosphericProfile(
-        variable=thetal, shape="lin", params=dict(surf_val=293.15, ddz=0)
-    )
-    atmo += AtmosphericProfile(
-        variable=qt, shape="lin", params=dict(surf_val=0.0, ddz=0)
-    )
+    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=0.0, ddz=0))
+    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0))
+    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=0))
+    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0))
     sim += atmo
 
     sim += ConstantSurfaceTemperatureModule(
