@@ -5,6 +5,7 @@ from typing import Optional
 from modular_dales.Geometry import GridDales, GridDalesOpenBC
 from modular_dales.LBC.nesting_idx import NestingIndices
 from modular_dales.LBC.openbc import do_openboundary
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -44,22 +45,18 @@ class NestingTopology(simulation_module):
     openbc_module: Optional["do_openboundary"] = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    lcross: bool | None = field(
+    lcross: bool | None = nml_field(
         default=True,
-        metadata={
-            "nml": "namcrosssection",
-            "key": "lcross",
-            "required": True,
-        },
+        section="namcrosssection",
+        key="lcross",
+        required=True,
         init=False,
     )
-    lstat: bool | None = field(
+    lstat: bool | None = nml_field(
         default=True,
-        metadata={
-            "nml": "namgenstat",
-            "key": "lstat",
-            "required": True,
-        },
+        section="namgenstat",
+        key="lstat",
+        required=True,
         init=False,
     )
 

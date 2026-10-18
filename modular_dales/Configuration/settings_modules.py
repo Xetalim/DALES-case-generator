@@ -25,96 +25,74 @@ class SprayingModule(simulation_module):
         key="i_glob_spray",
         description="Global i-index location for spray source.",
     )
-    y_idx: int | None = field(
+    y_idx: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namspraying",
-            "key": "j_glob_spray",
-            "doc": "Global j-index location for spray source.",
-        },
+        section="namspraying",
+        key="j_glob_spray",
+        description="Global j-index location for spray source.",
     )
-    z_idx: int | None = field(
+    z_idx: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namspraying",
-            "key": "k_glob_spray",
-            "doc": "Vertical level index for spray source.",
-        },
+        section="namspraying",
+        key="k_glob_spray",
+        description="Vertical level index for spray source.",
     )
     x: float | None = field(default=None, metadata={"serialize": False})
     y: float | None = field(default=None, metadata={"serialize": False})
     z: float | None = field(default=None, metadata={"serialize": False})
-    lwater_spraying: bool = field(
+    lwater_spraying: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "namspraying",
-            "key": "lwater_spraying",
-            "doc": "Enable prescribed water spraying source.",
-        },
+        section="namspraying",
+        key="lwater_spraying",
+        description="Enable prescribed water spraying source.",
     )
-    lsalt_spraying: bool = field(
+    lsalt_spraying: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "namspraying",
-            "key": "lsalt_spraying",
-            "doc": "Enable prescribed salt spraying source.",
-        },
+        section="namspraying",
+        key="lsalt_spraying",
+        description="Enable prescribed salt spraying source.",
     )
-    water_spray_rate: float = field(
+    water_spray_rate: float = nml_field(
         default=0.0,
-        metadata={
-            "nml": "namspraying",
-            "key": "water_spray_rate",
-            "doc": "Injected water spray mass rate.",
-        },
+        section="namspraying",
+        key="water_spray_rate",
+        description="Injected water spray mass rate.",
     )
-    salt_spray_rate: float = field(
+    salt_spray_rate: float = nml_field(
         default=0.0,
-        metadata={
-            "nml": "namspraying",
-            "key": "salt_spray_rate",
-            "doc": "Injected salt spray mass rate.",
-        },
+        section="namspraying",
+        key="salt_spray_rate",
+        description="Injected salt spray mass rate.",
     )
-    salinity: float = field(
+    salinity: float = nml_field(
         default=0.0,
-        metadata={
-            "nml": "namspraying",
-            "key": "salinity",
-            "doc": "Salt mass fraction used for water spray.",
-        },
+        section="namspraying",
+        key="salinity",
+        description="Salt mass fraction used for water spray.",
     )
-    tracer: str = field(
+    tracer: str = nml_field(
         default="salt",
-        metadata={
-            "nml": "namspraying",
-            "key": "tracer",
-            "doc": "Tracer name that receives spray source.",
-        },
+        section="namspraying",
+        key="tracer",
+        description="Tracer name that receives spray source.",
     )
-    lsalt_sponge: bool = field(
+    lsalt_sponge: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "namspraying",
-            "key": "lsalt_sponge",
-            "doc": "Enable salt sponge damping around spray source.",
-        },
+        section="namspraying",
+        key="lsalt_sponge",
+        description="Enable salt sponge damping around spray source.",
     )
-    lcoupled: bool = field(
+    lcoupled: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "namspraying",
-            "key": "lcoupled",
-            "doc": "Enable coupling with external spray forcing.",
-        },
+        section="namspraying",
+        key="lcoupled",
+        description="Enable coupling with external spray forcing.",
     )
-    target_mode: int = field(
+    target_mode: int = nml_field(
         default=0,
-        metadata={
-            "nml": "namspraying",
-            "key": "target_mode",
-            "doc": "Spray forcing mode selector.",
-        },
+        section="namspraying",
+        key="target_mode",
+        description="Spray forcing mode selector.",
     )
 
     def __post_init__(self):
@@ -149,21 +127,17 @@ class SprayingModule(simulation_module):
 class LateralSpongeModule(simulation_module):
     """Settings module for lateral sponge damping configuration."""
 
-    llateral_sponge: bool = field(
+    llateral_sponge: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "lateral_sponge",
-            "key": "llateral_sponge",
-            "doc": "Enable lateral sponge damping near side boundaries.",
-        },
+        section="lateral_sponge",
+        key="llateral_sponge",
+        description="Enable lateral sponge damping near side boundaries.",
     )
-    nudgedepth: float = field(
+    nudgedepth: float = nml_field(
         default=0.0,
-        metadata={
-            "nml": "lateral_sponge",
-            "key": "nudgedepth",
-            "doc": "Depth/width scale of lateral sponge region in m.",
-        },
+        section="lateral_sponge",
+        key="nudgedepth",
+        description="Depth/width scale of lateral sponge region in m.",
     )
 
     def __post_init__(self):
@@ -188,154 +162,120 @@ class LateralSpongeModule(simulation_module):
 class GeneralPhysicsModule(simulation_module):
     """Settings module combining thermodynamics and subgrid controls."""
 
-    lmoist: bool | None = field(
+    lmoist: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "lmoist",
-            "doc": "Enable moist thermodynamics.",
-        },
+        section="thermodynamics",
+        key="lmoist",
+        description="Enable moist thermodynamics.",
     )
-    chi_half: bool | None = field(
+    chi_half: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "chi_half",
-            "doc": "Use half-level chi/exner treatment where applicable.",
-        },
+        section="thermodynamics",
+        key="chi_half",
+        description="Use half-level chi/exner treatment where applicable.",
     )
-    lconstexner: bool | None = field(
+    lconstexner: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "lconstexner",
-            "doc": "Use initial pressure profile in exner function.",
-        },
+        section="thermodynamics",
+        key="lconstexner",
+        description="Use initial pressure profile in exner function.",
     )
-    lbaseexner: bool | None = field(
+    lbaseexner: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "lbaseexner",
-            "doc": "Use base-state pressure profile in exner function.",
-        },
+        section="thermodynamics",
+        key="lbaseexner",
+        description="Use base-state pressure profile in exner function.",
     )
-    lnoclouds: bool | None = field(
+    lnoclouds: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "lnoclouds",
-            "doc": "Disable cloud liquid calculations in thermodynamics.",
-        },
+        section="thermodynamics",
+        key="lnoclouds",
+        description="Disable cloud liquid calculations in thermodynamics.",
     )
-    lqlnr: bool | None = field(
+    lqlnr: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "lqlnr",
-            "doc": "Toggle non-rain liquid handling option.",
-        },
+        section="thermodynamics",
+        key="lqlnr",
+        description="Toggle non-rain liquid handling option.",
     )
 
-    ldelta: bool | None = field(
+    ldelta: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "ldelta",
-            "doc": "Use delta-based subgrid length scale.",
-        },
+        section="NAMSUBGRID",
+        key="ldelta",
+        description="Use delta-based subgrid length scale.",
     )
-    lmason: bool | None = field(
+    lmason: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "lmason",
-            "doc": "Enable Mason wall-damping formulation.",
-        },
+        section="NAMSUBGRID",
+        key="lmason",
+        description="Enable Mason wall-damping formulation.",
     )
-    cf: float | None = field(
+    cf: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "cf",
-            "doc": "Subgrid closure constant cf.",
-        },
+        section="NAMSUBGRID",
+        key="cf",
+        description="Subgrid closure constant cf.",
     )
-    cn: float | None = field(
+    cn: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "cn",
-            "doc": "Subgrid closure constant cn.",
-        },
+        section="NAMSUBGRID",
+        key="cn",
+        description="Subgrid closure constant cn.",
     )
-    Rigc: float | None = field(
+    Rigc: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "Rigc",
-            "doc": "Critical Richardson number for subgrid closure.",
-        },
+        section="NAMSUBGRID",
+        key="Rigc",
+        description="Critical Richardson number for subgrid closure.",
     )
-    Prandtl: float | None = field(
+    Prandtl: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "Prandtl",
-            "doc": "Subgrid turbulent Prandtl number.",
-        },
+        section="NAMSUBGRID",
+        key="Prandtl",
+        description="Subgrid turbulent Prandtl number.",
     )
-    lsmagorinsky: bool | None = field(
+    lsmagorinsky: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "lsmagorinsky",
-            "doc": "Enable Smagorinsky-type closure.",
-        },
+        section="NAMSUBGRID",
+        key="lsmagorinsky",
+        description="Enable Smagorinsky-type closure.",
     )
-    cs: float | None = field(
+    cs: float | None = nml_field(
         default=None,
-        metadata={"nml": "NAMSUBGRID", "key": "cs", "doc": "Smagorinsky coefficient."},
+        section="NAMSUBGRID",
+        key="cs",
+        description="Smagorinsky coefficient.",
     )
-    nmason: int | None = field(
+    nmason: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "nmason",
-            "doc": "Selector for Mason damping variant.",
-        },
+        section="NAMSUBGRID",
+        key="nmason",
+        description="Selector for Mason damping variant.",
     )
-    sgs_surface_fix: bool | None = field(
+    sgs_surface_fix: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "sgs_surface_fix",
-            "doc": "Enable near-surface SGS correction.",
-        },
+        section="NAMSUBGRID",
+        key="sgs_surface_fix",
+        description="Enable near-surface SGS correction.",
     )
-    ch1: float | None = field(
+    ch1: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "ch1",
-            "doc": "Empirical closure coefficient ch1.",
-        },
+        section="NAMSUBGRID",
+        key="ch1",
+        description="Empirical closure coefficient ch1.",
     )
-    lanisotrop: bool | None = field(
+    lanisotrop: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "lanisotrop",
-            "doc": "Enable anisotropic diffusion treatment.",
-        },
+        section="NAMSUBGRID",
+        key="lanisotrop",
+        description="Enable anisotropic diffusion treatment.",
     )
-    lD80R: bool | None = field(
+    lD80R: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSUBGRID",
-            "key": "lD80R",
-            "doc": "Enable D80R subgrid option.",
-        },
+        section="NAMSUBGRID",
+        key="lD80R",
+        description="Enable D80R subgrid option.",
     )
 
     def __post_init__(self):

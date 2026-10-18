@@ -6,6 +6,7 @@ import xarray as xr
 from modular_dales.Configuration import TimeModule
 from modular_dales.IO_helpers.atmosphere_writer import AtmosphereProfileWriter
 from modular_dales.modular.forcing import var_attrs
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.time_dependent_scalars import (
     TIME_DIM,
     Z_DIM,
@@ -48,25 +49,21 @@ class TimedependentModule(simulation_module):
         repr=False,
         metadata={"serialize": False},
     )
-    ntimedep: int = field(
+    ntimedep: int = nml_field(
         default=0,
         init=False,
         repr=False,
-        metadata={
-            "serialize": False,
-            "nml": "PHYSICS",
-            "key": "ntimedep",
-        },
+        section="PHYSICS",
+        key="ntimedep",
+        metadata={"serialize": False},
     )
-    ltimedep: bool = field(
+    ltimedep: bool = nml_field(
         default=True,
         init=True,
         repr=False,
-        metadata={
-            "serialize": False,
-            "nml": "PHYSICS",
-            "key": "ltimedep",
-        },
+        section="PHYSICS",
+        key="ltimedep",
+        metadata={"serialize": False},
     )
 
     def __post_init__(self):

@@ -5,6 +5,7 @@ import pathlib
 from dataclasses import dataclass, field
 from typing import Optional
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.Radiation.backrad_profile import (
@@ -51,65 +52,53 @@ class RadiationModule(simulation_module):
         doclearsky: Use clear sky radiation in the calculation
     """
 
-    iradiation: int | None = field(
-        default=None, metadata={"nml": "PHYSICS", "key": "IRADIATION"}
+    iradiation: int | None = nml_field(
+        default=None, section="PHYSICS", key="IRADIATION"
     )
     # NAMDE parameters
-    ssa: float | None = field(default=None, metadata={"nml": "NAMDE", "key": "ssa"})
-    laero: float | None = field(default=None, metadata={"nml": "NAMDE", "key": "laero"})
-    ide: int | None = field(default=None, metadata={"nml": "NAMDE", "key": "ide"})
+    ssa: float | None = nml_field(default=None, section="NAMDE", key="ssa")
+    laero: float | None = nml_field(default=None, section="NAMDE", key="laero")
+    ide: int | None = nml_field(default=None, section="NAMDE", key="ide")
 
     # NAMRADIATION parameters
-    lCnstZenith: bool | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "lCnstZenith"}
+    lCnstZenith: bool | None = nml_field(
+        default=None, section="NAMRADIATION", key="lCnstZenith"
     )
-    ioverlap: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "ioverlap"}
+    ioverlap: int | None = nml_field(
+        default=None, section="NAMRADIATION", key="ioverlap"
     )
-    inflglw: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "inflglw"}
+    inflglw: int | None = nml_field(default=None, section="NAMRADIATION", key="inflglw")
+    iceflglw: int | None = nml_field(
+        default=None, section="NAMRADIATION", key="iceflglw"
     )
-    iceflglw: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "iceflglw"}
+    liqflglw: int | None = nml_field(
+        default=None, section="NAMRADIATION", key="liqflglw"
     )
-    liqflglw: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "liqflglw"}
+    inflgsw: int | None = nml_field(default=None, section="NAMRADIATION", key="inflgsw")
+    iceflgsw: int | None = nml_field(
+        default=None, section="NAMRADIATION", key="iceflgsw"
     )
-    inflgsw: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "inflgsw"}
+    liqflgsw: int | None = nml_field(
+        default=None, section="NAMRADIATION", key="liqflgsw"
     )
-    iceflgsw: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "iceflgsw"}
-    )
-    liqflgsw: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "liqflgsw"}
-    )
-    iyear: int | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "iyear"}
-    )
-    ocean: bool | None = field(
-        default=None, metadata={"nml": "NAMRADIATION", "key": "ocean"}
-    )
+    iyear: int | None = nml_field(default=None, section="NAMRADIATION", key="iyear")
+    ocean: bool | None = nml_field(default=None, section="NAMRADIATION", key="ocean")
 
     # NAMRTERRMTGP parameters
-    nbatch: int | None = field(
-        default=None, metadata={"nml": "NAMRTERRTMGP", "key": "nbatch"}
+    nbatch: int | None = nml_field(default=None, section="NAMRTERRTMGP", key="nbatch")
+    usepade: bool | None = nml_field(
+        default=None, section="NAMRTERRTMGP", key="usepade"
     )
-    usepade: bool | None = field(
-        default=None, metadata={"nml": "NAMRTERRTMGP", "key": "usepade"}
-    )
-    doclearsky: bool | None = field(
-        default=None, metadata={"nml": "NAMRTERRTMGP", "key": "doclearsky"}
+    doclearsky: bool | None = nml_field(
+        default=None, section="NAMRTERRTMGP", key="doclearsky"
     )
 
-    timerad: int = field(
+    timerad: int = nml_field(
         default=60,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "timerad",
-            "required": True,
-            "serialize": True,
-        },
+        section="PHYSICS",
+        key="timerad",
+        required=True,
+        metadata={"serialize": True},
         init=True,
     )
 

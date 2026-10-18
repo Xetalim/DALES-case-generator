@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 # Ensure the project root is on sys.path so `modular_dales` can be imported
 sys.path.insert(0, os.path.abspath(".."))
 
+from modular_dales.modular.namelist import get_namelist_spec
 from modular_dales.modular.simulation_module import simulation_module
 
 project = "DALES Case Generator"  # pylint: disable=C0103
@@ -57,7 +58,7 @@ def _append_namelist_field_docs(what, obj, lines):
     """Append a "Namelist parameters" section for simulation modules.
 
     Any dataclass field on a subclass of ``simulation_module`` that carries
-    ``metadata={"nml": ..., "key": ...}`` will be listed, so the rendered
+    a typed ``nml_field`` binding will be listed, so the rendered
     HTML explicitly shows which namelist sections and keys a module controls.
     """
 
@@ -78,35 +79,17 @@ def _append_namelist_field_docs(what, obj, lines):
     namelist_entries = {}
 
     for field in fields(obj):  # type: ignore[arg-type]
-        meta = field.metadata or {}
-        section = meta.get("nml")
-        if not section:
+        spec = get_namelist_spec(field)
+        if spec is None:
             continue
-
-        key = meta.get("key", field.name)
-        required = bool(meta.get("required", False))
-
-        # Both ``nml`` and ``key`` may be lists (for fields that map to
-        # multiple namelist entries). Mirror the logic in
-        # simulation_module.apply_namelist_from_fields and record one docs
-        # entry per (section, key) pair.
-        if isinstance(section, (list, tuple)) or isinstance(key, (list, tuple)):
-            sections = section if isinstance(section, (list, tuple)) else [section]
-            keys = key if isinstance(key, (list, tuple)) else [key] * len(sections)
-            for sec, k in zip(sections, keys):
-                namelist_entries.setdefault(str(sec), []).append(
-                    {
-                        "key": str(k),
-                        "field": field.name,
-                        "required": required,
-                    }
-                )
-        else:
+        for section, key in spec.targets(field.name):
             namelist_entries.setdefault(str(section), []).append(
                 {
                     "key": str(key),
                     "field": field.name,
-                    "required": required,
+                    "required": spec.required,
+                    "description": spec.description,
+                    "units": spec.units,
                 }
             )
 
@@ -125,6 +108,10 @@ def _append_namelist_field_docs(what, obj, lines):
         lines.append(f"*Section* ``{section}``:")
         for entry in sorted(namelist_entries[section], key=lambda e: e["key"]):
             suffix = " (required)" if entry["required"] else ""
+            if entry["units"]:
+                suffix += f" [{entry['units']}]"
+            if entry["description"]:
+                suffix += f": {entry['description']}"
             lines.append(f"  - ``{entry['key']}`` (field ``{entry['field']}``){suffix}")
 
 
@@ -132,7 +119,7 @@ def setup(app):
     """Sphinx extension hook to enhance autodoc output.
 
     Currently this adds explicit lists of namelist parameters for modules
-    that inherit from ``simulation_module`` and declare ``nml`` metadata on
+    that inherit from ``simulation_module`` and declare ``nml_field`` bindings on
     their dataclass fields.
     """
 

@@ -1,7 +1,8 @@
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -39,60 +40,47 @@ class ConstantFluxesModule(SurfaceModule):
       albedoav: Surface albedo (dimensionless)
     """
 
-    isurf: int = field(
-        default=4, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
-    )
-    wtsurf: Union[float, "TimeDependentScalar"] | None = field(
+    isurf: int = nml_field(default=4, init=False, section="NAMSURFACE", key="isurf")
+    wtsurf: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "wtsurf",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "wtsurf",
-        },
+        section="NAMSURFACE",
+        key="wtsurf",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "wtsurf"},
     )
-    wqsurf: Union[float, "TimeDependentScalar"] | None = field(
+    wqsurf: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "wqsurf",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "wqsurf",
-        },
+        section="NAMSURFACE",
+        key="wqsurf",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "wqsurf"},
     )
-    ps: Union[float, "TimeDependentScalar"] | None = field(
+    ps: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "ps",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "psurf",
-        },
+        section="NAMSURFACE",
+        key="ps",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "psurf"},
     )
-    z0mav: float | None = field(
+    z0mav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0mav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0mav",
+        required=True,
+        metadata={"serialize": True},
     )
-    z0hav: float | None = field(
+    z0hav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0hav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0hav",
+        required=True,
+        metadata={"serialize": True},
     )
-    albedoav: float | None = field(
+    albedoav: float | None = nml_field(
         default=None,
-        metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
+        section="NAMSURFACE",
+        key="albedoav",
+        metadata={"serialize": True},
     )
 
     def __post_init__(self):
@@ -138,69 +126,54 @@ class ConstantFluxesWithShearModule(SurfaceModule):
       albedoav: Surface albedo (dimensionless)
     """
 
-    isurf: int = field(
-        default=3, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
-    )
-    wtsurf: Union[float, "TimeDependentScalar"] | None = field(
+    isurf: int = nml_field(default=3, init=False, section="NAMSURFACE", key="isurf")
+    wtsurf: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "wtsurf",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "wtsurf",
-        },
+        section="NAMSURFACE",
+        key="wtsurf",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "wtsurf"},
     )
-    wqsurf: Union[float, "TimeDependentScalar"] | None = field(
+    wqsurf: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "wqsurf",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "wqsurf",
-        },
+        section="NAMSURFACE",
+        key="wqsurf",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "wqsurf"},
     )
-    ustin: float | None = field(
+    ustin: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "ustin",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="ustin",
+        required=True,
+        metadata={"serialize": True},
     )
-    ps: Union[float, "TimeDependentScalar"] | None = field(
+    ps: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "ps",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "psurf",
-        },
+        section="NAMSURFACE",
+        key="ps",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "psurf"},
     )
-    z0mav: float | None = field(
+    z0mav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0mav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0mav",
+        required=True,
+        metadata={"serialize": True},
     )
-    z0hav: float | None = field(
+    z0hav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0hav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0hav",
+        required=True,
+        metadata={"serialize": True},
     )
-    albedoav: float | None = field(
+    albedoav: float | None = nml_field(
         default=None,
-        metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
+        section="NAMSURFACE",
+        key="albedoav",
+        metadata={"serialize": True},
     )
 
     def __post_init__(self):
@@ -245,50 +218,40 @@ class ConstantSurfaceTemperatureModule(SurfaceModule):
       albedoav: Surface albedo (dimensionless)
     """
 
-    isurf: int = field(
-        default=2, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
-    )
-    thls: Union[float, "TimeDependentScalar"] | None = field(
+    isurf: int = nml_field(default=2, init=False, section="NAMSURFACE", key="isurf")
+    thls: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "thls",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "thls",
-        },
+        section="NAMSURFACE",
+        key="thls",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "thls"},
     )
-    z0mav: float | None = field(
+    z0mav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0mav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0mav",
+        required=True,
+        metadata={"serialize": True},
     )
-    z0hav: float | None = field(
+    z0hav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0hav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0hav",
+        required=True,
+        metadata={"serialize": True},
     )
-    ps: Union[float, "TimeDependentScalar"] | None = field(
+    ps: Union[float, "TimeDependentScalar"] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "ps",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "psurf",
-        },
+        section="NAMSURFACE",
+        key="ps",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "psurf"},
     )
-    albedoav: float | None = field(
+    albedoav: float | None = nml_field(
         default=None,
-        metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
+        section="NAMSURFACE",
+        key="albedoav",
+        metadata={"serialize": True},
     )
 
     def __post_init__(self):

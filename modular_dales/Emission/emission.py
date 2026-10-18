@@ -20,6 +20,7 @@ from modular_dales.Emission.create_emis import (
     get_emis_sim_hours,
 )
 from modular_dales.modular import simulation_module
+from modular_dales.modular.namelist import nml_field
 from modular_dales.MODULE_REGISTRY import register_module
 
 logger = logging.getLogger(__name__)
@@ -103,54 +104,44 @@ class EmissionModule(simulation_module):
     emissions_instance: emissions | None = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    l_emission: bool = field(
+    l_emission: bool = nml_field(
         default=True,
-        metadata={
-            "nml": "NAMEMISSION",
-            "key": "l_emission",
-            "serialize": True,
-            "required": True,
-        },
+        section="NAMEMISSION",
+        key="l_emission",
+        required=True,
+        metadata={"serialize": True},
         init=True,
     )
-    l_points: bool = field(
+    l_points: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "NAMEMISSION",
-            "key": "l_points",
-            "serialize": False,
-            "required": True,
-        },
+        section="NAMEMISSION",
+        key="l_points",
+        required=True,
+        metadata={"serialize": False},
         init=True,
     )
-    explicit_plume_rise: bool = field(
+    explicit_plume_rise: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "NAMEMISSION",
-            "key": "explicit_plume_rise",
-            "serialize": True,
-            "required": True,
-        },
+        section="NAMEMISSION",
+        key="explicit_plume_rise",
+        required=True,
+        metadata={"serialize": True},
         init=True,
     )
-    emisnames: list[str] = field(
+    emisnames: list[str] = nml_field(
         default_factory=list,
-        metadata={
-            "nml": "NAMEMISSION",
-            "key": "emisnames",
-            "serialize": False,
-            "required": True,
-        },
+        section="NAMEMISSION",
+        key="emisnames",
+        required=True,
+        metadata={"serialize": False},
         init=True,
     )
-    nemis: int = field(
+    nemis: int = nml_field(
         default=0,
-        metadata={
-            "nml": "NAMEMISSION",
-            "key": "nemis",
-            "serialize": False,
-            "required": True,
-        },
+        section="NAMEMISSION",
+        key="nemis",
+        required=True,
+        metadata={"serialize": False},
         init=True,
     )
 

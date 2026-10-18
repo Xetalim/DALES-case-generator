@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal, overload
 import numpy as np
 from numpy.typing import ArrayLike
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -147,64 +148,60 @@ class EasyOutputModule(simulation_module):
 
     """
 
-    output_interval: int | list[int] | None = field(
+    output_interval: int | list[int] | None = nml_field(
         default=60,
-        metadata={
-            "nml": [
-                "namfielddump",
-                "namcape",
-                "namlsmcrosssection",
-                "namgenstat",
-                "namcrosssection",
-                "namtimestat",
-                "nambudget",
-                "nambudget",
-                "namgenstat",
-                "namradfield",
-                "namradfield",
-            ],
-            "key": [
-                "dtav",
-                "dtav",
-                "dtav",
-                "dtav",
-                "dtav",
-                "dtav",
-                "dtav",
-                "timeav",
-                "timeav",
-                "dtav",
-                "timeav",
-            ],
-            "required": True,
-        },
+        section=[
+            "namfielddump",
+            "namcape",
+            "namlsmcrosssection",
+            "namgenstat",
+            "namcrosssection",
+            "namtimestat",
+            "nambudget",
+            "nambudget",
+            "namgenstat",
+            "namradfield",
+            "namradfield",
+        ],
+        key=[
+            "dtav",
+            "dtav",
+            "dtav",
+            "dtav",
+            "dtav",
+            "dtav",
+            "dtav",
+            "timeav",
+            "timeav",
+            "dtav",
+            "timeav",
+        ],
+        required=True,
         init=True,
     )
-    enable_output: bool = field(
+    enable_output: bool = nml_field(
         default=True,
-        metadata={
-            "nml": [
-                "namfielddump",
-                "namcape",
-                "namlsmcrosssection",
-                "namgenstat",
-                "namcrosssection",
-                "namtimestat",
-                "nambudget",
-                "namradfield",
-            ],
-            "key": [
-                "lfielddump",
-                "lcape",
-                "lcross",
-                "lstat",
-                "lcross",
-                "ltimestat",
-                "lbudget",
-                "lradfield",
-            ],
-            "required": True,
-        },
+        section=[
+            "namfielddump",
+            "namcape",
+            "namlsmcrosssection",
+            "namgenstat",
+            "namcrosssection",
+            "namtimestat",
+            "nambudget",
+            "namradfield",
+        ],
+        key=[
+            "lfielddump",
+            "lcape",
+            "lcross",
+            "lstat",
+            "lcross",
+            "ltimestat",
+            "lbudget",
+            "lradfield",
+        ],
+        required=True,
     )
 
     def do_config(self):
@@ -233,13 +230,17 @@ class EasyOutputModule(simulation_module):
 class CapeModule(simulation_module):
     """Dedicated output module for NAMCAPE statistics."""
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=False,
-        metadata={"nml": "namcape", "key": "lcape", "required": True},
+        section="namcape",
+        key="lcape",
+        required=True,
     )
-    dtav: int | None = field(
+    dtav: int | None = nml_field(
         default=60,
-        metadata={"nml": "namcape", "key": "dtav", "required": True},
+        section="namcape",
+        key="dtav",
+        required=True,
     )
 
     def do_config(self):
@@ -264,13 +265,17 @@ class CapeModule(simulation_module):
 class LSMCrossModule(simulation_module):
     """Dedicated output module for NAMLSMCROSSSECTION statistics."""
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=False,
-        metadata={"nml": "namlsmcrosssection", "key": "lcross", "required": True},
+        section="namlsmcrosssection",
+        key="lcross",
+        required=True,
     )
-    dtav: int | None = field(
+    dtav: int | None = nml_field(
         default=60,
-        metadata={"nml": "namlsmcrosssection", "key": "dtav", "required": True},
+        section="namlsmcrosssection",
+        key="dtav",
+        required=True,
     )
 
     def do_config(self):
@@ -295,13 +300,17 @@ class LSMCrossModule(simulation_module):
 class TimestatModule(simulation_module):
     """Dedicated output module for NAMTIMESTAT statistics."""
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=False,
-        metadata={"nml": "namtimestat", "key": "ltimestat", "required": True},
+        section="namtimestat",
+        key="ltimestat",
+        required=True,
     )
-    dtav: int | None = field(
+    dtav: int | None = nml_field(
         default=60,
-        metadata={"nml": "namtimestat", "key": "dtav", "required": True},
+        section="namtimestat",
+        key="dtav",
+        required=True,
     )
 
     def do_config(self):
@@ -326,33 +335,29 @@ class TimestatModule(simulation_module):
 class StatsModule(simulation_module):
     """Combined profile-statistics module for GENSTAT, BUDGET, and RADSTAT."""
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=False,
-        metadata={
-            "nml": ["namgenstat", "nambudget", "NAMRADSTAT"],
-            "key": ["lstat", "lbudget", "lstat"],
-            "required": True,
-        },
+        section=["namgenstat", "nambudget", "NAMRADSTAT"],
+        key=["lstat", "lbudget", "lstat"],
+        required=True,
     )
-    dtav: int | None = field(
+    dtav: int | None = nml_field(
         default=60,
-        metadata={
-            "nml": ["namgenstat", "nambudget", "NAMRADSTAT"],
-            "key": ["dtav", "dtav", "dtav"],
-            "required": True,
-        },
+        section=["namgenstat", "nambudget", "NAMRADSTAT"],
+        key=["dtav", "dtav", "dtav"],
+        required=True,
     )
-    timeav: int | None = field(
+    timeav: int | None = nml_field(
         default=60,
-        metadata={
-            "nml": ["namgenstat", "nambudget", "NAMRADSTAT"],
-            "key": ["timeav", "timeav", "timeav"],
-            "required": True,
-        },
+        section=["namgenstat", "nambudget", "NAMRADSTAT"],
+        key=["timeav", "timeav", "timeav"],
+        required=True,
     )
-    radstat_clear_air: bool = field(
+    radstat_clear_air: bool = nml_field(
         default=False,
-        metadata={"nml": "NAMRADSTAT", "key": "lradclearair", "required": True},
+        section="NAMRADSTAT",
+        key="lradclearair",
+        required=True,
     )
 
     def do_config(self):
@@ -377,17 +382,23 @@ class StatsModule(simulation_module):
 class RadfieldModule(simulation_module):
     """Dedicated output module for NAMRADFIELD sampling."""
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=False,
-        metadata={"nml": "namradfield", "key": "lradfield", "required": True},
+        section="namradfield",
+        key="lradfield",
+        required=True,
     )
-    dtav: int | None = field(
+    dtav: int | None = nml_field(
         default=60,
-        metadata={"nml": "namradfield", "key": "dtav", "required": True},
+        section="namradfield",
+        key="dtav",
+        required=True,
     )
-    timeav: int | None = field(
+    timeav: int | None = nml_field(
         default=60,
-        metadata={"nml": "namradfield", "key": "timeav", "required": True},
+        section="namradfield",
+        key="timeav",
+        required=True,
     )
 
     def do_config(self):
@@ -416,40 +427,56 @@ class CrossSectionOutputModule(simulation_module):
     planes, and their corresponding indices.
     """
 
-    cross_enabled: bool = field(
+    cross_enabled: bool = nml_field(
         default=True,
-        metadata={"nml": "namcrosssection", "key": "lcross", "required": True},
+        section="namcrosssection",
+        key="lcross",
+        required=True,
     )
-    cross_dtav: int | None = field(
+    cross_dtav: int | None = nml_field(
         default=60,
-        metadata={"nml": "namcrosssection", "key": "dtav", "required": True},
+        section="namcrosssection",
+        key="dtav",
+        required=True,
     )
-    xy: list[int] = field(
+    xy: list[int] = nml_field(
         default_factory=list,
-        metadata={"nml": "namcrosssection", "key": "crossheight", "required": True},
+        section="namcrosssection",
+        key="crossheight",
+        required=True,
     )
-    xz: list[int] = field(
+    xz: list[int] = nml_field(
         default_factory=list,
-        metadata={"nml": "namcrosssection", "key": "crossplane", "required": True},
+        section="namcrosssection",
+        key="crossplane",
+        required=True,
     )
-    yz: list[int] = field(
+    yz: list[int] = nml_field(
         default_factory=list,
-        metadata={"nml": "namcrosssection", "key": "crossortho", "required": True},
+        section="namcrosssection",
+        key="crossortho",
+        required=True,
     )
     xy_coords: list[float] = field(default_factory=list, metadata={"serialize": False})
     xz_coords: list[float] = field(default_factory=list, metadata={"serialize": False})
     yz_coords: list[float] = field(default_factory=list, metadata={"serialize": False})
-    xy_enabled: bool = field(
+    xy_enabled: bool = nml_field(
         default=False,
-        metadata={"nml": "namcrosssection", "key": "lxy", "required": True},
+        section="namcrosssection",
+        key="lxy",
+        required=True,
     )
-    xz_enabled: bool = field(
+    xz_enabled: bool = nml_field(
         default=False,
-        metadata={"nml": "namcrosssection", "key": "lxz", "required": True},
+        section="namcrosssection",
+        key="lxz",
+        required=True,
     )
-    yz_enabled: bool = field(
+    yz_enabled: bool = nml_field(
         default=False,
-        metadata={"nml": "namcrosssection", "key": "lyz", "required": True},
+        section="namcrosssection",
+        key="lyz",
+        required=True,
     )
 
     def do_config(self):
@@ -591,34 +618,28 @@ class CheckSimulationModule(simulation_module):
             Default is False. Mapped to NAMCHECKSIM:lchecktend in Fortran namelist.
     """
 
-    check_interval: int | None = field(
+    check_interval: int | None = nml_field(
         default=60,
-        metadata={
-            "nml": "NAMCHECKSIM",
-            "key": "tcheck",
-            "serialize": True,
-            "required": True,
-        },
+        section="NAMCHECKSIM",
+        key="tcheck",
+        required=True,
+        metadata={"serialize": True},
         init=True,
     )
-    stop_on_invalid: bool = field(
+    stop_on_invalid: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "NAMCHECKSIM",
-            "key": "lstop",
-            "serialize": True,
-            "required": True,
-        },
+        section="NAMCHECKSIM",
+        key="lstop",
+        required=True,
+        metadata={"serialize": True},
         init=True,
     )
-    check_tendencies: bool = field(
+    check_tendencies: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "NAMCHECKSIM",
-            "key": "lchecktend",
-            "serialize": True,
-            "required": True,
-        },
+        section="NAMCHECKSIM",
+        key="lchecktend",
+        required=True,
+        metadata={"serialize": True},
         init=True,
     )
 
@@ -657,57 +678,53 @@ class SamplingModule(simulation_module):
 
     """
 
-    output_interval: int | list[int] | None = field(
+    output_interval: int | list[int] | None = nml_field(
         default=60,
-        metadata={
-            "nml": ["namsampling", "namsampling"],
-            "key": [
-                "dtav",
-                "timeav",
-            ],
-            "required": True,
-        },
+        section=["namsampling", "namsampling"],
+        key=[
+            "dtav",
+            "timeav",
+        ],
+        required=True,
         init=True,
     )
-    enable_output: bool = field(
+    enable_output: bool = nml_field(
         default=True,
-        metadata={
-            "nml": [
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-                "namsampling",
-            ],
-            "key": [
-                "lsampcl",
-                "lsampco",
-                "lsampup",
-                "lsampbuup",
-                "lsampcldup",
-                "lsamptend",
-                "ltendleib",
-                "lsamptendu",
-                "lsamptendv",
-                "lsamptendw",
-                "lsamptendthl",
-                "lsamptendqt",
-                "lsamptendqr",
-                "lsamptendnr",
-                "lqlflux",
-            ],
-            "required": True,
-        },
+        section=[
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+            "namsampling",
+        ],
+        key=[
+            "lsampcl",
+            "lsampco",
+            "lsampup",
+            "lsampbuup",
+            "lsampcldup",
+            "lsamptend",
+            "ltendleib",
+            "lsamptendu",
+            "lsamptendv",
+            "lsamptendw",
+            "lsamptendthl",
+            "lsamptendqt",
+            "lsamptendqr",
+            "lsamptendnr",
+            "lqlflux",
+        ],
+        required=True,
     )
 
     def do_config(self):
@@ -736,23 +753,19 @@ class SamplingModule(simulation_module):
 class FielddumpModule(simulation_module):
     """Dedicated output module for NAMFIELDDUMP with individual variable switches."""
 
-    dtav: int = field(
+    dtav: int = nml_field(
         default=60,
-        metadata={
-            "nml": "namfielddump",
-            "key": "dtav",
-            "required": True,
-            "doc": "Sampling interval in seconds for field dumps.",
-        },
+        section="namfielddump",
+        key="dtav",
+        required=True,
+        description="Sampling interval in seconds for field dumps.",
     )
-    lfielddump: bool = field(
+    lfielddump: bool = nml_field(
         default=True,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lfielddump",
-            "required": True,
-            "doc": "Enable field dump output.",
-        },
+        section="namfielddump",
+        key="lfielddump",
+        required=True,
+        description="Enable field dump output.",
     )
     # ldiracc: bool = field(
     #     default=False,
@@ -770,194 +783,162 @@ class FielddumpModule(simulation_module):
     #         "doc": "Write binary fielddump files instead of text.",
     #     },
     # )
-    klow: int | None = field(
+    klow: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "klow",
-            "doc": "Lowest model level index included in dump.",
-        },
+        section="namfielddump",
+        key="klow",
+        description="Lowest model level index included in dump.",
     )
-    khigh: int | None = field(
+    khigh: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "khigh",
-            "doc": "Highest model level index included in dump; 0 lets DALES decide.",
-        },
+        section="namfielddump",
+        key="khigh",
+        description="Highest model level index included in dump; 0 lets DALES decide.",
     )
-    ncoarse: int | None = field(
+    ncoarse: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "ncoarse",
-            "doc": "Horizontal coarsening factor for dumped fields.",
-        },
+        section="namfielddump",
+        key="ncoarse",
+        description="Horizontal coarsening factor for dumped fields.",
     )
-    tmin: float | None = field(
+    tmin: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "tmin",
-            "doc": "Start time in seconds for writing dumps.",
-        },
+        section="namfielddump",
+        key="tmin",
+        description="Start time in seconds for writing dumps.",
     )
-    tmax: float | None = field(
+    tmax: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "tmax",
-            "doc": "End time in seconds for writing dumps.",
-        },
+        section="namfielddump",
+        key="tmax",
+        description="End time in seconds for writing dumps.",
     )
 
-    lu: bool | None = field(
+    lu: bool | None = nml_field(
         default=None,
-        metadata={"nml": "namfielddump", "key": "lu", "doc": "Dump u velocity field."},
+        section="namfielddump",
+        key="lu",
+        description="Dump u velocity field.",
     )
-    lv: bool | None = field(
+    lv: bool | None = nml_field(
         default=None,
-        metadata={"nml": "namfielddump", "key": "lv", "doc": "Dump v velocity field."},
+        section="namfielddump",
+        key="lv",
+        description="Dump v velocity field.",
     )
-    lw: bool | None = field(
+    lw: bool | None = nml_field(
         default=None,
-        metadata={"nml": "namfielddump", "key": "lw", "doc": "Dump w velocity field."},
+        section="namfielddump",
+        key="lw",
+        description="Dump w velocity field.",
     )
-    lqt: bool | None = field(
+    lqt: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lqt",
-            "doc": "Dump total water mixing ratio field.",
-        },
+        section="namfielddump",
+        key="lqt",
+        description="Dump total water mixing ratio field.",
     )
-    lql: bool | None = field(
+    lql: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lql",
-            "doc": "Dump liquid water mixing ratio field.",
-        },
+        section="namfielddump",
+        key="lql",
+        description="Dump liquid water mixing ratio field.",
     )
-    lthl: bool | None = field(
+    lthl: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lthl",
-            "doc": "Dump liquid water potential temperature field.",
-        },
+        section="namfielddump",
+        key="lthl",
+        description="Dump liquid water potential temperature field.",
     )
-    lbuoy: bool | None = field(
+    lbuoy: bool | None = nml_field(
         default=None,
-        metadata={"nml": "namfielddump", "key": "lbuoy", "doc": "Dump buoyancy field."},
+        section="namfielddump",
+        key="lbuoy",
+        description="Dump buoyancy field.",
     )
-    lcli: bool | None = field(
+    lcli: bool | None = nml_field(
         default=None,
-        metadata={"nml": "namfielddump", "key": "lcli", "doc": "Dump cloud ice field."},
+        section="namfielddump",
+        key="lcli",
+        description="Dump cloud ice field.",
     )
-    lclw: bool | None = field(
+    lclw: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lclw",
-            "doc": "Dump cloud liquid water field.",
-        },
+        section="namfielddump",
+        key="lclw",
+        description="Dump cloud liquid water field.",
     )
-    lta: bool | None = field(
+    lta: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lta",
-            "doc": "Dump absolute temperature field.",
-        },
+        section="namfielddump",
+        key="lta",
+        description="Dump absolute temperature field.",
     )
-    lplw: bool | None = field(
+    lplw: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lplw",
-            "doc": "Dump longwave pressure-related field.",
-        },
+        section="namfielddump",
+        key="lplw",
+        description="Dump longwave pressure-related field.",
     )
-    lpli: bool | None = field(
+    lpli: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lpli",
-            "doc": "Dump ice-phase pressure-related field.",
-        },
+        section="namfielddump",
+        key="lpli",
+        description="Dump ice-phase pressure-related field.",
     )
-    lhus: bool | None = field(
+    lhus: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lhus",
-            "doc": "Dump specific humidity field.",
-        },
+        section="namfielddump",
+        key="lhus",
+        description="Dump specific humidity field.",
     )
-    lhur: bool | None = field(
+    lhur: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lhur",
-            "doc": "Dump relative humidity field.",
-        },
+        section="namfielddump",
+        key="lhur",
+        description="Dump relative humidity field.",
     )
-    ltntr: bool | None = field(
+    ltntr: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "ltntr",
-            "doc": "Dump total tendency field (resolved).",
-        },
+        section="namfielddump",
+        key="ltntr",
+        description="Dump total tendency field (resolved).",
     )
-    ltntrs: bool | None = field(
+    ltntrs: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "ltntrs",
-            "doc": "Dump subgrid tendency field.",
-        },
+        section="namfielddump",
+        key="ltntrs",
+        description="Dump subgrid tendency field.",
     )
-    ltntrl: bool | None = field(
+    ltntrl: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "ltntrl",
-            "doc": "Dump large-scale tendency field.",
-        },
+        section="namfielddump",
+        key="ltntrl",
+        description="Dump large-scale tendency field.",
     )
-    le12: bool | None = field(
+    le12: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "le12",
-            "doc": "Dump subgrid TKE field.",
-        },
+        section="namfielddump",
+        key="le12",
+        description="Dump subgrid TKE field.",
     )
-    lekh: bool | None = field(
+    lekh: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lekh",
-            "doc": "Dump heat diffusivity field.",
-        },
+        section="namfielddump",
+        key="lekh",
+        description="Dump heat diffusivity field.",
     )
-    lekm: bool | None = field(
+    lekm: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lekm",
-            "doc": "Dump momentum diffusivity field.",
-        },
+        section="namfielddump",
+        key="lekm",
+        description="Dump momentum diffusivity field.",
     )
-    lsv: bool | None = field(
+    lsv: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namfielddump",
-            "key": "lsv",
-            "doc": "Dump scalar tracer fields.",
-        },
+        section="namfielddump",
+        key="lsv",
+        description="Dump scalar tracer fields.",
     )
 
     def __post_init__(self):
@@ -986,9 +967,11 @@ class FielddumpModule(simulation_module):
 class NetCDFStatisticsSyncModule(simulation_module):
     """Configure NAMNETCDFSTATS synchronization settings."""
 
-    lsync: bool = field(
+    lsync: bool = nml_field(
         default=True,
-        metadata={"nml": "NAMNETCDFSTATS", "key": "lsync", "required": True},
+        section="NAMNETCDFSTATS",
+        key="lsync",
+        required=True,
     )
 
     def __post_init__(self):
@@ -1013,17 +996,23 @@ class NetCDFStatisticsSyncModule(simulation_module):
 class BulkMicrophysicsStatisticsOutputModule(simulation_module):
     """Configure NAMBULKMICROSTAT output."""
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=True,
-        metadata={"nml": "NAMBULKMICROSTAT", "key": "lmicrostat", "required": True},
+        section="NAMBULKMICROSTAT",
+        key="lmicrostat",
+        required=True,
     )
-    dtav: float | None = field(
+    dtav: float | None = nml_field(
         default=60,
-        metadata={"nml": "NAMBULKMICROSTAT", "key": "dtav", "required": True},
+        section="NAMBULKMICROSTAT",
+        key="dtav",
+        required=True,
     )
-    timeav: float | None = field(
+    timeav: float | None = nml_field(
         default=60,
-        metadata={"nml": "NAMBULKMICROSTAT", "key": "timeav", "required": True},
+        section="NAMBULKMICROSTAT",
+        key="timeav",
+        required=True,
     )
 
     def __post_init__(self):
@@ -1052,43 +1041,33 @@ class VirtualMeasurementOutputModule(simulation_module):
     horizontal coordinates, which are snapped to the nearest cell center.
     """
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=True,
-        metadata={
-            "nml": "NAMVIRTUALMEASUREMENT",
-            "key": "lvirtualmeasurement",
-            "required": True,
-        },
+        section="NAMVIRTUALMEASUREMENT",
+        key="lvirtualmeasurement",
+        required=True,
     )
-    dtav: float | None = field(
+    dtav: float | None = nml_field(
         default=60,
-        metadata={
-            "nml": "NAMVIRTUALMEASUREMENT",
-            "key": "dtav",
-            "required": True,
-        },
+        section="NAMVIRTUALMEASUREMENT",
+        key="dtav",
+        required=True,
     )
-    npoints: int | None = field(
+    npoints: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMVIRTUALMEASUREMENT",
-            "key": "npoints",
-        },
+        section="NAMVIRTUALMEASUREMENT",
+        key="npoints",
         init=False,
     )
-    x_idx: int | list[int] | None = field(
+    x_idx: int | list[int] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMVIRTUALMEASUREMENT",
-            "key": "x_idx",
-        },
+        section="NAMVIRTUALMEASUREMENT",
+        key="x_idx",
     )
-    y_idx: int | list[int] | None = field(
+    y_idx: int | list[int] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMVIRTUALMEASUREMENT",
-            "key": "y_idx",
-        },
+        section="NAMVIRTUALMEASUREMENT",
+        key="y_idx",
     )
     x: float | list[float] | None = field(default=None)
     y: float | list[float] | None = field(default=None)
@@ -1128,35 +1107,27 @@ class ColumnStatisticsOutputModule(simulation_module):
     horizontal coordinates, which are snapped to the nearest cell center.
     """
 
-    enabled: bool = field(
+    enabled: bool = nml_field(
         default=True,
-        metadata={
-            "nml": "NAMCOLSTAT",
-            "key": "lcolstat",
-            "required": True,
-        },
+        section="NAMCOLSTAT",
+        key="lcolstat",
+        required=True,
     )
-    npoints: int | None = field(
+    npoints: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMCOLSTAT",
-            "key": "npoints",
-        },
+        section="NAMCOLSTAT",
+        key="npoints",
         init=False,
     )
-    x_idx: int | list[int] | None = field(
+    x_idx: int | list[int] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMCOLSTAT",
-            "key": "x_idx",
-        },
+        section="NAMCOLSTAT",
+        key="x_idx",
     )
-    y_idx: int | list[int] | None = field(
+    y_idx: int | list[int] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMCOLSTAT",
-            "key": "y_idx",
-        },
+        section="NAMCOLSTAT",
+        key="y_idx",
     )
     x: float | list[float] | None = field(default=None)
     y: float | list[float] | None = field(default=None)

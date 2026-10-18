@@ -4,6 +4,7 @@ import pathlib
 from dataclasses import dataclass, field
 from typing import Optional
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.Radiation.backrad_profile import (
@@ -18,15 +19,13 @@ from modular_dales.Surface.surface import SurfaceModule
 class _RadiationTypedBase(simulation_module):
     """Shared behavior for typed radiation modules."""
 
-    timerad: int = field(
+    timerad: int = nml_field(
         default=60,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "timerad",
-            "required": True,
-            "serialize": True,
-            "doc": "Radiation update interval in seconds.",
-        },
+        section="PHYSICS",
+        key="timerad",
+        required=True,
+        description="Radiation update interval in seconds.",
+        metadata={"serialize": True},
     )
     surface_module: Optional["SurfaceModule"] = field(
         default=None,
@@ -92,15 +91,13 @@ class _RadiationTypedBase(simulation_module):
 class NoRadiationModule(_RadiationTypedBase):
     """No-radiation scheme (iradiation=0)."""
 
-    iradiation: int = field(
+    iradiation: int = nml_field(
         default=0,
         init=False,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "IRADIATION",
-            "required": True,
-            "doc": "Radiation scheme selector 0: no radiation.",
-        },
+        section="PHYSICS",
+        key="IRADIATION",
+        required=True,
+        description="Radiation scheme selector 0: no radiation.",
     )
 
     def __post_init__(self):
@@ -113,39 +110,31 @@ class NoRadiationModule(_RadiationTypedBase):
 class ParameterizedRadiationModule(_RadiationTypedBase):
     """Parameterized radiation scheme (iradiation=2)."""
 
-    iradiation: int = field(
+    iradiation: int = nml_field(
         default=2,
         init=False,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "IRADIATION",
-            "required": True,
-            "doc": "Radiation scheme selector 2: parameterized radiation.",
-        },
+        section="PHYSICS",
+        key="IRADIATION",
+        required=True,
+        description="Radiation scheme selector 2: parameterized radiation.",
     )
-    ssa: float | None = field(
+    ssa: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "ssa",
-            "doc": "Representative single scattering albedo (0 <= ssa <= 1).",
-        },
+        section="NAMDE",
+        key="ssa",
+        description="Representative single scattering albedo (0 <= ssa <= 1).",
     )
-    laero: bool | None = field(
+    laero: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "laero",
-            "doc": "Use aerosol optical properties when true; cloud optical properties when false.",
-        },
+        section="NAMDE",
+        key="laero",
+        description="Use aerosol optical properties when true; cloud optical properties when false.",
     )
-    ide: int | None = field(
+    ide: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "ide",
-            "doc": "Scalar index used for aerosols when laero=true.",
-        },
+        section="NAMDE",
+        key="ide",
+        description="Scalar index used for aerosols when laero=true.",
     )
 
     def __post_init__(self):
@@ -158,15 +147,13 @@ class ParameterizedRadiationModule(_RadiationTypedBase):
 class SurfaceLSMRadiationModule(_RadiationTypedBase):
     """Simple surface radiation for LSM (iradiation=3)."""
 
-    iradiation: int = field(
+    iradiation: int = nml_field(
         default=3,
         init=False,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "IRADIATION",
-            "required": True,
-            "doc": "Radiation scheme selector 3: simple surface radiation for LSM.",
-        },
+        section="PHYSICS",
+        key="IRADIATION",
+        required=True,
+        description="Radiation scheme selector 3: simple surface radiation for LSM.",
     )
 
     def __post_init__(self):
@@ -179,119 +166,91 @@ class SurfaceLSMRadiationModule(_RadiationTypedBase):
 class RRTMGRadiationModule(_RadiationTypedBase):
     """RRTMG radiation scheme (iradiation=4)."""
 
-    iradiation: int = field(
+    iradiation: int = nml_field(
         default=4,
         init=False,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "IRADIATION",
-            "required": True,
-            "doc": "Radiation scheme selector 4: RRTMG.",
-        },
+        section="PHYSICS",
+        key="IRADIATION",
+        required=True,
+        description="Radiation scheme selector 4: RRTMG.",
     )
-    ssa: float | None = field(
+    ssa: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "ssa",
-            "doc": "Representative single scattering albedo (0 <= ssa <= 1).",
-        },
+        section="NAMDE",
+        key="ssa",
+        description="Representative single scattering albedo (0 <= ssa <= 1).",
     )
-    laero: bool | None = field(
+    laero: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "laero",
-            "doc": "Use aerosol optical properties when true; cloud optical properties when false.",
-        },
+        section="NAMDE",
+        key="laero",
+        description="Use aerosol optical properties when true; cloud optical properties when false.",
     )
-    ide: int | None = field(
+    ide: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "ide",
-            "doc": "Scalar index used for aerosols when laero=true.",
-        },
+        section="NAMDE",
+        key="ide",
+        description="Scalar index used for aerosols when laero=true.",
     )
-    lCnstZenith: bool | None = field(
+    lCnstZenith: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "lCnstZenith",
-            "doc": "Use a constant solar zenith angle.",
-        },
+        section="NAMRADIATION",
+        key="lCnstZenith",
+        description="Use a constant solar zenith angle.",
     )
-    ioverlap: int | None = field(
+    ioverlap: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "ioverlap",
-            "doc": "Cloud overlap method selector.",
-        },
+        section="NAMRADIATION",
+        key="ioverlap",
+        description="Cloud overlap method selector.",
     )
-    inflglw: int | None = field(
+    inflglw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "inflglw",
-            "doc": "RRTMG longwave input selector.",
-        },
+        section="NAMRADIATION",
+        key="inflglw",
+        description="RRTMG longwave input selector.",
     )
-    iceflglw: int | None = field(
+    iceflglw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "iceflglw",
-            "doc": "Ice particle specification method for longwave.",
-        },
+        section="NAMRADIATION",
+        key="iceflglw",
+        description="Ice particle specification method for longwave.",
     )
-    liqflglw: int | None = field(
+    liqflglw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "liqflglw",
-            "doc": "Liquid water specification method for longwave.",
-        },
+        section="NAMRADIATION",
+        key="liqflglw",
+        description="Liquid water specification method for longwave.",
     )
-    inflgsw: int | None = field(
+    inflgsw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "inflgsw",
-            "doc": "RRTMG shortwave input selector.",
-        },
+        section="NAMRADIATION",
+        key="inflgsw",
+        description="RRTMG shortwave input selector.",
     )
-    iceflgsw: int | None = field(
+    iceflgsw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "iceflgsw",
-            "doc": "Ice particle specification method for shortwave.",
-        },
+        section="NAMRADIATION",
+        key="iceflgsw",
+        description="Ice particle specification method for shortwave.",
     )
-    liqflgsw: int | None = field(
+    liqflgsw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "liqflgsw",
-            "doc": "Liquid water specification method for shortwave.",
-        },
+        section="NAMRADIATION",
+        key="liqflgsw",
+        description="Liquid water specification method for shortwave.",
     )
-    iyear: int | None = field(
+    iyear: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "iyear",
-            "doc": "Simulation year used by radiation calculations.",
-        },
+        section="NAMRADIATION",
+        key="iyear",
+        description="Simulation year used by radiation calculations.",
     )
-    ocean: bool | None = field(
+    ocean: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "ocean",
-            "doc": "Enable ocean radiation treatment.",
-        },
+        section="NAMRADIATION",
+        key="ocean",
+        description="Enable ocean radiation treatment.",
     )
 
     def __post_init__(self):
@@ -304,143 +263,109 @@ class RRTMGRadiationModule(_RadiationTypedBase):
 class RteRrtmgpRadiationModule(_RadiationTypedBase):
     """RTE-RRTMGP radiation scheme (iradiation=5)."""
 
-    iradiation: int = field(
+    iradiation: int = nml_field(
         default=5,
         init=False,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "IRADIATION",
-            "required": True,
-            "doc": "Radiation scheme selector 5: RTE-RRTMGP.",
-        },
+        section="PHYSICS",
+        key="IRADIATION",
+        required=True,
+        description="Radiation scheme selector 5: RTE-RRTMGP.",
     )
-    ssa: float | None = field(
+    ssa: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "ssa",
-            "doc": "Representative single scattering albedo (0 <= ssa <= 1).",
-        },
+        section="NAMDE",
+        key="ssa",
+        description="Representative single scattering albedo (0 <= ssa <= 1).",
     )
-    laero: bool | None = field(
+    laero: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "laero",
-            "doc": "Use aerosol optical properties when true; cloud optical properties when false.",
-        },
+        section="NAMDE",
+        key="laero",
+        description="Use aerosol optical properties when true; cloud optical properties when false.",
     )
-    ide: int | None = field(
+    ide: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMDE",
-            "key": "ide",
-            "doc": "Scalar index used for aerosols when laero=true.",
-        },
+        section="NAMDE",
+        key="ide",
+        description="Scalar index used for aerosols when laero=true.",
     )
-    lCnstZenith: bool | None = field(
+    lCnstZenith: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "lCnstZenith",
-            "doc": "Use a constant solar zenith angle.",
-        },
+        section="NAMRADIATION",
+        key="lCnstZenith",
+        description="Use a constant solar zenith angle.",
     )
-    ioverlap: int | None = field(
+    ioverlap: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "ioverlap",
-            "doc": "Cloud overlap method selector.",
-        },
+        section="NAMRADIATION",
+        key="ioverlap",
+        description="Cloud overlap method selector.",
     )
-    inflglw: int | None = field(
+    inflglw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "inflglw",
-            "doc": "RRTMG longwave input selector.",
-        },
+        section="NAMRADIATION",
+        key="inflglw",
+        description="RRTMG longwave input selector.",
     )
-    iceflglw: int | None = field(
+    iceflglw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "iceflglw",
-            "doc": "Ice particle specification method for longwave.",
-        },
+        section="NAMRADIATION",
+        key="iceflglw",
+        description="Ice particle specification method for longwave.",
     )
-    liqflglw: int | None = field(
+    liqflglw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "liqflglw",
-            "doc": "Liquid water specification method for longwave.",
-        },
+        section="NAMRADIATION",
+        key="liqflglw",
+        description="Liquid water specification method for longwave.",
     )
-    inflgsw: int | None = field(
+    inflgsw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "inflgsw",
-            "doc": "RRTMG shortwave input selector.",
-        },
+        section="NAMRADIATION",
+        key="inflgsw",
+        description="RRTMG shortwave input selector.",
     )
-    iceflgsw: int | None = field(
+    iceflgsw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "iceflgsw",
-            "doc": "Ice particle specification method for shortwave.",
-        },
+        section="NAMRADIATION",
+        key="iceflgsw",
+        description="Ice particle specification method for shortwave.",
     )
-    liqflgsw: int | None = field(
+    liqflgsw: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "liqflgsw",
-            "doc": "Liquid water specification method for shortwave.",
-        },
+        section="NAMRADIATION",
+        key="liqflgsw",
+        description="Liquid water specification method for shortwave.",
     )
-    iyear: int | None = field(
+    iyear: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "iyear",
-            "doc": "Simulation year used by radiation calculations.",
-        },
+        section="NAMRADIATION",
+        key="iyear",
+        description="Simulation year used by radiation calculations.",
     )
-    ocean: bool | None = field(
+    ocean: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRADIATION",
-            "key": "ocean",
-            "doc": "Enable ocean radiation treatment.",
-        },
+        section="NAMRADIATION",
+        key="ocean",
+        description="Enable ocean radiation treatment.",
     )
-    nbatch: int | None = field(
+    nbatch: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRTERRTMGP",
-            "key": "nbatch",
-            "doc": "Number of column batches sent to RTE-RRTMGP kernels.",
-        },
+        section="NAMRTERRTMGP",
+        key="nbatch",
+        description="Number of column batches sent to RTE-RRTMGP kernels.",
     )
-    usepade: bool | None = field(
+    usepade: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRTERRTMGP",
-            "key": "usepade",
-            "doc": "Use Pade coefficients for cloud optical properties.",
-        },
+        section="NAMRTERRTMGP",
+        key="usepade",
+        description="Use Pade coefficients for cloud optical properties.",
     )
-    doclearsky: bool | None = field(
+    doclearsky: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMRTERRTMGP",
-            "key": "doclearsky",
-            "doc": "Enable clear-sky radiation diagnostics.",
-        },
+        section="NAMRTERRTMGP",
+        key="doclearsky",
+        description="Enable clear-sky radiation diagnostics.",
     )
 
     def __post_init__(self):
@@ -453,15 +378,13 @@ class RteRrtmgpRadiationModule(_RadiationTypedBase):
 class UserRadiationModule(_RadiationTypedBase):
     """User-defined radiation scheme (iradiation=10)."""
 
-    iradiation: int = field(
+    iradiation: int = nml_field(
         default=10,
         init=False,
-        metadata={
-            "nml": "PHYSICS",
-            "key": "IRADIATION",
-            "required": True,
-            "doc": "Radiation scheme selector 10: user-defined radiation behavior.",
-        },
+        section="PHYSICS",
+        key="IRADIATION",
+        required=True,
+        description="Radiation scheme selector 10: user-defined radiation behavior.",
     )
 
     def __post_init__(self):

@@ -10,6 +10,7 @@ from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D
 from modular_dales.Geometry.geometry_modification import (
     GeometricModification,
 )
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.time_dependent_scalars import SOIL_DIM, value_at
 from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.Surface.LSM import plot_lsm
@@ -202,14 +203,12 @@ class LSMModule(BaseLSMModule):
         dz_soil: List of soil layer thicknesses (m)
     """
 
-    lheterogeneous: bool = field(
+    lheterogeneous: bool = nml_field(
         default=True,
-        metadata={
-            "nml": "NAMLSM",
-            "key": "lheterogeneous",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMLSM",
+        key="lheterogeneous",
+        required=True,
+        metadata={"serialize": True},
     )
     land_use_modifications: LandUseModifications = field(
         default_factory=LandUseModifications,

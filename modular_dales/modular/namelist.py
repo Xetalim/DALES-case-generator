@@ -77,7 +77,9 @@ def get_namelist_spec(dataclass_field: Field[Any]) -> NamelistSpec | None:
     """Read a typed binding and reject obsolete namelist metadata."""
     metadata = dataclass_field.metadata
     if "nml" in metadata or "key" in metadata:
-        raise TypeError(f"Field '{dataclass_field.name}' must use nml_field or NamelistSpec")
+        raise TypeError(
+            f"Field '{dataclass_field.name}' must use nml_field or NamelistSpec"
+        )
     spec = metadata.get("namelist")
     if spec is not None:
         if not isinstance(spec, NamelistSpec):

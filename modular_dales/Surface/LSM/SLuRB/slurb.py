@@ -10,6 +10,7 @@ from modular_dales.Geometry.geometry_modification import (
     ModifierClass,
 )
 from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -141,157 +142,127 @@ class SLURBModule(simulation_module):
     slb_generator: Any = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
-    urban_fraction: float | None = field(
+    urban_fraction: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "urban_fraction",
-            "doc": "Urban tile fraction used by the SLURB parameterization.",
-        },
+        section="NAMSLURB",
+        key="urban_fraction",
+        description="Urban tile fraction used by the SLURB parameterization.",
+        metadata={"serialize": True},
     )
-    urban_roughness_length: float | None = field(
+    urban_roughness_length: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "urban_roughness_length",
-            "doc": "Bulk roughness length for urban canopy momentum exchange in m.",
-        },
+        section="NAMSLURB",
+        key="urban_roughness_length",
+        description="Bulk roughness length for urban canopy momentum exchange in m.",
+        metadata={"serialize": True},
     )
-    building_plan_area_fraction: float | None = field(
+    building_plan_area_fraction: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "building_plan_area_fraction",
-            "doc": "Plan area fraction covered by buildings.",
-        },
+        section="NAMSLURB",
+        key="building_plan_area_fraction",
+        description="Plan area fraction covered by buildings.",
+        metadata={"serialize": True},
     )
-    building_frontal_area_fraction: float | None = field(
+    building_frontal_area_fraction: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "building_frontal_area_fraction",
-            "doc": "Frontal area density controlling urban drag.",
-        },
+        section="NAMSLURB",
+        key="building_frontal_area_fraction",
+        description="Frontal area density controlling urban drag.",
+        metadata={"serialize": True},
     )
-    building_height: float | None = field(
+    building_height: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "building_height",
-            "doc": "Representative building height in m.",
-        },
+        section="NAMSLURB",
+        key="building_height",
+        description="Representative building height in m.",
+        metadata={"serialize": True},
     )
-    window_fraction: float | None = field(
+    window_fraction: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "window_fraction",
-            "doc": "Fraction of facade area occupied by windows.",
-        },
+        section="NAMSLURB",
+        key="window_fraction",
+        description="Fraction of facade area occupied by windows.",
+        metadata={"serialize": True},
     )
-    street_canyon_aspect_ratio: float | None = field(
+    street_canyon_aspect_ratio: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "street_canyon_aspect_ratio",
-            "doc": "Street canyon height-to-width ratio.",
-        },
+        section="NAMSLURB",
+        key="street_canyon_aspect_ratio",
+        description="Street canyon height-to-width ratio.",
+        metadata={"serialize": True},
     )
-    building_type: int | None = field(
+    building_type: int | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "building_type",
-            "doc": "Index selecting building material/thermal parameter set.",
-        },
+        section="NAMSLURB",
+        key="building_type",
+        description="Index selecting building material/thermal parameter set.",
+        metadata={"serialize": True},
     )
-    pavement_type: int | None = field(
+    pavement_type: int | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "pavement_type",
-            "doc": "Index selecting pavement material parameter set.",
-        },
+        section="NAMSLURB",
+        key="pavement_type",
+        description="Index selecting pavement material parameter set.",
+        metadata={"serialize": True},
     )
-    anisotropic_street_canyons: bool | None = field(
+    anisotropic_street_canyons: bool | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "anisotropic_street_canyons",
-            "doc": "Enable anisotropic canyon treatment with separate facade directions.",
-        },
+        section="NAMSLURB",
+        key="anisotropic_street_canyons",
+        description="Enable anisotropic canyon treatment with separate facade directions.",
+        metadata={"serialize": True},
     )
-    street_canyon_orientation: float | None = field(
+    street_canyon_orientation: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "street_canyon_orientation",
-            "doc": "Azimuth orientation of street canyon axis in degrees.",
-        },
+        section="NAMSLURB",
+        key="street_canyon_orientation",
+        description="Azimuth orientation of street canyon axis in degrees.",
+        metadata={"serialize": True},
     )
-    deep_soil_temperature: float = field(
+    deep_soil_temperature: float = nml_field(
         default=283.15,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "deep_soil_temperature",
-            "required": True,
-            "doc": "Deep soil temperature boundary condition in K.",
-        },
+        section="NAMSLURB",
+        key="deep_soil_temperature",
+        required=True,
+        description="Deep soil temperature boundary condition in K.",
+        metadata={"serialize": True},
     )
-    building_indoor_temperature: float = field(
+    building_indoor_temperature: float = nml_field(
         default=293.15,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "building_indoor_temperature",
-            "required": True,
-            "doc": "Indoor building temperature used for wall/roof heat transfer in K.",
-        },
+        section="NAMSLURB",
+        key="building_indoor_temperature",
+        required=True,
+        description="Indoor building temperature used for wall/roof heat transfer in K.",
+        metadata={"serialize": True},
     )
-    shf_external: float | None = field(
+    shf_external: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "shf_external",
-            "doc": "External anthropogenic sensible heat flux source in W m-2.",
-        },
+        section="NAMSLURB",
+        key="shf_external",
+        description="External anthropogenic sensible heat flux source in W m-2.",
+        metadata={"serialize": True},
     )
-    qsws_external: float | None = field(
+    qsws_external: float | None = nml_field(
         default=None,
         init=True,
-        metadata={
-            "serialize": True,
-            "nml": "NAMSLURB",
-            "key": "qsws_external",
-            "doc": "External anthropogenic latent heat flux source in W m-2.",
-        },
+        section="NAMSLURB",
+        key="qsws_external",
+        description="External anthropogenic latent heat flux source in W m-2.",
+        metadata={"serialize": True},
     )
 
     def __post_init__(self):

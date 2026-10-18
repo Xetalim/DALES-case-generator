@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from modular_dales.IO_helpers.dales_external_data import resolve_van_genuchten_path
+from modular_dales.modular.namelist import nml_field
 from modular_dales.Surface.surface import SurfaceModule
 
 logger = logging.getLogger(__name__)
@@ -15,82 +16,73 @@ logger = logging.getLogger(__name__)
 class BaseLSMModule(SurfaceModule):
     """Base class that owns required LSM namelist options."""
 
-    isurf: int = field(
+    isurf: int = nml_field(
         default=11,
         init=False,
-        metadata={"nml": "NAMSURFACE", "key": "isurf", "required": True},
+        section="NAMSURFACE",
+        key="isurf",
+        required=True,
     )
-    ps: float | None = field(
+    ps: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "ps",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "psurf",
-        },
+        section="NAMSURFACE",
+        key="ps",
+        required=True,
+        metadata={"serialize": True, "forcing_var": "psurf"},
     )
-    z0mav: float | None = field(
+    z0mav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0mav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0mav",
+        required=True,
+        metadata={"serialize": True},
     )
-    z0hav: float | None = field(
+    z0hav: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "z0hav",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMSURFACE",
+        key="z0hav",
+        required=True,
+        metadata={"serialize": True},
     )
-    albedoav: float | None = field(
+    albedoav: float | None = nml_field(
         default=None,
-        metadata={"nml": "NAMSURFACE", "key": "albedoav", "serialize": True},
+        section="NAMSURFACE",
+        key="albedoav",
+        metadata={"serialize": True},
     )
-    iinterp_t: int | None = field(
+    iinterp_t: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM",
-            "key": "iinterp_t",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMLSM",
+        key="iinterp_t",
+        required=True,
+        metadata={"serialize": True},
     )
-    iinterp_theta: int | None = field(
+    iinterp_theta: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM",
-            "key": "iinterp_theta",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMLSM",
+        key="iinterp_theta",
+        required=True,
+        metadata={"serialize": True},
     )
-    kmax_soil: int | None = field(
+    kmax_soil: int | None = nml_field(
         default=4,
-        metadata={
-            "nml": "DOMAIN",
-            "key": "kmax_soil",
-            "required": True,
-            "serialize": True,
-        },
+        section="DOMAIN",
+        key="kmax_soil",
+        required=True,
+        metadata={"serialize": True},
     )
-    dz_soil: list[float] | None = field(
+    dz_soil: list[float] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM",
-            "key": "dz_soil",
-            "required": True,
-            "serialize": True,
-        },
+        section="NAMLSM",
+        key="dz_soil",
+        required=True,
+        metadata={"serialize": True},
     )
-    nlu: int = field(
+    nlu: int = nml_field(
         default=0,
-        metadata={"nml": "NAMLSM", "key": "nlu", "serialize": False},
+        section="NAMLSM",
+        key="nlu",
+        metadata={"serialize": False},
         init=False,
         repr=False,
     )

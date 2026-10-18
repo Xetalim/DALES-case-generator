@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -9,17 +10,23 @@ from modular_dales.MODULE_REGISTRY import register_module
 class BulkMicrophysicsSettingsModule(simulation_module):
     """Configure bulk microphysics and required tracer count."""
 
-    imicro: int = field(
+    imicro: int = nml_field(
         default=2,
-        metadata={"nml": "NAMMICROPHYSICS", "key": "imicro", "required": True},
+        section="NAMMICROPHYSICS",
+        key="imicro",
+        required=True,
     )
-    l_sb: bool = field(
+    l_sb: bool = nml_field(
         default=True,
-        metadata={"nml": "NAMMICROPHYSICS", "key": "l_sb", "required": True},
+        section="NAMMICROPHYSICS",
+        key="l_sb",
+        required=True,
     )
-    nsv: int = field(
+    nsv: int = nml_field(
         default=2,
-        metadata={"nml": "RUN", "key": "nsv", "required": True},
+        section="RUN",
+        key="nsv",
+        required=True,
     )
 
     def __post_init__(self):
@@ -44,9 +51,11 @@ class BulkMicrophysicsSettingsModule(simulation_module):
 class TracerSettingsModule(simulation_module):
     """Configure passive/active tracer count in RUN."""
 
-    nsv: int = field(
+    nsv: int = nml_field(
         default=0,
-        metadata={"nml": "RUN", "key": "nsv", "required": True},
+        section="RUN",
+        key="nsv",
+        required=True,
     )
 
     def __post_init__(self):

@@ -13,6 +13,7 @@ from modular_dales.Geometry import (
     ModifierClass,
 )
 from modular_dales.Geometry.geometry_modification import GeometricModification
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module, register_singleton
 
@@ -189,129 +190,107 @@ class IBMModule(simulation_module):
         init=True,
         repr=False,
     )
-    apply_ibm: bool = field(
+    apply_ibm: bool = nml_field(
         default=True,
-        metadata={
-            "nml": "IBM",
-            "key": "lapply_ibm",
-            "serialize": True,
-            "required": True,
-            "doc": "Enable immersed boundary method in IBM:lapply_ibm.",
-        },
+        section="IBM",
+        key="lapply_ibm",
+        required=True,
+        description="Enable immersed boundary method in IBM:lapply_ibm.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    lwallheat: bool | None = field(
+    lwallheat: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "lwallheat",
-            "serialize": True,
-            "doc": "Enable lateral wall heat flux treatment for buildings.",
-        },
+        section="IBM",
+        key="lwallheat",
+        description="Enable lateral wall heat flux treatment for buildings.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    thlwall: float | None = field(
+    thlwall: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "thlwall",
-            "serialize": True,
-            "doc": "Potential temperature at building side walls in K.",
-        },
+        section="IBM",
+        key="thlwall",
+        description="Potential temperature at building side walls in K.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    thlibm: float | None = field(
+    thlibm: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "thlibm",
-            "serialize": True,
-            "required": True,
-            "doc": "Interior obstacle potential temperature in K.",
-        },
+        section="IBM",
+        key="thlibm",
+        required=True,
+        description="Interior obstacle potential temperature in K.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    thlroof: float | None = field(
+    thlroof: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "thlroof",
-            "serialize": True,
-            "required": True,
-            "doc": "Potential temperature at obstacle roofs in K.",
-        },
+        section="IBM",
+        key="thlroof",
+        required=True,
+        description="Potential temperature at obstacle roofs in K.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    qtibm: float | None = field(
+    qtibm: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "qtibm",
-            "serialize": True,
-            "doc": "Interior obstacle specific humidity in kg/kg.",
-        },
+        section="IBM",
+        key="qtibm",
+        description="Interior obstacle specific humidity in kg/kg.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    lpoislast: bool | None = field(
+    lpoislast: bool | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "lpoislast",
-            "serialize": True,
-            "doc": "If true, apply Poisson solver after IBM velocity correction.",
-        },
+        section="IBM",
+        key="lpoislast",
+        description="If true, apply Poisson solver after IBM velocity correction.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    z0m_wall: float | None = field(
+    z0m_wall: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "z0m_wall",
-            "serialize": True,
-            "doc": "Wall roughness length for momentum in m.",
-        },
+        section="IBM",
+        key="z0m_wall",
+        description="Wall roughness length for momentum in m.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    z0h_wall: float | None = field(
+    z0h_wall: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "IBM",
-            "key": "z0h_wall",
-            "serialize": True,
-            "doc": "Wall roughness length for heat/scalars in m.",
-        },
+        section="IBM",
+        key="z0h_wall",
+        description="Wall roughness length for heat/scalars in m.",
+        metadata={"serialize": True},
         init=True,
         repr=False,
     )
-    ibas_prf: int = field(
+    ibas_prf: int = nml_field(
         default=2,
-        metadata={
-            "nml": "DYNAMICS",
-            "key": "IBAS_PRF",
-            "serialize": True,
-            "required": True,
-            "doc": "Base-state profile selector, forced to IBM-compatible choice by DALES.",
-        },
+        section="DYNAMICS",
+        key="IBAS_PRF",
+        required=True,
+        description="Base-state profile selector, forced to IBM-compatible choice by DALES.",
+        metadata={"serialize": True},
         init=False,
         repr=False,
     )
-    iadv_mom: int = field(
+    iadv_mom: int = nml_field(
         default=2,
-        metadata={
-            "nml": "DYNAMICS",
-            "key": "IADV_MOM",
-            "serialize": True,
-            "required": True,
-            "doc": "Momentum advection scheme; IBM is typically used with second-order centered scheme.",
-        },
+        section="DYNAMICS",
+        key="IADV_MOM",
+        required=True,
+        description="Momentum advection scheme; IBM is typically used with second-order centered scheme.",
+        metadata={"serialize": True},
         init=False,
         repr=False,
     )

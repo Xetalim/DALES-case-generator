@@ -117,7 +117,11 @@ class simulation_module(ABC):
                         section, key, item, raise_conflict=spec.raise_conflict
                     )
                 continue
-            values = value if multiple and isinstance(value, list) else [value] * len(targets)
+            values = (
+                value
+                if multiple and isinstance(value, list)
+                else [value] * len(targets)
+            )
             for (section, key), item in zip(targets, values, strict=True):
                 self.set_nml_section(
                     section, key, item, raise_conflict=spec.raise_conflict

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field, fields
 import numpy as np
 from pyproj import CRS
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -34,80 +35,95 @@ class GridDales(simulation_module):
         sim: Parent dales_simulation instance
     """
 
-    itot: int = field(
+    itot: int = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "DOMAIN", "key": "itot", "required": True},
+        section="DOMAIN",
+        key="itot",
+        required=True,
+        metadata={"serialize": True},
     )
-    jtot: int = field(
+    jtot: int = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "DOMAIN", "key": "jtot", "required": True},
+        section="DOMAIN",
+        key="jtot",
+        required=True,
+        metadata={"serialize": True},
     )
-    kmax: int = field(
+    kmax: int = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "DOMAIN", "key": "kmax", "required": True},
+        section="DOMAIN",
+        key="kmax",
+        required=True,
+        metadata={"serialize": True},
     )
-    xsize: float = field(
+    xsize: float = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "DOMAIN", "key": "xsize", "required": True},
+        section="DOMAIN",
+        key="xsize",
+        required=True,
+        metadata={"serialize": True},
     )
-    ysize: float = field(
+    ysize: float = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "DOMAIN", "key": "ysize", "required": True},
+        section="DOMAIN",
+        key="ysize",
+        required=True,
+        metadata={"serialize": True},
     )
-    kmax_soil: int = field(
+    kmax_soil: int = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={
-            "serialize": True,
-            "nml": "DOMAIN",
-            "key": "kmax_soil",
-            "required": True,
-        },
+        section="DOMAIN",
+        key="kmax_soil",
+        required=True,
+        metadata={"serialize": True},
     )
-    xlat: float = field(
+    xlat: float = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "DOMAIN", "key": "xlat", "required": False},
+        section="DOMAIN",
+        key="xlat",
+        required=False,
+        metadata={"serialize": True},
     )
-    xlon: float = field(
+    xlon: float = nml_field(
         # default=None,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "DOMAIN", "key": "xlon", "required": False},
+        section="DOMAIN",
+        key="xlon",
+        required=False,
+        metadata={"serialize": True},
     )
-    x0: float = field(
+    x0: float = nml_field(
         default=0,
         init=True,
         repr=True,
-        metadata={
-            "serialize": True,
-            "nml": "DOMAIN",
-            "key": "x0",
-            "required": False,
-        },  # TODO add x0 if merged
+        section="DOMAIN",
+        key="x0",
+        required=False,
+        metadata={"serialize": True},  # TODO add x0 if merged
     )
-    y0: float = field(
+    y0: float = nml_field(
         default=0,
         init=True,
         repr=True,
-        metadata={
-            "serialize": True,
-            "nml": "DOMAIN",
-            "key": "y0",
-            "required": False,
-        },  # TODO add y0 if merged
+        section="DOMAIN",
+        key="y0",
+        required=False,
+        metadata={"serialize": True},  # TODO add y0 if merged
     )
     alpha: float | None = field(
         default=None,

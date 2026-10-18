@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -23,14 +24,10 @@ class RunModule(simulation_module):
         dtmax: Maximum timestep
     """
 
-    iexpnr: int | None = field(default=None, metadata={"nml": "RUN", "key": "iexpnr"})
-    runtime: float | None = field(
-        default=None, metadata={"nml": "RUN", "key": "runtime"}
-    )
-    ladaptive: bool | None = field(
-        default=None, metadata={"nml": "RUN", "key": "ladaptive"}
-    )
-    dtmax: float | None = field(default=None, metadata={"nml": "RUN", "key": "dtmax"})
+    iexpnr: int | None = nml_field(default=None, section="RUN", key="iexpnr")
+    runtime: float | None = nml_field(default=None, section="RUN", key="runtime")
+    ladaptive: bool | None = nml_field(default=None, section="RUN", key="ladaptive")
+    dtmax: float | None = nml_field(default=None, section="RUN", key="dtmax")
 
     def __post_init__(self):
         super().__init__(self.sim)
@@ -65,76 +62,60 @@ class TimeModule(simulation_module):
         trestart: Restart file write interval in seconds
     """
 
-    xtime: float = field(
+    xtime: float = nml_field(
         default=0.0,
-        metadata={
-            "nml": "DOMAIN",
-            "key": "xtime",
-            "required": True,
-            "doc": "UTC start time in hours within the day for DOMAIN:xtime.",
-        },
+        section="DOMAIN",
+        key="xtime",
+        required=True,
+        description="UTC start time in hours within the day for DOMAIN:xtime.",
     )
-    xday: int = field(
+    xday: int = nml_field(
         default=265,
-        metadata={
-            "nml": "DOMAIN",
-            "key": "xday",
-            "required": True,
-            "doc": "Day of year (1-365/366) used by DOMAIN:xday.",
-        },
+        section="DOMAIN",
+        key="xday",
+        required=True,
+        description="Day of year (1-365/366) used by DOMAIN:xday.",
     )
-    xyear: int = field(
+    xyear: int = nml_field(
         default=2025,
-        metadata={
-            "nml": "DOMAIN",
-            "key": "xyear",
-            "required": True,
-            "doc": "Simulation year used by DOMAIN:xyear.",
-        },
+        section="DOMAIN",
+        key="xyear",
+        required=True,
+        description="Simulation year used by DOMAIN:xyear.",
     )
-    enable_datetime: bool = field(
+    enable_datetime: bool = nml_field(
         default=True,
-        metadata={
-            "nml": "namdatetime",
-            "key": "l_datetime",
-            "required": True,
-            "doc": "Enable NAMDATETIME-based calendar interpretation.",
-        },
+        section="namdatetime",
+        key="l_datetime",
+        required=True,
+        description="Enable NAMDATETIME-based calendar interpretation.",
     )
-    timezone: int = field(
+    timezone: int = nml_field(
         default=0,
-        metadata={
-            "nml": "namdatetime",
-            "key": "timezone",
-            "doc": "Timezone offset in hours for NAMDATETIME.",
-        },
+        section="namdatetime",
+        key="timezone",
+        description="Timezone offset in hours for NAMDATETIME.",
     )
-    startyear: int = field(
+    startyear: int = nml_field(
         default=2025,
-        metadata={
-            "nml": "namdatetime",
-            "key": "startyear",
-            "required": True,
-            "doc": "Calendar start year for NAMDATETIME.",
-        },
+        section="namdatetime",
+        key="startyear",
+        required=True,
+        description="Calendar start year for NAMDATETIME.",
     )
-    startmonth: int = field(
+    startmonth: int = nml_field(
         default=1,
-        metadata={
-            "nml": "namdatetime",
-            "key": "startmonth",
-            "required": True,
-            "doc": "Calendar start month for NAMDATETIME.",
-        },
+        section="namdatetime",
+        key="startmonth",
+        required=True,
+        description="Calendar start month for NAMDATETIME.",
     )
-    startday: int = field(
+    startday: int = nml_field(
         default=1,
-        metadata={
-            "nml": "namdatetime",
-            "key": "startday",
-            "required": True,
-            "doc": "Calendar start day for NAMDATETIME.",
-        },
+        section="namdatetime",
+        key="startday",
+        required=True,
+        description="Calendar start day for NAMDATETIME.",
     )
     inferfromdatetime: bool = field(
         default=False,
@@ -144,22 +125,18 @@ class TimeModule(simulation_module):
         },
     )
 
-    runtime: float | None = field(
+    runtime: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "RUN",
-            "key": "runtime",
-            "required": True,
-            "doc": "Total runtime in seconds for RUN:runtime.",
-        },
+        section="RUN",
+        key="runtime",
+        required=True,
+        description="Total runtime in seconds for RUN:runtime.",
     )
-    trestart: float | None = field(
+    trestart: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "RUN",
-            "key": "trestart",
-            "doc": "Restart write interval in seconds for RUN:trestart.",
-        },
+        section="RUN",
+        key="trestart",
+        description="Restart write interval in seconds for RUN:trestart.",
     )
 
     def __post_init__(self):

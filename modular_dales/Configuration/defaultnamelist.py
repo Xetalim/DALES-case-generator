@@ -1,8 +1,9 @@
 """Default configuration modules and base surface module."""
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -22,61 +23,59 @@ class DefaultNamelistModule(simulation_module):
         sim: Parent dales_simulation instance
     """
 
-    iexpnr: int = field(
+    iexpnr: int = nml_field(
         default=1,
         init=True,
         repr=False,
-        metadata={"nml": "RUN", "key": "iexpnr", "serialize": True, "required": True},
+        section="RUN",
+        key="iexpnr",
+        required=True,
+        metadata={"serialize": True},
     )
-    iinput: int = field(
+    iinput: int = nml_field(
         default=2,
         init=True,
         repr=False,
-        metadata={"nml": "RUN", "key": "iinput", "serialize": True, "required": True},
+        section="RUN",
+        key="iinput",
+        required=True,
+        metadata={"serialize": True},
     )
-    lwarmstart: bool = field(
+    lwarmstart: bool = nml_field(
         default=False,
         init=True,
         repr=False,
-        metadata={
-            "nml": "RUN",
-            "key": "lwarmstart",
-            "serialize": True,
-            "required": True,
-        },
+        section="RUN",
+        key="lwarmstart",
+        required=True,
+        metadata={"serialize": True},
     )
-    trestart: int = field(
+    trestart: int = nml_field(
         default=3600,
         init=True,
         repr=False,
-        metadata={
-            "nml": "RUN",
-            "key": "trestart",
-            "serialize": True,
-            "required": True,
-        },
+        section="RUN",
+        key="trestart",
+        required=True,
+        metadata={"serialize": True},
     )
-    startfile: str = field(
+    startfile: str = nml_field(
         default="initd_latest_x000y000.001",
         init=True,
         repr=False,
-        metadata={
-            "nml": "RUN",
-            "key": "startfile",
-            "serialize": True,
-            "required": True,
-        },
+        section="RUN",
+        key="startfile",
+        required=True,
+        metadata={"serialize": True},
     )
-    ladaptive: bool = field(
+    ladaptive: bool = nml_field(
         default=True,
         init=True,
         repr=False,
-        metadata={
-            "nml": "RUN",
-            "key": "ladaptive",
-            "serialize": True,
-            "required": True,
-        },
+        section="RUN",
+        key="ladaptive",
+        required=True,
+        metadata={"serialize": True},
     )
 
     def __post_init__(self):

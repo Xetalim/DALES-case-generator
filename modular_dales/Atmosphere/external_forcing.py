@@ -16,6 +16,7 @@ from modular_dales.modular.forcing import (
     sounding_forcings,
     var_attrs,
 )
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.modular.time_dependent_scalars import (
     SOIL_DIM,
@@ -106,11 +107,13 @@ class ExternalForcingModule(simulation_module):
 
     forcing_priority = EXTERNAL_FORCING_PRIORITY
 
-    do_nudging: bool = field(
+    do_nudging: bool = nml_field(
         default=True,
         init=True,
         repr=True,
-        metadata={"serialize": True, "nml": "NAMNUDGE", "key": "lnudge"},
+        section="NAMNUDGE",
+        key="lnudge",
+        metadata={"serialize": True},
     )
     central_lat: float | None = field(
         default=None,

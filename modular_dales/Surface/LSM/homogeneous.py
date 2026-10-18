@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 
+from modular_dales.modular.namelist import nml_field
 from modular_dales.MODULE_REGISTRY import register_module
 
 from .base import BaseLSMModule
@@ -14,369 +15,288 @@ from .base import BaseLSMModule
 class LSMHomogeneousModule(BaseLSMModule):
     """Standalone homogeneous LSM configuration module."""
 
-    c_low: float | None = field(
+    c_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "c_low",
-            "serialize": True,
-            "doc": "Tile fraction for low vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="c_low",
+        description="Tile fraction for low vegetation.",
+        metadata={"serialize": True},
     )
-    c_high: float | None = field(
+    c_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "c_high",
-            "serialize": True,
-            "doc": "Tile fraction for high vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="c_high",
+        description="Tile fraction for high vegetation.",
+        metadata={"serialize": True},
     )
-    c_bare: float | None = field(
+    c_bare: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "c_bare",
-            "serialize": True,
-            "doc": "Tile fraction for bare soil.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="c_bare",
+        description="Tile fraction for bare soil.",
+        metadata={"serialize": True},
     )
-    c_water: float | None = field(
+    c_water: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "c_water",
-            "serialize": True,
-            "doc": "Tile fraction for open water.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="c_water",
+        description="Tile fraction for open water.",
+        metadata={"serialize": True},
     )
-    c_asph: float | None = field(
+    c_asph: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "c_asph",
-            "serialize": True,
-            "doc": "Tile fraction for asphalt/impervious surface.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="c_asph",
+        description="Tile fraction for asphalt/impervious surface.",
+        metadata={"serialize": True},
     )
-    z0m_low: float | None = field(
+    z0m_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0m_low",
-            "serialize": True,
-            "doc": "Momentum roughness length for low vegetation in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0m_low",
+        description="Momentum roughness length for low vegetation in m.",
+        metadata={"serialize": True},
     )
-    z0m_high: float | None = field(
+    z0m_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0m_high",
-            "serialize": True,
-            "doc": "Momentum roughness length for high vegetation in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0m_high",
+        description="Momentum roughness length for high vegetation in m.",
+        metadata={"serialize": True},
     )
-    z0m_bare: float | None = field(
+    z0m_bare: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0m_bare",
-            "serialize": True,
-            "doc": "Momentum roughness length for bare soil in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0m_bare",
+        description="Momentum roughness length for bare soil in m.",
+        metadata={"serialize": True},
     )
-    z0m_water: float | None = field(
+    z0m_water: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0m_water",
-            "serialize": True,
-            "doc": "Momentum roughness length for water in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0m_water",
+        description="Momentum roughness length for water in m.",
+        metadata={"serialize": True},
     )
-    z0m_asph: float | None = field(
+    z0m_asph: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0m_asph",
-            "serialize": True,
-            "doc": "Momentum roughness length for asphalt in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0m_asph",
+        description="Momentum roughness length for asphalt in m.",
+        metadata={"serialize": True},
     )
-    z0h_low: float | None = field(
+    z0h_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0h_low",
-            "serialize": True,
-            "doc": "Scalar roughness length for low vegetation in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0h_low",
+        description="Scalar roughness length for low vegetation in m.",
+        metadata={"serialize": True},
     )
-    z0h_high: float | None = field(
+    z0h_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0h_high",
-            "serialize": True,
-            "doc": "Scalar roughness length for high vegetation in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0h_high",
+        description="Scalar roughness length for high vegetation in m.",
+        metadata={"serialize": True},
     )
-    z0h_bare: float | None = field(
+    z0h_bare: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0h_bare",
-            "serialize": True,
-            "doc": "Scalar roughness length for bare soil in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0h_bare",
+        description="Scalar roughness length for bare soil in m.",
+        metadata={"serialize": True},
     )
-    z0h_water: float | None = field(
+    z0h_water: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0h_water",
-            "serialize": True,
-            "doc": "Scalar roughness length for water in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0h_water",
+        description="Scalar roughness length for water in m.",
+        metadata={"serialize": True},
     )
-    z0h_asph: float | None = field(
+    z0h_asph: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "z0h_asph",
-            "serialize": True,
-            "doc": "Scalar roughness length for asphalt in m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="z0h_asph",
+        description="Scalar roughness length for asphalt in m.",
+        metadata={"serialize": True},
     )
-    lambda_s_low: float | None = field(
+    lambda_s_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_s_low",
-            "serialize": True,
-            "doc": "Stable transfer coefficient for low vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_s_low",
+        description="Stable transfer coefficient for low vegetation.",
+        metadata={"serialize": True},
     )
-    lambda_s_high: float | None = field(
+    lambda_s_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_s_high",
-            "serialize": True,
-            "doc": "Stable transfer coefficient for high vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_s_high",
+        description="Stable transfer coefficient for high vegetation.",
+        metadata={"serialize": True},
     )
-    lambda_s_bare: float | None = field(
+    lambda_s_bare: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_s_bare",
-            "serialize": True,
-            "doc": "Stable transfer coefficient for bare soil.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_s_bare",
+        description="Stable transfer coefficient for bare soil.",
+        metadata={"serialize": True},
     )
-    lambda_s_asph: float | None = field(
+    lambda_s_asph: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_s_asph",
-            "serialize": True,
-            "doc": "Stable transfer coefficient for asphalt.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_s_asph",
+        description="Stable transfer coefficient for asphalt.",
+        metadata={"serialize": True},
     )
-    lambda_us_low: float | None = field(
+    lambda_us_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_us_low",
-            "serialize": True,
-            "doc": "Unstable transfer coefficient for low vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_us_low",
+        description="Unstable transfer coefficient for low vegetation.",
+        metadata={"serialize": True},
     )
-    lambda_us_high: float | None = field(
+    lambda_us_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_us_high",
-            "serialize": True,
-            "doc": "Unstable transfer coefficient for high vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_us_high",
+        description="Unstable transfer coefficient for high vegetation.",
+        metadata={"serialize": True},
     )
-    lambda_us_bare: float | None = field(
+    lambda_us_bare: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_us_bare",
-            "serialize": True,
-            "doc": "Unstable transfer coefficient for bare soil.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_us_bare",
+        description="Unstable transfer coefficient for bare soil.",
+        metadata={"serialize": True},
     )
-    lambda_us_asph: float | None = field(
+    lambda_us_asph: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lambda_us_asph",
-            "serialize": True,
-            "doc": "Unstable transfer coefficient for asphalt.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lambda_us_asph",
+        description="Unstable transfer coefficient for asphalt.",
+        metadata={"serialize": True},
     )
-    lai_low: float | None = field(
+    lai_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lai_low",
-            "serialize": True,
-            "doc": "Leaf area index for low vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lai_low",
+        description="Leaf area index for low vegetation.",
+        metadata={"serialize": True},
     )
-    lai_high: float | None = field(
+    lai_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "lai_high",
-            "serialize": True,
-            "doc": "Leaf area index for high vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="lai_high",
+        description="Leaf area index for high vegetation.",
+        metadata={"serialize": True},
     )
-    rs_min_low: float | None = field(
+    rs_min_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "rs_min_low",
-            "serialize": True,
-            "doc": "Minimum stomatal resistance for low vegetation in s/m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="rs_min_low",
+        description="Minimum stomatal resistance for low vegetation in s/m.",
+        metadata={"serialize": True},
     )
-    rs_min_high: float | None = field(
+    rs_min_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "rs_min_high",
-            "serialize": True,
-            "doc": "Minimum stomatal resistance for high vegetation in s/m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="rs_min_high",
+        description="Minimum stomatal resistance for high vegetation in s/m.",
+        metadata={"serialize": True},
     )
-    rs_min_bare: float | None = field(
+    rs_min_bare: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "rs_min_bare",
-            "serialize": True,
-            "doc": "Minimum surface resistance for bare soil in s/m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="rs_min_bare",
+        description="Minimum surface resistance for bare soil in s/m.",
+        metadata={"serialize": True},
     )
-    rs_min_asph: float | None = field(
+    rs_min_asph: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "rs_min_asph",
-            "serialize": True,
-            "doc": "Minimum surface resistance for asphalt in s/m.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="rs_min_asph",
+        description="Minimum surface resistance for asphalt in s/m.",
+        metadata={"serialize": True},
     )
-    t_soil_p: list[float] | None = field(
+    t_soil_p: list[float] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "t_soil_p",
-            "serialize": True,
-            "doc": "Initial homogeneous soil temperature profile in K.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="t_soil_p",
+        description="Initial homogeneous soil temperature profile in K.",
+        metadata={"serialize": True},
     )
-    theta_soil_p: list[float] | None = field(
+    theta_soil_p: list[float] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "theta_soil_p",
-            "serialize": True,
-            "doc": "Initial homogeneous soil moisture profile in m3/m3.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="theta_soil_p",
+        description="Initial homogeneous soil moisture profile in m3/m3.",
+        metadata={"serialize": True},
     )
-    soil_index_p: list[int] | None = field(
+    soil_index_p: list[int] | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "soil_index_p",
-            "serialize": True,
-            "doc": "Initial homogeneous soil type index profile.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="soil_index_p",
+        description="Initial homogeneous soil type index profile.",
+        metadata={"serialize": True},
     )
-    ar_low: float | None = field(
+    ar_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "ar_low",
-            "serialize": True,
-            "doc": "Root profile parameter a for low vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="ar_low",
+        description="Root profile parameter a for low vegetation.",
+        metadata={"serialize": True},
     )
-    br_low: float | None = field(
+    br_low: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "br_low",
-            "serialize": True,
-            "doc": "Root profile parameter b for low vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="br_low",
+        description="Root profile parameter b for low vegetation.",
+        metadata={"serialize": True},
     )
-    ar_high: float | None = field(
+    ar_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "ar_high",
-            "serialize": True,
-            "doc": "Root profile parameter a for high vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="ar_high",
+        description="Root profile parameter a for high vegetation.",
+        metadata={"serialize": True},
     )
-    br_high: float | None = field(
+    br_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "br_high",
-            "serialize": True,
-            "doc": "Root profile parameter b for high vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="br_high",
+        description="Root profile parameter b for high vegetation.",
+        metadata={"serialize": True},
     )
-    gD_high: float | None = field(
+    gD_high: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "gD_high",
-            "serialize": True,
-            "doc": "Vapour pressure deficit response coefficient for high vegetation.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="gD_high",
+        description="Vapour pressure deficit response coefficient for high vegetation.",
+        metadata={"serialize": True},
     )
-    tskin_water: float | None = field(
+    tskin_water: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMLSM_HOMOGENEOUS",
-            "key": "tskin_water",
-            "serialize": True,
-            "doc": "Skin temperature assigned to water tile in K.",
-        },
+        section="NAMLSM_HOMOGENEOUS",
+        key="tskin_water",
+        description="Skin temperature assigned to water tile in K.",
+        metadata={"serialize": True},
     )
-    thls: float | None = field(
+    thls: float | None = nml_field(
         default=None,
-        metadata={
-            "nml": "NAMSURFACE",
-            "key": "thls",
-            "required": True,
-            "serialize": True,
-            "forcing_var": "thls",
-            "doc": "Surface potential temperature in K.",
-        },
+        section="NAMSURFACE",
+        key="thls",
+        required=True,
+        description="Surface potential temperature in K.",
+        metadata={"serialize": True, "forcing_var": "thls"},
     )
 
-    lheterogeneous: bool = field(
+    lheterogeneous: bool = nml_field(
         default=False,
-        metadata={
-            "nml": "NAMLSM",
-            "key": "lheterogeneous",
-            "required": True,
-            "serialize": True,
-            "doc": "Use homogeneous LSM mode.",
-        },
+        section="NAMLSM",
+        key="lheterogeneous",
+        required=True,
+        description="Use homogeneous LSM mode.",
+        metadata={"serialize": True},
     )
 
     def __post_init__(self):

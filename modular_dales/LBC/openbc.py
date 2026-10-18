@@ -32,6 +32,7 @@ from modular_dales.modular.forcing import (
     ForcingSet,
     sounding_forcings,
 )
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.vars import ProfileVariable
@@ -357,158 +358,198 @@ class do_openboundary(simulation_module):
     end: str | None = field(
         default=None, repr=True, metadata={"serialize": True}, init=True
     )
-    lopenbc: bool = field(
+    lopenbc: bool = nml_field(
         default=True,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lopenbc", "serialize": True},
+        section="OPENBC",
+        key="lopenbc",
+        metadata={"serialize": True},
         init=True,
     )
-    linithetero: bool = field(
+    linithetero: bool = nml_field(
         default=True,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "linithetero", "serialize": True},
+        section="OPENBC",
+        key="linithetero",
+        metadata={"serialize": True},
         init=True,
     )
-    lper: bool = field(
+    lper: bool = nml_field(
         default=False,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lper", "serialize": True},
+        section="OPENBC",
+        key="lper",
+        metadata={"serialize": True},
         init=True,
     )
-    lbuoytop: bool = field(
+    lbuoytop: bool = nml_field(
         default=True,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lbuoytop", "serialize": True},
+        section="OPENBC",
+        key="lbuoytop",
+        metadata={"serialize": True},
         init=True,
     )
-    dxint: int = field(
+    dxint: int = nml_field(
         default=100,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "dxint", "serialize": True},
+        section="OPENBC",
+        key="dxint",
+        metadata={"serialize": True},
         init=True,
     )
-    dyint: int = field(
+    dyint: int = nml_field(
         default=100,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "dyint", "serialize": True},
+        section="OPENBC",
+        key="dyint",
+        metadata={"serialize": True},
         init=True,
     )
-    dzint: int = field(
+    dzint: int = nml_field(
         default=-1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "dzint", "serialize": True},
+        section="OPENBC",
+        key="dzint",
+        metadata={"serialize": True},
         init=True,
     )
-    dxturb: int = field(
+    dxturb: int = nml_field(
         default=-1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "dxturb", "serialize": True},
+        section="OPENBC",
+        key="dxturb",
+        metadata={"serialize": True},
         init=True,
     )
-    dyturb: int = field(
+    dyturb: int = nml_field(
         default=-1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "dyturb", "serialize": True},
+        section="OPENBC",
+        key="dyturb",
+        metadata={"serialize": True},
         init=True,
     )
-    taum: int = field(
+    taum: int = nml_field(
         default=0,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "taum", "serialize": True},
+        section="OPENBC",
+        key="taum",
+        metadata={"serialize": True},
         init=True,
     )
-    tauh: int = field(
+    tauh: int = nml_field(
         default=20,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "tauh", "serialize": True},
+        section="OPENBC",
+        key="tauh",
+        metadata={"serialize": True},
         init=True,
     )
-    pbc: int = field(
+    pbc: int = nml_field(
         default=3,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "pbc", "serialize": True},
+        section="OPENBC",
+        key="pbc",
+        metadata={"serialize": True},
         init=True,
     )
-    lsynturb: bool = field(
+    lsynturb: bool = nml_field(
         default=False,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lsynturb", "serialize": True},
+        section="OPENBC",
+        key="lsynturb",
+        metadata={"serialize": True},
         init=True,
     )
-    iturb: int = field(
+    iturb: int = nml_field(
         default=0,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "iturb", "serialize": True},
+        section="OPENBC",
+        key="iturb",
+        metadata={"serialize": True},
         init=True,
     )
-    tau: int = field(
+    tau: int = nml_field(
         default=180,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "tau", "serialize": True},
+        section="OPENBC",
+        key="tau",
+        metadata={"serialize": True},
         init=True,
     )
-    lambda_: int = field(
+    lambda_: int = nml_field(
         default=1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lambda", "serialize": True},
+        section="OPENBC",
+        key="lambda",
+        metadata={"serialize": True},
         init=True,
     )
-    nmodes: int = field(
+    nmodes: int = nml_field(
         default=100,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "nmodes", "serialize": True},
+        section="OPENBC",
+        key="nmodes",
+        metadata={"serialize": True},
         init=True,
     )
-    lambdas: int = field(
+    lambdas: int = nml_field(
         default=1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lambdas", "serialize": True},
+        section="OPENBC",
+        key="lambdas",
+        metadata={"serialize": True},
         init=True,
     )
-    lambdas_x: int = field(
+    lambdas_x: int = nml_field(
         default=1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lambdas_x", "serialize": True},
+        section="OPENBC",
+        key="lambdas_x",
+        metadata={"serialize": True},
         init=True,
     )
-    lambdas_y: int = field(
+    lambdas_y: int = nml_field(
         default=1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lambdas_y", "serialize": True},
+        section="OPENBC",
+        key="lambdas_y",
+        metadata={"serialize": True},
         init=True,
     )
-    lambdas_z: int = field(
+    lambdas_z: int = nml_field(
         default=1,
         repr=True,
-        metadata={"nml": "OPENBC", "key": "lambdas_z", "serialize": True},
+        section="OPENBC",
+        key="lambdas_z",
+        metadata={"serialize": True},
         init=True,
     )
-    igrw_damp: int = field(
+    igrw_damp: int = nml_field(
         default=0,
         repr=True,
-        metadata={"nml": "PHYSICS", "key": "igrw_damp", "serialize": True},
+        section="PHYSICS",
+        key="igrw_damp",
+        metadata={"serialize": True},
         init=True,
     )
-    lconstexner: bool = field(
+    lconstexner: bool = nml_field(
         default=True,
         repr=True,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "lconstexner",
-            "serialize": True,
-            "raise_conflict": True,
-        },
+        section="thermodynamics",
+        key="lconstexner",
+        raise_conflict=True,
+        metadata={"serialize": True},
         init=True,
     )
-    lbaseexner: bool = field(
+    lbaseexner: bool = nml_field(
         default=True,
         repr=True,
-        metadata={
-            "nml": "thermodynamics",
-            "key": "lbaseexner",
-            "serialize": True,
-            "raise_conflict": True,
-        },
+        section="thermodynamics",
+        key="lbaseexner",
+        raise_conflict=True,
+        metadata={"serialize": True},
         init=True,
     )
 

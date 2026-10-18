@@ -67,7 +67,11 @@ def test_required_and_conflict():
     @dataclass
     class Required(NamelistModule):
         value: float | None = nml_field(
-            section="TEST", key="value", default=None, required=True, raise_conflict=True
+            section="TEST",
+            key="value",
+            default=None,
+            required=True,
+            raise_conflict=True,
         )
 
     module = attached(Required())
@@ -80,7 +84,9 @@ def test_required_and_conflict():
         module.apply_namelist_from_fields()
 
 
-@pytest.mark.parametrize("value,expected", [(3, [3, 3]), ([4, 5], [4, 5]), ({"A:x": 6, "B:y": 7}, [6, 7])])
+@pytest.mark.parametrize(
+    "value,expected", [(3, [3, 3]), ([4, 5], [4, 5]), ({"A:x": 6, "B:y": 7}, [6, 7])]
+)
 def test_multiple_targets(value, expected):
     @dataclass
     class Multiple(NamelistModule):
@@ -97,8 +103,14 @@ def test_single_target_array_is_not_split():
     assert module.nml == {"TEST": {"value": [1, 2]}}
 
 
-@pytest.mark.parametrize("metadata", [{"nml": "TEST"}, {"key": "value"},
-                                      {"nml": "TEST", "namelist": NamelistSpec("TEST")}])
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"nml": "TEST"},
+        {"key": "value"},
+        {"nml": "TEST", "namelist": NamelistSpec("TEST")},
+    ],
+)
 def test_obsolete_metadata_is_rejected(metadata):
     @dataclass
     class Invalid:
