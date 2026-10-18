@@ -40,7 +40,6 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
     preprocessing pipeline can consume them.
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     forecast_datetime: str | None = field(
         default=None,
         init=True,

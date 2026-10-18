@@ -1,18 +1,19 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Self
 
 import numpy as np
 
 from modular_dales.modular.time_dependent_scalars import TimeDependentScalar
+from modular_dales.MODULE_REGISTRY import register_module, register_special_serializing
 
 
 @dataclass
 class ShapeFunction:
     name: str
 
-    @staticmethod
-    def evaluate(*args, **kwargs):
-        raise NotImplementedError("This method should be implemented by subclasses.")
+    # @staticmethod
+    # def evaluate(*args, **kwargs):
+    #     raise NotImplementedError("This method should be implemented by subclasses.")
 
     def params_at(self, time_value: float = 0.0) -> dict:
         return {
@@ -34,6 +35,8 @@ class ShapeFunction:
         return type(self)(**params)
 
 
+@register_special_serializing
+@register_module
 @dataclass
 class lin(ShapeFunction):
     """
@@ -47,6 +50,7 @@ class lin(ShapeFunction):
         Vertical gradient of the shape function.
     """
 
+    name: str = field(default="lin", init=False)
     surf_val: float | TimeDependentScalar
     ddz: float | TimeDependentScalar
 
@@ -62,6 +66,8 @@ class lin(ShapeFunction):
         return surf_val + ddz * z
 
 
+@register_special_serializing
+@register_module
 @dataclass
 class expsinw(ShapeFunction):
     """
@@ -79,6 +85,7 @@ class expsinw(ShapeFunction):
         Height above which the sinusoidal component is zero.
     """
 
+    name: str = field(default="expsinw", init=False)
     surf_val: float | TimeDependentScalar
     H: float | TimeDependentScalar
     amp: float | TimeDependentScalar
@@ -105,6 +112,8 @@ class expsinw(ShapeFunction):
         return wbase + wonion
 
 
+@register_special_serializing
+@register_module
 @dataclass
 class linmlsurf(ShapeFunction):
     """
@@ -122,6 +131,7 @@ class linmlsurf(ShapeFunction):
         Mixed-layer height (default is 500).
     """
 
+    name: str = field(default="linmlsurf", init=False)
     lapse_rate: float
     surf_val: float | TimeDependentScalar
     offset_val: float | TimeDependentScalar = 1.25
@@ -148,6 +158,8 @@ class linmlsurf(ShapeFunction):
         return u
 
 
+@register_special_serializing
+@register_module
 @dataclass
 class exp(ShapeFunction):
     """
@@ -163,6 +175,7 @@ class exp(ShapeFunction):
         Reference height for the exponential decay (default is 500).
     """
 
+    name: str = field(default="exp", init=False)
     surf_val: float | TimeDependentScalar
     lambda_val: float | TimeDependentScalar
     z_ml: float | TimeDependentScalar = 500
@@ -183,6 +196,9 @@ class exp(ShapeFunction):
         u = surf_val * np.exp(-(z - z_ml) / lambda_val)
         u[z <= z_ml] = surf_val
         return u
+
+
+ShapeSpec = lin | exp | expsinw | linmlsurf
 
 
 SHAPE_FUNCTIONS = {

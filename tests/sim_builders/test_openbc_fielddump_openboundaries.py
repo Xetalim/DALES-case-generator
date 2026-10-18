@@ -88,11 +88,11 @@ def _build_coarse_sim_with_easyoutput(
     sim += nesting
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=0.5, ddz=0))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=3.0, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=0.5, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=3.0, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
     sim += atmo
 
     sim += TimeModule(
@@ -139,11 +139,11 @@ def _build_nested_openbc_sim_from_coarse(
     sim2 += subgrid
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=0.5, ddz=0))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=3.0, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=0.5, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=3.0, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
     sim2 += atmo
 
     sim2 += TimeModule(

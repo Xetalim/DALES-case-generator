@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 from modular_dales import dales_simulation
-from modular_dales.Atmosphere import (
-    AtmosphereModule,
-    AtmosphericProfile,
-)
+from modular_dales.Atmosphere import AtmosphereModule, AtmosphericProfile, lin
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Configuration.run_and_time import TimeModule
@@ -45,10 +42,10 @@ def emission_case(machine_conf: dict) -> dales_simulation:
     sim += time_module
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=0.0, ddz=0))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=0))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0))
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=0.0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0)))
     sim += atmo
 
     sim += ConstantSurfaceTemperatureModule(

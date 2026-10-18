@@ -1,7 +1,7 @@
 # Interpolate fields to DALES domain boundary
 # Creates openboundaries.inp.xxx.nc
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 import numpy as np
 import xarray as xr
@@ -29,7 +29,7 @@ def boundary_fields(
     openboundaries = openboundaries.assign_attrs(
         {
             # "title": "openboundaries.inp.XXX.nc",
-            "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
+            "history": f"Created on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')} UTC",
             "author": input_json.author,
             "time0": input_json.time0,
         }

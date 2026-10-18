@@ -3,7 +3,7 @@
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Self
 
 import netCDF4
 import numpy as np
@@ -153,7 +153,6 @@ class IBMModule(simulation_module):
         write_files: Export IBM geometry to NetCDF file.
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     ibm_modifications: list[IBMModification] = field(
         default_factory=list, init=True, repr=False, metadata={"serialize": True}
     )
@@ -321,7 +320,7 @@ class IBMModule(simulation_module):
         super().__init__(self.sim)
         self.module_name = "IBMModule"
 
-    def __add__(self, obj) -> "IBMModule":
+    def __add__(self, obj) -> Self:
         """Add IBM modification to module.
 
         Args:
@@ -342,7 +341,7 @@ class IBMModule(simulation_module):
             )
         return self
 
-    def __iadd__(self, obj) -> "IBMModule":
+    def __iadd__(self, obj) -> Self:
         """In-place addition."""
         return self.__add__(obj)
 
@@ -486,11 +485,11 @@ class IBMModifications:
         default_factory=list, metadata={"serialize": True}
     )
 
-    def __add__(self, modification: IBMModification) -> "IBMModifications":
+    def __add__(self, modification: IBMModification) -> Self:
         """Add a modification."""
         self.modifications.append(modification)
         return self
 
-    def __iadd__(self, modification: IBMModification) -> "IBMModifications":
+    def __iadd__(self, modification: IBMModification) -> Self:
         """In-place addition."""
         return self.__add__(modification)

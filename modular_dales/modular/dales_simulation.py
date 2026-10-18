@@ -6,7 +6,7 @@ import pathlib
 import subprocess
 from dataclasses import is_dataclass
 from pathlib import Path, PosixPath
-from typing import Union
+from typing import Self, Union
 
 import f90nml
 import yaml
@@ -203,13 +203,16 @@ class dales_simulation:
         self.has_atmosphere_module = False  # set by AtmosphereModule when added
         # Start with empty namelist - will be populated by modules
         self.nml = f90nml.namelist.Namelist()
-        self.nml_docs = {}  # stores info about which module set which namelist variables for better error messages and debugging
+        self.nml_docs: dict[
+            str, dict[str, str]
+        ] = {}  # stores info about which module set which namelist variables for better error messages and debugging
 
         # These will be initialized by init_output_folder()
         self.output_path = None
         self.exp_id = None
         self.grid = None
-        self.required_files = {}
+        # map output files to their paths
+        self.required_files: dict[str, str] = {}
         self.required_folder_list = []
         self._initialized = False
         self._forcings: ForcingSet | None = None
@@ -289,7 +292,7 @@ class dales_simulation:
         self._forcings = None
         return self
 
-    def __iadd__(self, module: "simulation_module") -> "dales_simulation":
+    def __iadd__(self, module: "simulation_module") -> Self:
         """In-place addition of a module (+=).
 
         Args:
@@ -467,7 +470,7 @@ class dales_simulation:
         # Set up required file transfers
         required_transfers = ""
         if len(self.required_files) != 0:
-            for file in self.required_files.keys():
+            for file in self.required_files:
                 required_transfers += (
                     f'ln -sf "$(pwd)/input/{file}" "$RUNDIR/{file}" || exit\n'
                 )

@@ -37,6 +37,8 @@ def boundaries_timestep0(
     ``init.*.nc`` where ``zh == zt`` and construct horizontally uniform
     boundary fields for all variables and boundaries from that profile.
     """
+    if not input_json.inpath_coarse:
+        raise ValueError("Input path for coarse grid is not provided.")
     inpath_coarse = Path(input_json.inpath_coarse)
     crosssection_chunks = chunks
     if crosssection_chunks is None:
@@ -188,7 +190,7 @@ def boundaries_timestep0(
                     data = np.zeros(shape, dtype=float)
                     vert_index = dims.index(vertical_dim)
                     for k in range(len(vert_coords)):
-                        idx = [slice(None)] * len(shape)
+                        idx: list[slice | int] = [slice(None)] * len(shape)
                         idx[vert_index] = k
                         data[tuple(idx)] = prof_on_vert[k]
 

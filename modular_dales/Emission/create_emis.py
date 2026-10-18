@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 from dataclasses import dataclass
+from datetime import UTC
 
 import netCDF4 as nc
 import numpy as np
@@ -48,8 +49,8 @@ class emissions:
     @logwrap
     def __init__(self, output_path, grid: GridDales):
         self.output_path = output_path
-        self.tracers = {}
-        self.tracer_profiles = {}
+        self.tracers: dict[str, Tracer] = {}
+        self.tracer_profiles: dict[str, np.ndarray] = {}
         self.grid = grid
 
     def add_tracer(self, info: TracerInfo):
@@ -169,6 +170,7 @@ def get_emis_sim_hours(nml):
         month=int(nml["NAMDATETIME"]["startmonth"]),
         day=int(nml["NAMDATETIME"]["startday"]),
         hour=int(nml["DOMAIN"]["xtime"]),
+        tzinfo=UTC,
     )
     end_hour = sim_start_time + datetime.timedelta(seconds=nml["RUN"]["runtime"])
 

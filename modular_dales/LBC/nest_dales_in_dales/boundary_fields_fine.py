@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -42,7 +42,7 @@ def boundary_fields_fine(
     # Add global attributes
     openboundaries = openboundaries.assign_attrs(
         {
-            "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
+            "history": f"Created on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')} UTC",
             "author": input_json.author,
             "time0": input_json.time0,
         }
@@ -86,8 +86,7 @@ def set_openboundary_attrs(input_json: OpenBoundaryConfig, openboundaries):
     )
     variables = ["u", "v", "w", "thl", "qt", "e12"]
     if len(input_json.tracernames) > 0:
-        for tracername in input_json.tracernames:
-            variables.append(tracername)
+        variables.extend(input_json.tracernames)
     units = ["m/s", "m/s", "m/s", "K", "kg/kg", "m/s"]
     if len(input_json.tracernames) > 0:
         for tracername in input_json.tracernames:

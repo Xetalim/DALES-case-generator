@@ -3,7 +3,7 @@
 import logging
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -25,6 +25,8 @@ from modular_dales.modular.time_dependent_scalars import (
     profile,
 )
 from modular_dales.vars import (
+    NudgingVariable,
+    ProfileVariable,
     VariableDefinition,
     dthldt_ls,
     dudt_ls,
@@ -103,8 +105,6 @@ class ExternalForcingModule(simulation_module):
     """
 
     forcing_priority = EXTERNAL_FORCING_PRIORITY
-
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
 
     do_nudging: bool = field(
         default=True,
@@ -257,13 +257,13 @@ class ExternalForcingModule(simulation_module):
     # les_input -> ForcingSet
     # ------------------------------------------------------------------
 
-    def _les_field(self, name: str) -> xr.DataArray | None:
+    def _les_field(self, les_input: LESInput, name: str) -> xr.DataArray | None:
         """``les_input[name]`` with dims ``(time[, zt])`` and time in seconds."""
 
-        if self.les_input is None or name not in self.les_input:
+        if les_input is None or name not in les_input:
             return None
-        times = np.asarray(self.les_input["time_sec"].values, dtype=float)
-        da = self.les_input[name].reset_coords(drop=True)
+        times = np.asarray(les_input["time_sec"].values, dtype=float)
+        da = les_input[name].reset_coords(drop=True)
         if set(da.dims) not in ({"time"}, {"time", "z"}):
             raise ValueError(
                 f"{self.module_name}: les_input.{name} must have dimensions (time,) or (time, z); got {da.dims}"
@@ -274,6 +274,8 @@ class ExternalForcingModule(simulation_module):
         return check_time_series(da.astype(float).rename(name))
 
     def _build_forcings(self) -> ForcingSet:
+        if self.les_input is None:
+            raise ValueError(f"{self.module_name}: les_input is not prepared")
         times = self.les_input["time_sec"]
         if times.ndim != 1 or times.size < 2:
             raise ValueError(
@@ -281,7 +283,8 @@ class ExternalForcingModule(simulation_module):
             )
         forcings = ForcingSet()
         fields = {
-            name: self._les_field(name) for name in set(LES_INPUT_SERIES.values())
+            name: self._les_field(self.les_input, name)
+            for name in set(LES_INPUT_SERIES.values())
         }
 
         def initial(name: str) -> xr.DataArray | None:
@@ -307,20 +310,20 @@ class ExternalForcingModule(simulation_module):
             self.init_tke, self.zt, tke.name, var_attrs(tke)
         )
 
-        for var_definition, name in LES_INPUT_SERIES.items():
+        for series_variable, name in LES_INPUT_SERIES.items():
             series = fields.get(name)
             if series is None:
                 continue
-            if (Z_DIM in series.dims) != var_definition.is_profile:
+            if (Z_DIM in series.dims) != series_variable.is_profile:
                 logger.warning(
                     "%s: skipping les_input.%s for '%s' (dims %s)",
                     self.module_name,
                     name,
-                    var_definition.name,
+                    series_variable.name,
                     series.dims,
                 )
                 continue
-            forcings.series[var_definition.name] = named(series, var_definition)
+            forcings.series[series_variable.name] = named(series, series_variable)
 
         qt_series = fields.get("qt")
         if qt_series is not None and Z_DIM in qt_series.dims:
@@ -330,8 +333,8 @@ class ExternalForcingModule(simulation_module):
             )
 
         if self.do_nudging and self.write_nudging_netcdf:
-            forcings.series.update(self._nudging_series(fields))
-        forcings.initial.update(self._surface_state())
+            forcings.series.update(self._nudging_series(self.les_input, fields))
+        forcings.initial.update(self._surface_state(self.les_input))
         sounding = backrad_sounding(self.les_input)
         if sounding is not None:
             forcings.initial.update(sounding_forcings(sounding))
@@ -340,9 +343,15 @@ class ExternalForcingModule(simulation_module):
 
     def _nudging_series(
         self,
+        les_input: LESInput,
         fields: dict[str, xr.DataArray | None],
     ) -> dict[str, xr.DataArray]:
         """Nudging targets and timescales, written as ``(time, zh)`` fields to ``init.nc``."""
+
+        if les_input is None:
+            raise ValueError(
+                f"{self.module_name}: les_input is required for nudging series"
+            )
 
         def require_profile(name: str, source: xr.DataArray | None) -> xr.DataArray:
             if source is None or Z_DIM not in source.dims:
@@ -389,7 +398,7 @@ class ExternalForcingModule(simulation_module):
 
         for tracer_cfg in self.nudging_tracers:
             if not isinstance(tracer_cfg, dict):
-                raise ValueError(
+                raise TypeError(
                     f"{self.module_name}.nudging_tracers entries must be dicts"
                 )
             if not bool(tracer_cfg.get("enabled", True)):
@@ -400,26 +409,34 @@ class ExternalForcingModule(simulation_module):
                     f"{self.module_name}.nudging_tracers requires a non-empty 'name'"
                 )
             source_name = str(tracer_cfg.get("source", tracer_name)).strip()
-            tracer = require_profile(source_name, self._les_field(source_name))
-            target = ensure_var(
-                VariableDefinition(
-                    f"{tracer_name}_nudge",
-                    str(
-                        tracer_cfg.get(
-                            "long_name", f"Nudging target for tracer {tracer_name}"
-                        )
-                    ),
+            tracer = require_profile(
+                source_name, self._les_field(les_input, source_name)
+            )
+            tracer_variable = ensure_var(
+                ProfileVariable(
+                    tracer_name,
+                    f"Tracer {tracer_name}",
                     str(
                         tracer_cfg.get("units")
                         or tracer.attrs.get("units")
                         or tracer.attrs.get("unit")
                         or "1"
                     ),
-                    can_be_time_dependent=True,
-                    init_time_height=True,
-                    file_name=f"{tracer_name}_nud",
                 )
             )
+            if not isinstance(tracer_variable, ProfileVariable):
+                raise TypeError(
+                    f"Nudging tracer '{tracer_name}' must be a profile variable"
+                )
+            target = NudgingVariable(
+                tracer_variable,
+                long_name=str(
+                    tracer_cfg.get(
+                        "long_name", f"Nudging target for tracer {tracer_name}"
+                    )
+                ),
+            )
+            ensure_var(target)
             targets.append(
                 (
                     target,
@@ -437,9 +454,8 @@ class ExternalForcingModule(simulation_module):
             )
         return nudging
 
-    def _surface_state(self) -> dict[str, xr.DataArray]:
+    def _surface_state(self, les_input: LESInput) -> dict[str, xr.DataArray]:
         """Initial soil state (on ``zs``), soil type and time-mean roughness lengths."""
-        les_input = self.les_input
         state: dict[str, xr.DataArray] = {}
 
         def at_start(name: str) -> xr.DataArray:
@@ -459,7 +475,7 @@ class ExternalForcingModule(simulation_module):
                 )
                 continue
             soil_dim = da.dims[0]
-            da = da.drop_vars(soil_dim, errors="ignore")
+            da = da.drop_vars((soil_dim,), errors="ignore")
             if soil_dim != SOIL_DIM:
                 da = da.rename({soil_dim: SOIL_DIM})
             if "zs" in les_input and les_input["zs"].size == da.size:
@@ -471,10 +487,11 @@ class ExternalForcingModule(simulation_module):
         if type_soil.name in les_input:
             state[type_soil.name] = named(at_start(type_soil.name), type_soil)
 
-        for var_definition in (z0m, z0h):
-            if var_definition.name in les_input:
-                state[var_definition.name] = named(
-                    les_input[var_definition.name].astype(float).mean(), var_definition
+        for roughness_variable in (z0m, z0h):
+            if roughness_variable.name in les_input:
+                state[roughness_variable.name] = named(
+                    les_input[roughness_variable.name].astype(float).mean(),
+                    roughness_variable,
                 )
         return state
 
@@ -503,7 +520,11 @@ class ExternalForcingModule(simulation_module):
                 ", ".join(missing),
             )
             return prof_u, prof_v
-
+        # make mypy understand that prof_u and prof_v are not None beyond this point
+        assert prof_u is not None
+        assert prof_v is not None
+        assert prof_ug is not None
+        assert prof_vg is not None
         nz = prof_u.sizes[Z_DIM]
         sponge_start = min(max(nz - 15, 0), int(np.floor(0.75 * nz)))
         sponge_size = nz - sponge_start
@@ -526,7 +547,7 @@ class ExternalForcingModule(simulation_module):
         )
 
 
-def backrad_sounding(les_input: xr.Dataset) -> xr.Dataset | None:
+def backrad_sounding(les_input: LESInput) -> xr.Dataset | None:
     """Time-mean radiation sounding (``T``, ``q`` on pressure ``lev``) from ``les_input``."""
     if les_input is None or not all(
         name in les_input for name in ("p_lay", "t_lay", "h2o_lay")

@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Self
 
 import netCDF4
 import numpy as np
@@ -55,7 +55,7 @@ class SLURBModifications:
 
     def __add__(
         self, modification: SLURBModification | list[SLURBModification]
-    ) -> "SLURBModifications":
+    ) -> Self:
         """Add a modification."""
         if isinstance(modification, list):
             self.modifications.extend(modification)
@@ -65,7 +65,7 @@ class SLURBModifications:
 
     def __iadd__(
         self, modification: SLURBModification | list[SLURBModification]
-    ) -> "SLURBModifications":
+    ) -> Self:
         """In-place addition."""
         return self.__add__(modification)
 
@@ -100,7 +100,6 @@ class slbCreatorClass(ModifierClass):
 
     def output_nc(self, filename):
         with netCDF4.Dataset(filename, "w") as nc:
-
             nc.createDimension("x", len(self.x))
             nc.createDimension("y", len(self.y))
 
@@ -133,7 +132,6 @@ class slbCreatorClass(ModifierClass):
 class SLURBModule(simulation_module):
     """Surface Layer Urban Boundary (SLURB) simulation module."""
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     slb_modifications: SLURBModifications = field(
         default_factory=SLURBModifications,
         init=True,
@@ -312,7 +310,7 @@ class SLURBModule(simulation_module):
             )
         return self
 
-    def __iadd__(self, obj) -> "SLURBModule":
+    def __iadd__(self, obj) -> Self:
         return self.__add__(obj)
 
     def do_config(self):
@@ -325,7 +323,6 @@ class SLURBModule(simulation_module):
     def init_generator(self):
         """Initialize SLURB generator."""
         if self.slb_generator is None:
-
             self.slb_generator = slbCreatorClass(self.grid)
 
     def prepare_calculations(self):

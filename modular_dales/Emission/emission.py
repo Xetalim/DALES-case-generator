@@ -11,7 +11,7 @@ This module mirrors the IBM module pattern:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional, Self
+from typing import Any, Self
 
 from modular_dales.Emission.create_emis import (
     PointSource,
@@ -91,8 +91,6 @@ class EmissionModule(simulation_module):
       sim: Parent simulation instance
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
-
     # User-configurable content
     tracers: list[EmissionTracer] = field(
         default_factory=list, metadata={"serialize": True}
@@ -163,7 +161,7 @@ class EmissionModule(simulation_module):
     # ------------------------------------------------------------------
     # Public API for adding tracers / point sources
     # ------------------------------------------------------------------
-    def __add__(self, item: Any) -> "EmissionModule":
+    def __add__(self, item: Any) -> Self:
         """Add a tracer or point source to the module.
 
         This mirrors the pattern used by :class:`IBMModule`, allowing

@@ -57,7 +57,7 @@ def _plot_soil_layers(ds, x, y, field_name, title_prefix, output_path, nlevels=4
 
     n_layers = min(nlevels, arr.shape[0])
     ncols = 2
-    nrows = int(math.ceil(n_layers / ncols))
+    nrows = math.ceil(n_layers / ncols)
     fig, axes = plt.subplots(nrows, ncols, figsize=(10, 4 * nrows), squeeze=False)
     flat_axes = axes.ravel()
 
@@ -298,7 +298,7 @@ def _plot_lcz_variables(lsm_netcdf_path, output_path, urban_cover_mask=None):
         if values.ndim == 3:
             n_slices = values.shape[0]
             ncols = min(3, n_slices)
-            nrows = int(math.ceil(n_slices / ncols))
+            nrows = math.ceil(n_slices / ncols)
             fig, axes = plt.subplots(
                 nrows,
                 ncols,
@@ -437,7 +437,6 @@ def plot_lsm_cover(lsm_netcdf_path, plot_base_path):
     # DISCRETE COLORMAP (17 DISTINCT COLORS)
     # ------------------------------------------------------------------
     if "short_grass" in cover_names:  # IFS MAPPING, use nice colors!
-
         # Full label → color mapping
         label_to_color = {
             "crops_mixed_farming": "#f1c232",

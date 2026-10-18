@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
 
 from modular_dales.Atmosphere import (
-    AtmosphericProfile,
-    InterpolatedProfile,
     TimedAtmosphereProfile,
     profiles_to_forcings,
 )
@@ -22,7 +20,6 @@ from modular_dales.modular.time_dependent_scalars import (
     Z_DIM,
     resample_time,
     resolve_time_axis,
-    stack_in_time,
 )
 
 if TYPE_CHECKING:
@@ -56,7 +53,9 @@ class OpenBCAtmosphereWorker:
             end=self.module.end,
         )
 
-        initfields = self._build_initfields_dataset(initial)
+        initfields = self._build_initfields_dataset(
+            initial, list(self.module.tracernames or [])
+        )
         boundaries_ds = boundary_fields_fine.set_openboundary_attrs(
             config,
             ds,
@@ -66,6 +65,7 @@ class OpenBCAtmosphereWorker:
     def _build_initfields_dataset(
         self,
         profiles_1d: dict[str, xr.DataArray],
+        tracernames: list[str],
     ) -> xr.Dataset:
         dims_by_var = {
             "u0": ("u", ("zt", "yt", "xm")),
@@ -83,12 +83,12 @@ class OpenBCAtmosphereWorker:
         )
         initfields = initfields.assign_attrs(
             {
-                "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
+                "history": f"Created on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')} UTC",
                 "author": "author",
                 "time0": self.module.time0,
             }
         )
-        for name in self.module.nest_in_atmosphere.tracers:
+        for name in tracernames:
             initfields[f"{name}0"] = self._broadcast_profile(
                 profiles_1d[name], ("zt", "yt", "xt")
             )
@@ -133,8 +133,14 @@ class OpenBCAtmosphereWorker:
             self.module.nest_in_atmosphere.provide_profiles()
         )
         forcings = profiles_to_forcings(heights, profiles)
-        initial = forcings.initial
-        series = forcings.series
+        names = {
+            entry.profile.variable.name: entry.profile.variable.boundary_name
+            for entry in profiles
+        }
+        initial = {names[name]: values for name, values in forcings.initial.items()}
+        series = {names[name]: values for name, values in forcings.series.items()}
+        for name, values in series.items():
+            initial[name] = values.isel({TIME_DIM: 0}, drop=True)
         return initial, series
 
     def _boundary_dims(self, var: str, bnd: str) -> tuple[str, ...]:
@@ -188,7 +194,8 @@ class OpenBCAtmosphereWorker:
                 prof = in_time
                 if var == "thl" and bnd == "top" and add_to_top_thl is not None:
                     prof = prof + add_to_top_thl
-                ds[f"{var}{bnd}"] = self._broadcast_profile(
+                field_name = "e12" if var == "e120" else var
+                ds[f"{field_name}{bnd}"] = self._broadcast_profile(
                     prof, self._boundary_dims(var, bnd)
                 )
 

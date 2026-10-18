@@ -129,9 +129,7 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
             if not self.harmonie_sfc_glob:
                 self.harmonie_sfc_glob = knmi_download_module.sfc_glob
 
-        openbc_grid = (
-            self.grid.as_openbc() if hasattr(self.grid, "as_openbc") else self.grid
-        )
+        openbc_grid = self.grid.as_openbc()
 
         config = OpenBoundaryConfig(
             start=str(self.harmonie_start),
@@ -204,6 +202,10 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
         else:
             wls = xr.zeros_like(u)
 
+        if prepper.ug is None or prepper.vg is None:
+            raise ValueError(
+                "HarmonieAtmosphereModule: missing geostrophic wind components in prepper"
+            )
         ug_mean, vg_mean = dask.compute(
             prepper.ug.mean(["x", "y"]), prepper.vg.mean(["x", "y"])
         )

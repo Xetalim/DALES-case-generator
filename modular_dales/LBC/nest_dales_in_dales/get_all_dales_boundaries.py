@@ -64,7 +64,7 @@ def _promote_boundary_stagger_dims(ds: xr.Dataset, boundary: str) -> xr.Dataset:
     dim_map = boundary_dim_map[boundary]
 
     for var_name, da in ds.data_vars.items():
-        target_dim = dim_map.get(var_name, dim_map["default"])
+        target_dim = dim_map.get(str(var_name), dim_map["default"])
         if target_dim in da.dims:
             continue
 

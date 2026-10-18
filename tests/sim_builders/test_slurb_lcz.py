@@ -54,24 +54,24 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(
         variable=thetal,
         shape=linmlsurf(surf_val=293, offset_val=1.25, lapse_rate=1e-3, z_ml=0),
-    )
-    atmo += AtmosphericProfile(
+    ))
+    atmo.add(AtmosphericProfile(
         variable=qt, shape=exp(surf_val=0.016, lambda_val=1500, z_ml=0)
-    )
-    atmo += AtmosphericProfile(
+    ))
+    atmo.add(AtmosphericProfile(
         variable=wa,
         shape=expsinw(surf_val=4.0e-3, amp=0, H=2500, Hp=5300),
-    )
-    atmo += InterpolatedProfile(
+    ))
+    atmo.add(InterpolatedProfile(
         variable=tke,
         z=[0, 4000, 5000],
         points=[1, 1e-8, 1e-8],
-    )
+    ))
 
     sim += atmo
     lsm = LSMModule(

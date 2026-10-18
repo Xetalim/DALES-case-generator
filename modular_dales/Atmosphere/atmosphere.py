@@ -1,12 +1,11 @@
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
-from typing import Optional
 
 import numpy as np
 import xarray as xr
 
-from modular_dales.Atmosphere.shapes import ShapeFunction
+from modular_dales.Atmosphere.shapes import ShapeFunction, ShapeSpec
 from modular_dales.IO_helpers import AtmosphereProfileWriter
 from modular_dales.modular.forcing import (
     ForcingSet,
@@ -88,7 +87,7 @@ class AtmosphericProfile(Profile):
     every parameter linearly interpolated in time.
     """
 
-    shape: ShapeFunction
+    shape: ShapeSpec
     """Shape type (lin, exp, linmlsurf, expsinw, etc.)"""
 
     def _evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
@@ -278,7 +277,6 @@ class AtmosphereModule(simulation_module):
             of the initial state. No state-to-nudging fallback is applied.
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     profiles: list[TimedAtmosphereProfile] = field(default_factory=list)
     nudging_profiles: list[TimedAtmosphereProfile] = field(default_factory=list)
     profile_writer: AtmosphereProfileWriter = field(

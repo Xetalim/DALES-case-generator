@@ -1,7 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional
 
-from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -11,7 +9,6 @@ from modular_dales.MODULE_REGISTRY import register_module
 class BulkMicrophysicsSettingsModule(simulation_module):
     """Configure bulk microphysics and required tracer count."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     imicro: int = field(
         default=2,
         metadata={"nml": "NAMMICROPHYSICS", "key": "imicro", "required": True},
@@ -47,7 +44,6 @@ class BulkMicrophysicsSettingsModule(simulation_module):
 class TracerSettingsModule(simulation_module):
     """Configure passive/active tracer count in RUN."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     nsv: int = field(
         default=0,
         metadata={"nml": "RUN", "key": "nsv", "required": True},

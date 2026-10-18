@@ -44,14 +44,14 @@ def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
     )
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=2.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=5e-3))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.008, ddz=0.0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += InterpolatedProfile(
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=2.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=5e-3)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.008, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(InterpolatedProfile(
         variable=tke, z=[0, 1000, 3000], points=[0.2, 0.02, 0.01]
-    )
+    ))
     sim += atmo
 
     sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=120)

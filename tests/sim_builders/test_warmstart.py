@@ -45,14 +45,14 @@ def build_warmstart_base_sim(
     )
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3.0, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += InterpolatedProfile(
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3.0, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(InterpolatedProfile(
         variable=tke, z=[0, 4000, 5000], points=[1.0, 1e-8, 1e-8]
-    )
+    ))
     sim += atmo
 
     sim += ConstantSurfaceTemperatureModule(

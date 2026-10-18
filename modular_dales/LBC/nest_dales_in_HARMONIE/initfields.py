@@ -1,7 +1,7 @@
 # Interpolate initial field to DALES grid
 # Creates initfields.inp.xxx.nc
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -91,7 +91,7 @@ def initial_fields(
     initfields = initfields.assign_attrs(
         {
             # "title": "initfields.inp.XXX.nc",
-            "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
+            "history": f"Created on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')} UTC",
             "author": input_json.author,
             "time0": input_json.time0,
         }

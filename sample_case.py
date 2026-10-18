@@ -36,15 +36,9 @@ from modular_dales import (
 from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D, LS2DAtmosphereModule
 from modular_dales.Configuration import NetCDFStatisticsSyncModule
 from modular_dales.Configuration.output_modules import (
-    CapeModule,
     CheckSimulationModule,
     ColumnStatisticsOutputModule,
-    CrossSectionOutputModule,
-    FielddumpModule,
-    LSMCrossModule,
-    RadfieldModule,
     SamplingModule,
-    StatsModule,
     TimestatModule,
     VirtualMeasurementOutputModule,
 )
@@ -52,7 +46,6 @@ from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.logging_wrapper import setup_logging
 from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.modular.time_dependent import TimedependentModule
-from modular_dales.Radiation.radiation import RadiationModule
 from modular_dales.Surface.LSM.LSM import (
     FromBofek,
     FromLCZ,
@@ -65,9 +58,7 @@ from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.Surface.LSM.SLuRB.slurb import (
-    SLURBModule,
-)
+from modular_dales.Surface.LSM.SLuRB.slurb import SLURBModule
 from modular_dales.vars import *
 
 setup_logging("logging.yaml")
@@ -75,37 +66,37 @@ logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 x0, y0 = 136173, 455912  # center of the domain in RD coordinates
-_GRID64_SUPER = dict(
-    itot=64,
-    jtot=64,
-    kmax=96,
-    xsize=6400.0 * 1.5,
-    ysize=6400.0 * 1.5,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=x0 - ((6400.0 * 1.5) / 2.0),
-    y0=y0 - ((6400.0 * 1.5) / 2.0),
-    proj4="EPSG:28992",
-    alpha=1.02,
-    dz0=20.0,
-)
+_GRID64_SUPER = {
+    "itot": 64,
+    "jtot": 64,
+    "kmax": 96,
+    "xsize": 6400.0 * 1.5,
+    "ysize": 6400.0 * 1.5,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": x0 - ((6400.0 * 1.5) / 2.0),
+    "y0": y0 - ((6400.0 * 1.5) / 2.0),
+    "proj4": "EPSG:28992",
+    "alpha": 1.02,
+    "dz0": 20.0,
+}
 
-_GRID64_MID = dict(
-    itot=64,
-    jtot=64,
-    kmax=48,
-    xsize=1600.0 * 1.5,
-    ysize=1600.0 * 1.5,
-    kmax_soil=4,
-    xlat=52.25,
-    xlon=5.45,
-    x0=x0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
-    y0=y0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
-    proj4="EPSG:28992",
-    alpha=1,
-    dz0=10.0,
-)
+_GRID64_MID = {
+    "itot": 64,
+    "jtot": 64,
+    "kmax": 48,
+    "xsize": 1600.0 * 1.5,
+    "ysize": 1600.0 * 1.5,
+    "kmax_soil": 4,
+    "xlat": 52.25,
+    "xlon": 5.45,
+    "x0": x0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
+    "y0": y0 - ((6400.0 * 1.5) / 2.0) + (2400.0 * 1.5),
+    "proj4": "EPSG:28992",
+    "alpha": 1,
+    "dz0": 10.0,
+}
 
 
 def _deep_update(target: dict[str, Any], patch: dict[str, Any]) -> None:
@@ -152,7 +143,7 @@ def _load_nml_overrides(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
 
 
 def _may_start_end(start_day: int) -> tuple[datetime.datetime, datetime.datetime]:
-    start = datetime.datetime(2026, 5, start_day, hour=12)
+    start = datetime.datetime(2026, 5, start_day, hour=12, tzinfo=datetime.UTC)
     end = start + datetime.timedelta(hours=24)
     return start, end
 
@@ -354,7 +345,7 @@ if __name__ == "__main__":
         )
         sim += atmo_ls2d
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0))
+    atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0)))
     sim += atmo
 
     sim += TimeModule(

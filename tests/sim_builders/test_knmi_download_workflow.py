@@ -18,6 +18,7 @@ from modular_dales import (
     dales_simulation,
     do_openboundary,
 )
+from modular_dales.Atmosphere import lin
 from modular_dales.LBC.openbc import Nest_in_KNMI
 from modular_dales.vars import qt, thetal, tke, ua, va, wa
 from tests.generic_testers import run_simulation_and_check_job
@@ -41,7 +42,9 @@ def _previous_day_forecast_datetime() -> dt.datetime:
 
     now_utc = dt.datetime.now(dt.UTC)
     prev_day = (now_utc - dt.timedelta(days=1)).date()
-    return dt.datetime(prev_day.year, prev_day.month, prev_day.day, 0, 0, 0)
+    return dt.datetime(
+        prev_day.year, prev_day.month, prev_day.day, 0, 0, 0, tzinfo=dt.UTC
+    )
 
 
 def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
@@ -81,15 +84,17 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
     )
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3.0, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.01, ddz=0.0))
-    atmo += InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3.0, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.01, ddz=0.0)))
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
     )
     sim += atmo
 

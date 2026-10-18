@@ -1,17 +1,15 @@
 """Additional non-output settings modules for DALES namelist configuration."""
 
 from dataclasses import dataclass, field
-from typing import Optional
 
-from modular_dales.Configuration.output_modules import _HorizontalPointOutputMixin
-from modular_dales.modular.dales_simulation import dales_simulation
+from modular_dales.Configuration.output_modules import prepare_point_indices
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
 
 @register_module
 @dataclass
-class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
+class SprayingModule(simulation_module):
     """Settings module for sea-spray and water-spray source terms.
 
     Supports both index-based and coordinate-based source placement.
@@ -20,8 +18,6 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
     configured i_glob_spray/j_glob_spray/k_glob_spray indices are used.
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    allow_idx_list: bool = False
     x_idx: int | None = field(
         default=None,
         metadata={
@@ -130,7 +126,17 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
         return None
 
     def prepare_calculation(self):
-        self._prepare_point_indices("SprayingModule")
+        self.x_idx, self.y_idx, self.z_idx = prepare_point_indices(
+            "SprayingModule",
+            self.grid,
+            allow_idx_list=False,
+            x_idx=self.x_idx,
+            y_idx=self.y_idx,
+            z_idx=self.z_idx,
+            x=self.x,
+            y=self.y,
+            z=self.z,
+        )
 
     def check_settings(self):
         return None
@@ -144,7 +150,6 @@ class SprayingModule(_HorizontalPointOutputMixin, simulation_module):
 class LateralSpongeModule(simulation_module):
     """Settings module for lateral sponge damping configuration."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     llateral_sponge: bool = field(
         default=False,
         metadata={
@@ -183,8 +188,6 @@ class LateralSpongeModule(simulation_module):
 @dataclass
 class GeneralPhysicsModule(simulation_module):
     """Settings module combining thermodynamics and subgrid controls."""
-
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
 
     lmoist: bool | None = field(
         default=None,

@@ -20,7 +20,6 @@ class NestingTopology(simulation_module):
         sim: Parent simulation instance
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     subnest_subgrid: Optional["GridDalesOpenBC"] = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )

@@ -82,11 +82,11 @@ class harmoniePrepper:
         self.z = None
         self.z_int = None
         self.exnrs = None
-        self.exnr = None
-        self.thl = None
+        self.exnr: xr.DataArray | None = None
+        self.thl: xr.DataArray | None = None
         self.backrad_profile = None
-        self.ug = None
-        self.vg = None
+        self.ug: xr.DataArray | None = None
+        self.vg: xr.DataArray | None = None
 
     def load_data(self):
         variables = ["ua", "va", "wa", "ta", "hus", "clw", "ps", "tas", "huss"]
@@ -317,11 +317,11 @@ def get_ref_height_crop(input_json, grid: GridDalesOpenBC, data):
     else:  # Take reference height levels from exnr.inp.xxx
         try:
             exnr = np.loadtxt(input_json.exnr_file, skiprows=1)
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             logger.critical(
                 "No reference height levels found in exnr_file in configuration. This is required as the simulation start is not the same as the HARMONIE start."
             )
-            raise e
+            raise
         z_int = exnr[:, 0]
     return z_int
 
@@ -413,11 +413,11 @@ def calc_base_exner(input_json, grid: GridDalesOpenBC, data, z_int):
         try:
             with open(input_json.exnr_file, "r") as file:
                 line0 = file.readline()
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             logger.critical(
                 "No reference height levels found in exnr_file in configuration. This is required as the simulation start is not the same as the HARMONIE start."
             )
-            raise e
+            raise
         thls_exnr = float(line0.split(",")[1].split("thls = ")[-1])
         ps_exnr = float(line0.split(",")[2].split("ps = ")[-1])
         exnr = np.loadtxt(input_json.exnr_file, skiprows=1)
@@ -480,29 +480,29 @@ def vertical_interp_all(ds, z3d, z_new):
 
 @logwrap
 def interpolate_ref_height(input_json, data, z_int):
-    data_intz = []
-    its = 0
-    new_shape = [data.sizes["time"], len(z_int), data.sizes["y"], data.sizes["x"]]
-    new_coords = {
-        "time": data.coords["time"],
-        "z": z_int,
-        "y": data.coords["y"],
-        "x": data.coords["x"],
-    }
-    new_dims = ["time", "z", "y", "x"]
+    # data_intz = []
+    # its = 0
+    # new_shape = [data.sizes["time"], len(z_int), data.sizes["y"], data.sizes["x"]]
+    # new_coords = {
+    #     "time": data.coords["time"],
+    #     "z": z_int,
+    #     "y": data.coords["y"],
+    #     "x": data.coords["x"],
+    # }
+    # new_dims = ["time", "z", "y", "x"]
     variables = ["ua", "va", "wa", "ta", "p", "hus", "clw"]
-    dic = {
-        "ua": "u",
-        "va": "v",
-        "wa": "wz",
-        "ta": "t",
-        "hus": "q",
-        "clw": "clwc",
-        "ps": "ps",
-        "tas": "2t",
-        "huss": "2sh",
-        "p": "p",
-    }
+    # dic = {
+    #     "ua": "u",
+    #     "va": "v",
+    #     "wa": "wz",
+    #     "ta": "t",
+    #     "hus": "q",
+    #     "clw": "clwc",
+    #     "ps": "ps",
+    #     "tas": "2t",
+    #     "huss": "2sh",
+    #     "p": "p",
+    # }
     if input_json.synturb is not None:
         variables.append("tke")
     logger.debug("Checking if data is ascending..")

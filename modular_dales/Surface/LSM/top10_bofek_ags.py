@@ -238,7 +238,7 @@ def apply_top10_to_lsm_writer(
     top10_codes_int = np.where(np.isfinite(top10_codes), top10_codes, -9999).astype(int)
 
     # Reset fractions before re-assigning from the raster map.
-    for lu in lsm_writer.lu_types.keys():
+    for lu in lsm_writer.lu_types:
         lsm_writer.lu_types[lu]["lu_frac"][:, :] = 0.0
 
     for lu, lu_info in lsm_writer.lu_types.items():
@@ -256,12 +256,13 @@ def apply_top10_to_lsm_writer(
         lsm_writer.lu_types[lu]["lu_frac"][mask] = 1.0
         lsm_writer.value_dic[f"c_{lu}"][:, :] = lsm_writer.lu_types[lu]["lu_frac"]
 
-    if fill_north_sea:
-        if not hasattr(lsm_writer, "lat") or not hasattr(lsm_writer, "lon"):
-            logger.warning(
-                "Top10 north-sea fill requested, but no 2D lat/lon arrays are available; skipping"
-            )
-            fill_north_sea = False
+    if fill_north_sea and (
+        not hasattr(lsm_writer, "lat") or not hasattr(lsm_writer, "lon")
+    ):
+        logger.warning(
+            "Top10 north-sea fill requested, but no 2D lat/lon arrays are available; skipping"
+        )
+        fill_north_sea = False
 
     if fill_north_sea:
         slope = (50.9 - 51.396) / (1.7 - 3.414)
@@ -269,7 +270,7 @@ def apply_top10_to_lsm_writer(
             (lsm_writer.lat - 51.396) > slope * (lsm_writer.lon - 3.414)
         )
         if "aqu" in lsm_writer.lu_types:
-            for lu in lsm_writer.lu_types.keys():
+            for lu in lsm_writer.lu_types:
                 lsm_writer.lu_types[lu]["lu_frac"][sea_mask] = 0.0
             lsm_writer.lu_types["aqu"]["lu_frac"][sea_mask] = 1.0
             lsm_writer.value_dic["c_aqu"][:, :] = lsm_writer.lu_types["aqu"]["lu_frac"]

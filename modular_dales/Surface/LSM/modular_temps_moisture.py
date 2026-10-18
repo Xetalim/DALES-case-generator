@@ -73,6 +73,7 @@ class UniformSoilMoisture:
     """
 
 
+@register_special_serializing
 @register_module
 @dataclass
 class SoilTemperatureMoistureFromHarmonie:
@@ -105,7 +106,7 @@ class SoilTemperatureMoistureFromHarmonie:
 
     def __post_init__(self):
         if not isinstance(self.harmonie_soil_file, str):
-            raise ValueError(
+            raise TypeError(
                 "harmonie_soil_file must be a string path to the HARMONIE soil file"
             )
         if not self.harmonie_soil_file.endswith(".nc"):
@@ -129,7 +130,7 @@ class SoilTemperatureMoistureFromHarmonie:
 
         # Crop data to time and spatial range, using harmonie spatial resolution or filter as buffer
         dx = ds_soil["x"][1] - ds_soil["x"][0]
-        dy = ds_soil["y"][1] - ds_soil["y"][0]
+        # dy = ds_soil["y"][1] - ds_soil["y"][0]
 
         buffer = dx
         # Merge into xarray dataset
@@ -183,3 +184,20 @@ class SoilTemperatureMoistureFromHarmonie:
         if self.data is None:
             self.get_soil_temp_moisture_arrays(grid, dz_soil)
         return self.data.t_soil.values
+
+
+SkinTempSpec = (
+    UniformSkinTemperature
+    | VaryingSkinTemperature
+    | SoilTemperatureMoistureFromHarmonie
+)
+
+SoilTempSpec = (
+    UniformSoilTemperature
+    | VaryingSoilTemperature
+    | SoilTemperatureMoistureFromHarmonie
+)
+
+SoilMoistureSpec = (
+    UniformSoilMoisture | VaryingSoilMoisture | SoilTemperatureMoistureFromHarmonie
+)

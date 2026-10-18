@@ -139,7 +139,7 @@ def get_reproject(
         ds.write(dst)
 
 
-def fix_lambert_offsets(ds):
+def fix_lambert_offsets(ds: xr.Dataset) -> xr.Dataset:
     """Fix Lambert false_easting/false_northing by shifting x/y coordinates.
 
     With ``decode_coords='all'`` xarray may change how CF grid mapping

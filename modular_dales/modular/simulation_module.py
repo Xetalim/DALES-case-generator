@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import fields, is_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Union
 
 from modular_dales.logging_wrapper import logwrap
@@ -44,13 +44,16 @@ def set_nml_section(
     nml_docs[section][key] = f"{value} (Set by {nml_module_setter} module)"
 
 
+@dataclass(init=False, repr=False, eq=False)
 class simulation_module(ABC):
     """Base class for DALES simulation modules."""
+
+    sim: "dales_simulation | None" = field(default=None, repr=False, kw_only=True)
 
     forcing_priority: ClassVar[int] = USER_FORCING_PRIORITY
     """Priority of this module's forcings when several modules provide the same variable."""
 
-    def __init__(self, sim: "dales_simulation" = None):
+    def __init__(self, sim: "dales_simulation | None" = None):
         """Initialize module with reference to parent simulation.
 
         Args:
@@ -65,6 +68,9 @@ class simulation_module(ABC):
         self._provided_forcings: ForcingSet | None = None
         self.check_settings_done = False
         self.write_files_done = False
+
+    def __post_init__(self):
+        simulation_module.__init__(self, self.sim)
 
     def apply_namelist_from_fields(self) -> None:
         """Apply dataclass field values to the namelist using field metadata.

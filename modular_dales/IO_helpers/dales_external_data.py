@@ -51,8 +51,7 @@ def _run_git(args: list[str], cwd: pathlib.Path) -> None:
             ["git", *args],
             cwd=cwd,
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
     except subprocess.CalledProcessError as exc:
@@ -67,8 +66,7 @@ def _run_git_capture(args: list[str], cwd: pathlib.Path) -> str:
             ["git", *args],
             cwd=cwd,
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
         return result.stdout.strip()
@@ -83,8 +81,7 @@ def _git_ref_exists(cwd: pathlib.Path, ref: str) -> bool:
         ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
         cwd=cwd,
         check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
     return result.returncode == 0

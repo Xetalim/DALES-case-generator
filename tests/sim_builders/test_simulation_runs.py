@@ -78,38 +78,38 @@ def test_triple_nested_simulation_setup(machine_conf):
         sim += DefaultNamelistModule()
 
         atmo = AtmosphereModule()
-        atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=0))
-        atmo += AtmosphericProfile(variable=ug, shape=lin(surf_val=3, ddz=0))
-        atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=3, ddz=0))
-        atmo += AtmosphericProfile(variable=vg, shape=lin(surf_val=3, ddz=0))
-        atmo += AtmosphericProfile(variable=ua_nudge, shape=lin(surf_val=3, ddz=0))
-        atmo += AtmosphericProfile(variable=va_nudge, shape=lin(surf_val=3, ddz=0))
+        atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=ug, shape=lin(surf_val=3, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=3, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=vg, shape=lin(surf_val=3, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=ua_nudge, shape=lin(surf_val=3, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=va_nudge, shape=lin(surf_val=3, ddz=0)))
         # atmo += AtmosphericProfile(
         #     variable=thetal, shape=lin(surf_val=293.15,ddz=1e-2)
         # )
-        atmo += InterpolatedProfile(
+        atmo.add(InterpolatedProfile(
             variable=thetal,
             z=[0, 400, 410, 1600],
             points=[293.15, 293.15, 298.15, 301.15],
-        )
-        atmo += InterpolatedProfile(
+        ))
+        atmo.add(InterpolatedProfile(
             variable=thl_nudge,
             z=[0, 400, 410, 1600],
             points=[293.15, 293.15, 298.15, 301.15],
-        )
-        atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0018, ddz=0))
-        atmo += AtmosphericProfile(variable=qt_nudge, shape=lin(surf_val=0.0018, ddz=0))
-        atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
-        atmo += AtmosphericProfile(variable=wa_nudge, shape=lin(surf_val=0, ddz=0))
-        atmo += InterpolatedProfile(
+        ))
+        atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0018, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=qt_nudge, shape=lin(surf_val=0.0018, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0)))
+        atmo.add(AtmosphericProfile(variable=wa_nudge, shape=lin(surf_val=0, ddz=0)))
+        atmo.add(InterpolatedProfile(
             variable=tke,
             z=[0, 4000, 5000],
             points=[1, 1e-8, 1e-8],
-        )
-        atmo += AtmosphericProfile(
+        ))
+        atmo.add(AtmosphericProfile(
             variable=w,
             shape=lin(surf_val=0.0, ddz=0.0),
-        )
+        ))
         sim += atmo
 
         sim += TimeModule(

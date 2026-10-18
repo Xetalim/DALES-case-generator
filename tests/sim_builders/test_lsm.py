@@ -14,9 +14,7 @@ from modular_dales import (
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import (
-    InterpolatedProfile,
-)
+from modular_dales.Atmosphere import InterpolatedProfile, lin
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Emission.emission import EmissionModule, EmissionTracer
 from modular_dales.Geometry.geometry_modification import AllGeometry
@@ -59,15 +57,17 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
-    atmo += InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
     )
 
     sim += atmo
@@ -145,13 +145,13 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
 
     # Base state needed by open boundaries.
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=2.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=w, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.004, ddz=0.0))
-    atmo += AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0))
-    atmo += AtmosphericProfile(variable=co2_var, shape=lin(surf_val=420.0, ddz=0.0))
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=2.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=w, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.004, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=co2_var, shape=lin(surf_val=420.0, ddz=0.0)))
     sim += atmo
 
     lsm = LSMModule(

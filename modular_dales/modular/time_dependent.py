@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import xarray as xr
@@ -16,9 +15,6 @@ from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.vars import get_var_by_name
 
 from .simulation_module import simulation_module
-
-if TYPE_CHECKING:
-    from . import dales_simulation
 
 
 @register_module
@@ -38,7 +34,6 @@ class TimedependentModule(simulation_module):
     Time 0 and the end of the run are always part of the axis.
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     timesteps: list[float] = field(default_factory=list)
     timedep: xr.Dataset = field(
         default_factory=xr.Dataset,

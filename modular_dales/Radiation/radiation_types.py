@@ -18,7 +18,6 @@ from modular_dales.Surface.surface import SurfaceModule
 class _RadiationTypedBase(simulation_module):
     """Shared behavior for typed radiation modules."""
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     timerad: int = field(
         default=60,
         metadata={
@@ -73,11 +72,13 @@ class _RadiationTypedBase(simulation_module):
         return None
 
     def write_files(self):
-        if self.iradiation != 0 and self.surface_module is not None:
-            if getattr(self.surface_module, "albedoav", None) is None:
-                raise ValueError(
-                    f"{self.module_name}: albedoav must be set in surface config for radiation to work properly"
-                )
+        if (
+            self.iradiation != 0
+            and getattr(self.surface_module, "albedoav", None) is None
+        ):
+            raise ValueError(
+                f"{self.module_name}: albedoav must be set in surface config for radiation to work properly"
+            )
         if self.iradiation != 0 and self.surface_module is None:
             raise ValueError(
                 f"{self.module_name}: albedoav must be set in surface config for radiation to work properly"

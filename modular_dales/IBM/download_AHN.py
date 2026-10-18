@@ -116,16 +116,16 @@ def get_cached_AHN(cache_dir, grid: GridDales):
     mosaic[mosaic == datasets[0].nodata] = 0  # Convert nodata to NaN
     # Convert masked nodata to NaN
 
-    profile = dict(
-        driver="GTiff",
-        height=mosaic.shape[1],
-        width=mosaic.shape[2],
-        count=mosaic.shape[0],  # number of bands
-        dtype=mosaic.dtype,
-        crs=dst_crs,
-        transform=out_transform,
-        compress="deflate",  # optional compression
-    )
+    profile = {
+        "driver": "GTiff",
+        "height": mosaic.shape[1],
+        "width": mosaic.shape[2],
+        "count": mosaic.shape[0],  # number of bands
+        "dtype": mosaic.dtype,
+        "crs": dst_crs,
+        "transform": out_transform,
+        "compress": "deflate",  # optional compression
+    }
     with rasterio.open(cache_path, "w", **profile) as dst:
         dst.write(mosaic)
 

@@ -1,7 +1,6 @@
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field, fields
-from typing import Optional
 
 import numpy as np
 from pyproj import CRS
@@ -35,39 +34,38 @@ class GridDales(simulation_module):
         sim: Parent dales_simulation instance
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     itot: int = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "itot", "required": True},
     )
     jtot: int = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "jtot", "required": True},
     )
     kmax: int = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "kmax", "required": True},
     )
     xsize: float = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "xsize", "required": True},
     )
     ysize: float = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "ysize", "required": True},
     )
     kmax_soil: int = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={
@@ -78,19 +76,19 @@ class GridDales(simulation_module):
         },
     )
     xlat: float = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "xlat", "required": False},
     )
     xlon: float = field(
-        default=None,
+        # default=None,
         init=True,
         repr=True,
         metadata={"serialize": True, "nml": "DOMAIN", "key": "xlon", "required": False},
     )
-    x0: float | None = field(
-        default=None,
+    x0: float = field(
+        default=0,
         init=True,
         repr=True,
         metadata={
@@ -100,8 +98,8 @@ class GridDales(simulation_module):
             "required": False,
         },  # TODO add x0 if merged
     )
-    y0: float | None = field(
-        default=None,
+    y0: float = field(
+        default=0,
         init=True,
         repr=True,
         metadata={

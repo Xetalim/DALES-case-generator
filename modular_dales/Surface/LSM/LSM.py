@@ -1,7 +1,7 @@
 import logging
 import pathlib
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Self
 
 import numpy as np
 import xarray as xr
@@ -15,7 +15,10 @@ from modular_dales.MODULE_REGISTRY import register_module
 from modular_dales.Surface.LSM import plot_lsm
 from modular_dales.Surface.LSM.LSM_output_dales import LSM_output_dales, LsmModifier
 from modular_dales.Surface.LSM.modular_temps_moisture import (
+    SkinTempSpec,
+    SoilMoistureSpec,
     SoilTemperatureMoistureFromHarmonie,
+    SoilTempSpec,
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
@@ -76,12 +79,12 @@ class LandUseModifications:
         default_factory=list, metadata={"serialize": True}
     )
 
-    def __add__(self, modification: LandUseModification) -> "LandUseModifications":
+    def __add__(self, modification: LandUseModification) -> Self:
         """Add a modification."""
         self.modifications.append(modification)
         return self
 
-    def __iadd__(self, modification: LandUseModification) -> "LandUseModifications":
+    def __iadd__(self, modification: LandUseModification) -> Self:
         """In-place addition."""
         return self.__add__(modification)
 
@@ -250,7 +253,7 @@ class LSMModule(BaseLSMModule):
         repr=False,
         metadata={"serialize": True},
     )
-    skin_temperature: UniformSkinTemperature | VaryingSkinTemperature | SoilTemperatureMoistureFromHarmonie | None = field(
+    skin_temperature: SkinTempSpec | None = field(
         default=None,
         init=True,
         repr=True,
@@ -262,13 +265,13 @@ class LSMModule(BaseLSMModule):
         repr=True,
         metadata={"serialize": True},
     )
-    soil_temperature: UniformSoilTemperature | VaryingSoilTemperature | SoilTemperatureMoistureFromHarmonie | None = field(
+    soil_temperature: SoilTempSpec | None = field(
         default=None,
         init=True,
         repr=True,
         metadata={"serialize": True},
     )
-    soil_moisture: UniformSoilMoisture | VaryingSoilMoisture | SoilTemperatureMoistureFromHarmonie | None = field(
+    soil_moisture: SoilMoistureSpec | None = field(
         default=None,
         init=True,
         repr=True,
@@ -285,7 +288,7 @@ class LSMModule(BaseLSMModule):
         super().__post_init__()
         self.module_name = "LSMModule"
 
-    def __add__(self, obj) -> "LSMModule":
+    def __add__(self, obj) -> Self:
         """Add configurations to LSM module.
 
         Args:
@@ -339,7 +342,7 @@ class LSMModule(BaseLSMModule):
             )
         return self
 
-    def __iadd__(self, modification) -> "LSMModule":
+    def __iadd__(self, modification) -> Self:
         """In-place addition of modification."""
         return self.__add__(modification)
 
@@ -614,7 +617,7 @@ class LSMModule(BaseLSMModule):
                 self.soil_moisture.get_soil_moisture_array(self.grid, self.dz_soil)
             )
         else:
-            raise ValueError(
+            raise TypeError(
                 "Invalid soil moisture configuration. Must be UniformSoilMoisture, VaryingSoilMoisture, or SoilTemperatureMoistureFromHarmonie."
             )
 
@@ -639,7 +642,7 @@ class LSMModule(BaseLSMModule):
                 )
             )
         else:
-            raise ValueError(
+            raise TypeError(
                 "Invalid soil temperature configuration. Must be UniformSoilTemperature, VaryingSoilTemperature, or SoilTemperatureMoistureFromHarmonie."
             )
 
@@ -657,7 +660,7 @@ class LSMModule(BaseLSMModule):
                 lu_type="all",
             )
         else:
-            raise ValueError(
+            raise TypeError(
                 "Invalid skin temperature configuration. Must be UniformSkinTemperature or VaryingSkinTemperature."
             )
 

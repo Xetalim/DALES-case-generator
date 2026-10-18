@@ -37,15 +37,17 @@ def _build_basic_sim(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
-    atmo += InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
     )
     sim += ConstantSurfaceTemperatureModule(
         thls=293.15, z0mav=0.0001, z0hav=0.0001, ps=100000, albedoav=0.22

@@ -1,99 +1,136 @@
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from numbers import Number
-from typing import Optional
+from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
+from numpy.typing import ArrayLike
 
-from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
+if TYPE_CHECKING:
+    from modular_dales.Geometry.GridDales import GridDales
+
 
 def _normalize_horizontal_points(
-    values: Number | list[Number] | None,
-) -> list[Number] | None:
+    values: float | Sequence[float] | None,
+) -> list[float] | None:
     if values is None:
         return None
-    if isinstance(values, Number):
+    if isinstance(values, (int, float, np.number)):
         return [values]
-    return values
+    return list(values)
 
 
-def _resolve_nearest_indices(grid_axis, coordinates, axis_name: str) -> list[int]:
-    if coordinates is None:
-        return None
+def _resolve_nearest_indices(
+    grid_axis: ArrayLike | None, coordinates: Sequence[float], axis_name: str
+) -> list[int]:
     if grid_axis is None:
         raise RuntimeError(
             f"Cannot resolve {axis_name} coordinates without an attached GridDales module"
         )
-    return [int(np.abs(grid_axis - coord).argmin()) + 1 for coord in coordinates]
+    axis = np.asarray(grid_axis)
+    return [int(np.abs(axis - coord).argmin()) + 1 for coord in coordinates]
 
 
-class _HorizontalPointOutputMixin:
-    allow_idx_list = False
+@overload
+def prepare_point_indices(
+    module_label: str,
+    grid: "GridDales | None",
+    *,
+    allow_idx_list: Literal[True] = True,
+    x_idx: int | Sequence[int] | None = None,
+    y_idx: int | Sequence[int] | None = None,
+    x: float | Sequence[float] | None = None,
+    y: float | Sequence[float] | None = None,
+    z_idx: int | Sequence[int] | None = None,
+    z: float | Sequence[float] | None = None,
+) -> tuple[list[int], list[int], list[int] | None]: ...
 
-    def _prepare_point_indices(self, module_label: str) -> None:
-        x_idx = _normalize_horizontal_points(self.x_idx)
-        y_idx = _normalize_horizontal_points(self.y_idx)
-        z_idx = _normalize_horizontal_points(getattr(self, "z_idx", None))
-        x = _normalize_horizontal_points(self.x)
-        y = _normalize_horizontal_points(self.y)
-        z = _normalize_horizontal_points(getattr(self, "z", None))
 
-        if x_idx is None:
-            if x is None:
-                raise ValueError(f"{module_label} requires x_idx or real x coordinates")
-            x_idx = _resolve_nearest_indices(self.grid.xt, x, "x")
-        else:
-            x_idx = [int(idx) for idx in x_idx]
+@overload
+def prepare_point_indices(
+    module_label: str,
+    grid: "GridDales | None",
+    *,
+    allow_idx_list: Literal[False],
+    x_idx: int | Sequence[int] | None = None,
+    y_idx: int | Sequence[int] | None = None,
+    x: float | Sequence[float] | None = None,
+    y: float | Sequence[float] | None = None,
+    z_idx: int | Sequence[int] | None = None,
+    z: float | Sequence[float] | None = None,
+) -> tuple[int, int, int | None]: ...
 
-        if y_idx is None:
-            if y is None:
-                raise ValueError(f"{module_label} requires y_idx or real y coordinates")
-            y_idx = _resolve_nearest_indices(self.grid.yt, y, "y")
-        else:
-            y_idx = [int(idx) for idx in y_idx]
 
-        if len(x_idx) != len(y_idx):
+@overload
+def prepare_point_indices(
+    module_label: str,
+    grid: "GridDales | None",
+    *,
+    allow_idx_list: bool,
+    x_idx: int | Sequence[int] | None = None,
+    y_idx: int | Sequence[int] | None = None,
+    x: float | Sequence[float] | None = None,
+    y: float | Sequence[float] | None = None,
+    z_idx: int | Sequence[int] | None = None,
+    z: float | Sequence[float] | None = None,
+) -> tuple[list[int], list[int], list[int] | None] | tuple[int, int, int | None]: ...
+
+
+def prepare_point_indices(
+    module_label: str,
+    grid: "GridDales | None",
+    *,
+    allow_idx_list: bool = True,
+    x_idx: int | Sequence[int] | None = None,
+    y_idx: int | Sequence[int] | None = None,
+    x: float | Sequence[float] | None = None,
+    y: float | Sequence[float] | None = None,
+    z_idx: int | Sequence[int] | None = None,
+    z: float | Sequence[float] | None = None,
+) -> tuple[list[int], list[int], list[int] | None] | tuple[int, int, int | None]:
+    """Resolve one-based indices as lists or first-point scalars, with optional z."""
+
+    def resolve_axis(
+        indices: int | Sequence[int] | None,
+        coordinates: float | Sequence[float] | None,
+        grid_axis: ArrayLike | None,
+        axis_name: str,
+    ) -> list[int]:
+        normalized_indices = _normalize_horizontal_points(indices)
+        if normalized_indices is not None:
+            return [int(index) for index in normalized_indices]
+        normalized_coordinates = _normalize_horizontal_points(coordinates)
+        if normalized_coordinates is None:
             raise ValueError(
-                f"{module_label} requires x and y point definitions with matching lengths"
+                f"{module_label} requires {axis_name}_idx or real {axis_name} coordinates"
             )
-        if len(x_idx) == 0:
-            raise ValueError(f"{module_label} requires at least one sampling point")
+        return _resolve_nearest_indices(grid_axis, normalized_coordinates, axis_name)
 
-        resolved_npoints = len(x_idx)
-        if not self.allow_idx_list:
-            self.x_idx = x_idx[0]
-            self.y_idx = y_idx[0]
-        else:
-            self.x_idx = x_idx
-            self.y_idx = y_idx
-        if hasattr(self, "npoints"):
-            self.npoints = resolved_npoints
+    resolved_x = resolve_axis(x_idx, x, grid.xt if grid is not None else None, "x")
+    resolved_y = resolve_axis(y_idx, y, grid.yt if grid is not None else None, "y")
+    if len(resolved_x) != len(resolved_y):
+        raise ValueError(
+            f"{module_label} requires x and y point definitions with matching lengths"
+        )
+    if not resolved_x:
+        raise ValueError(f"{module_label} requires at least one sampling point")
 
-        if z_idx is not None or z is not None:
-            z_idx = _normalize_horizontal_points(z_idx)
-            z = _normalize_horizontal_points(z)
-
-            if z_idx is None:
-                if z is None:
-                    raise ValueError(
-                        f"{module_label} requires z_idx or real z coordinates"
-                    )
-                z_idx = _resolve_nearest_indices(self.grid.zt, z, "z")
-            else:
-                z_idx = [int(idx) for idx in z_idx]
-
-            if len(z_idx) != len(x_idx):
-                raise ValueError(
-                    f"{module_label} requires z point definitions with matching lengths to x/y"
-                )
-
-            self.z_idx = z_idx
-        if not self.allow_idx_list:
-            self.z_idx = z_idx[0]
-        else:
-            self.z_idx = z_idx
+    resolved_z = None
+    if z_idx is not None or z is not None:
+        resolved_z = resolve_axis(z_idx, z, grid.zt if grid is not None else None, "z")
+        if len(resolved_z) != len(resolved_x):
+            raise ValueError(
+                f"{module_label} requires z point definitions with matching lengths to x/y"
+            )
+    if allow_idx_list:
+        return resolved_x, resolved_y, resolved_z
+    return (
+        resolved_x[0],
+        resolved_y[0],
+        resolved_z[0] if resolved_z is not None else None,
+    )
 
 
 @register_module
@@ -110,7 +147,6 @@ class EasyOutputModule(simulation_module):
 
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     output_interval: int | list[int] | None = field(
         default=60,
         metadata={
@@ -197,7 +233,6 @@ class EasyOutputModule(simulation_module):
 class CapeModule(simulation_module):
     """Dedicated output module for NAMCAPE statistics."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     enabled: bool = field(
         default=False,
         metadata={"nml": "namcape", "key": "lcape", "required": True},
@@ -228,8 +263,6 @@ class CapeModule(simulation_module):
 @dataclass
 class LSMCrossModule(simulation_module):
     """Dedicated output module for NAMLSMCROSSSECTION statistics."""
-
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
 
     enabled: bool = field(
         default=False,
@@ -262,8 +295,6 @@ class LSMCrossModule(simulation_module):
 class TimestatModule(simulation_module):
     """Dedicated output module for NAMTIMESTAT statistics."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
-
     enabled: bool = field(
         default=False,
         metadata={"nml": "namtimestat", "key": "ltimestat", "required": True},
@@ -294,8 +325,6 @@ class TimestatModule(simulation_module):
 @dataclass
 class StatsModule(simulation_module):
     """Combined profile-statistics module for GENSTAT, BUDGET, and RADSTAT."""
-
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
 
     enabled: bool = field(
         default=False,
@@ -348,8 +377,6 @@ class StatsModule(simulation_module):
 class RadfieldModule(simulation_module):
     """Dedicated output module for NAMRADFIELD sampling."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
-
     enabled: bool = field(
         default=False,
         metadata={"nml": "namradfield", "key": "lradfield", "required": True},
@@ -388,8 +415,6 @@ class CrossSectionOutputModule(simulation_module):
     This module controls atmospheric cross-section output interval, selected
     planes, and their corresponding indices.
     """
-
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
 
     cross_enabled: bool = field(
         default=True,
@@ -566,7 +591,6 @@ class CheckSimulationModule(simulation_module):
             Default is False. Mapped to NAMCHECKSIM:lchecktend in Fortran namelist.
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     check_interval: int | None = field(
         default=60,
         metadata={
@@ -633,7 +657,6 @@ class SamplingModule(simulation_module):
 
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     output_interval: int | list[int] | None = field(
         default=60,
         metadata={
@@ -712,8 +735,6 @@ class SamplingModule(simulation_module):
 @dataclass
 class FielddumpModule(simulation_module):
     """Dedicated output module for NAMFIELDDUMP with individual variable switches."""
-
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
 
     dtav: int = field(
         default=60,
@@ -965,7 +986,6 @@ class FielddumpModule(simulation_module):
 class NetCDFStatisticsSyncModule(simulation_module):
     """Configure NAMNETCDFSTATS synchronization settings."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     lsync: bool = field(
         default=True,
         metadata={"nml": "NAMNETCDFSTATS", "key": "lsync", "required": True},
@@ -993,7 +1013,6 @@ class NetCDFStatisticsSyncModule(simulation_module):
 class BulkMicrophysicsStatisticsOutputModule(simulation_module):
     """Configure NAMBULKMICROSTAT output."""
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     enabled: bool = field(
         default=True,
         metadata={"nml": "NAMBULKMICROSTAT", "key": "lmicrostat", "required": True},
@@ -1026,15 +1045,13 @@ class BulkMicrophysicsStatisticsOutputModule(simulation_module):
 
 @register_module
 @dataclass
-class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_module):
+class VirtualMeasurementOutputModule(simulation_module):
     """Configure NAMVIRTUALMEASUREMENT point output.
 
     Points can be specified directly via DALES indices or by providing real
     horizontal coordinates, which are snapped to the nearest cell center.
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    allow_idx_list: bool = True
     enabled: bool = field(
         default=True,
         metadata={
@@ -1084,7 +1101,16 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
         self.module_name = "VirtualMeasurementOutputModule"
 
     def prepare_calculation(self):
-        self._prepare_point_indices(self.module_name)
+        self.x_idx, self.y_idx, _ = prepare_point_indices(
+            "VirtualMeasurementOutputModule",
+            self.grid,
+            allow_idx_list=True,
+            x_idx=self.x_idx,
+            y_idx=self.y_idx,
+            x=self.x,
+            y=self.y,
+        )
+        self.npoints = len(self.x_idx)
 
     def check_settings(self):
         return None
@@ -1095,15 +1121,13 @@ class VirtualMeasurementOutputModule(_HorizontalPointOutputMixin, simulation_mod
 
 @register_module
 @dataclass
-class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_module):
+class ColumnStatisticsOutputModule(simulation_module):
     """Configure NAMCOLSTAT point output.
 
     Points can be specified directly via DALES indices or by providing real
     horizontal coordinates, which are snapped to the nearest cell center.
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
-    allow_idx_list: bool = True
     enabled: bool = field(
         default=True,
         metadata={
@@ -1145,7 +1169,16 @@ class ColumnStatisticsOutputModule(_HorizontalPointOutputMixin, simulation_modul
         self.module_name = "ColumnStatisticsOutputModule"
 
     def prepare_calculation(self):
-        self._prepare_point_indices(self.module_name)
+        self.x_idx, self.y_idx, _ = prepare_point_indices(
+            "ColumnStatisticsOutputModule",
+            self.grid,
+            allow_idx_list=True,
+            x_idx=self.x_idx,
+            y_idx=self.y_idx,
+            x=self.x,
+            y=self.y,
+        )
+        self.npoints = len(self.x_idx)
 
     def check_settings(self):
         return None

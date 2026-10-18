@@ -137,10 +137,7 @@ def load_any_boundary_var(
     interp_coords = {dim: interp_grid_dic[dim] for dim in var_interp_dims}
     assign_coords = {dim: assign_grid_dic[dim] for dim in var_assign_dims}
 
-    if var in interp_kwargs_dic:
-        interp_kwargs = interp_kwargs_dic[var]
-    else:
-        interp_kwargs = None
+    interp_kwargs = interp_kwargs_dic.get(var, None)
 
     if isinstance(isel, bool):
         if isel:
@@ -179,6 +176,8 @@ def load_any_boundary_var(
 
 
 def get_boundary_dict(path, grid: GridDalesOpenBC, indices: "NestingIndices"):
+    if indices.supergrid is None:
+        raise ValueError("Supergrid indices are not provided.")
     return {
         "west": (
             Path(path) / "crossyz.*.*.nc",

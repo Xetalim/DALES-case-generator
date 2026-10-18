@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import traceback
 
 import pytest
 
@@ -59,7 +60,7 @@ def assert_roundtrip_simulation_outputs_identical(
 
         stage = "roundtrip_output_compare"
         assert_dirs_equal(out1, out2)
-    except Exception as exc:
+    except Exception:
         case_name = getattr(sim1, "case_name", "<unavailable>")
         out1_str = str(out1) if out1 is not None else "<unavailable>"
         out2_str = str(out2) if out2 is not None else "<unavailable>"
@@ -68,7 +69,7 @@ def assert_roundtrip_simulation_outputs_identical(
             add_report(
                 f"{case_name} roundtrip failed",
                 {
-                    "crash_message": str(exc),
+                    "crash_message": traceback.format_exc(),
                     "log_messages": "Roundtrip simulation failed; inspect stage and case directories.",
                     "case_dir": out1_str,
                     "comparison_case_dir": out2_str,
@@ -94,7 +95,7 @@ def assert_roundtrip_simulation_outputs_identical(
                     f"case_name={case_name}",
                     f"case_dir={out1_str}",
                     f"comparison_case_dir={out2_str}",
-                    f"error={exc}",
+                    f"error={traceback.format_exc()}",
                 ]
             ),
             pytrace=False,

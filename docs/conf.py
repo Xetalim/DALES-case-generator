@@ -9,7 +9,7 @@ and cross-referencing with external documentation sources.
 import os
 import sys
 from dataclasses import fields, is_dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 # Ensure the project root is on sys.path so `modular_dales` can be imported
 sys.path.insert(0, os.path.abspath(".."))
@@ -18,7 +18,7 @@ from modular_dales.modular.simulation_module import simulation_module
 
 project = "DALES Case Generator"  # pylint: disable=C0103
 author = "Project contributors"  # pylint: disable=C0103
-current_year = datetime.now().year
+current_year = datetime.now(UTC).year
 copyright = f"{current_year}, {author}"  # pylint: disable=W0622,C0103
 
 extensions = [

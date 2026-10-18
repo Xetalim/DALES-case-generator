@@ -67,6 +67,7 @@ import datetime as dt
 import glob
 import logging
 import os
+from datetime import UTC
 from pathlib import Path
 
 import dask
@@ -837,9 +838,7 @@ def _is_grib_source(glob_pattern, use_grib_flag=None) -> bool:
     if matched:
         files = [f for f in matched if os.path.isfile(f)]
         if files:
-            if files[0].endswith((".nc", ".nc4", ".netcdf")):
-                return False
-            return True
+            return not files[0].endswith((".nc", ".nc4", ".netcdf"))
     return False
 
 
@@ -963,7 +962,7 @@ def _open_knmi_grib_dataset(glob_pattern, chunks=None):
                 hour = data_time_int // 100
                 minute = data_time_int % 100
                 base_time = dt.datetime.strptime(data_date_str, "%Y%m%d").replace(
-                    hour=hour, minute=minute
+                    hour=hour, minute=minute, tzinfo=UTC
                 )
             except (ValueError, TypeError):
                 pass

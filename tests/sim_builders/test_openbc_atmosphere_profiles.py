@@ -55,29 +55,41 @@ def _build_openbc_atmo_sim(
     atmo = AtmosphereModule()
 
     # Simple linear profiles for u, v, w, thetal, qt, tke
-    atmo += AtmosphericProfile(
-        variable=ua,
-        shape=lin(surf_val=3.0, ddz=1e-3),
+    atmo.add(
+        AtmosphericProfile(
+            variable=ua,
+            shape=lin(surf_val=3.0, ddz=1e-3),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=va,
-        shape=lin(surf_val=0.0, ddz=0.0),
+    atmo.add(
+        AtmosphericProfile(
+            variable=va,
+            shape=lin(surf_val=0.0, ddz=0.0),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=w,
-        shape=lin(surf_val=0.0, ddz=0.0),
+    atmo.add(
+        AtmosphericProfile(
+            variable=w,
+            shape=lin(surf_val=0.0, ddz=0.0),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=thetal,
-        shape=lin(surf_val=293.15, ddz=1e-2),
+    atmo.add(
+        AtmosphericProfile(
+            variable=thetal,
+            shape=lin(surf_val=293.15, ddz=1e-2),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=qt,
-        shape=lin(surf_val=0.01, ddz=0.0),
+    atmo.add(
+        AtmosphericProfile(
+            variable=qt,
+            shape=lin(surf_val=0.01, ddz=0.0),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=tke,
-        shape=lin(surf_val=0.1, ddz=0.0),
+    atmo.add(
+        AtmosphericProfile(
+            variable=tke,
+            shape=lin(surf_val=0.1, ddz=0.0),
+        )
     )
 
     sim += atmo
@@ -94,11 +106,11 @@ def _build_openbc_atmo_sim(
     # Configure time so Atmosphere profiles have a reference start
     sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600)
 
-    boundary_u = AtmosphericProfile(
+    boundary_u_const = AtmosphericProfile(
         variable=ua,
         shape=lin(surf_val=3.0, ddz=1e-3),
     )
-    boundary_v = AtmosphericProfile(
+    boundary_v_const = AtmosphericProfile(
         variable=va,
         shape=lin(surf_val=0.0, ddz=0),
     )
@@ -119,61 +131,74 @@ def _build_openbc_atmo_sim(
         shape=lin(surf_val=0.1, ddz=0.0),
     )
 
-    if add_timedep:
-        boundary_u = [
-            TimedAtmosphereProfile(
-                time=0.0,
-                profile=AtmosphericProfile(
-                    variable=ua,
-                    shape=lin(surf_val=3.0, ddz=1e-3),
-                ),
+    boundary_u_timedep = [
+        TimedAtmosphereProfile(
+            time=0.0,
+            profile=AtmosphericProfile(
+                variable=ua,
+                shape=lin(surf_val=3.0, ddz=1e-3),
             ),
-            TimedAtmosphereProfile(
-                time=3600.0,
-                profile=AtmosphericProfile(
-                    variable=ua,
-                    shape=lin(surf_val=0.0, ddz=0),
-                ),
+        ),
+        TimedAtmosphereProfile(
+            time=3600.0,
+            profile=AtmosphericProfile(
+                variable=ua,
+                shape=lin(surf_val=0.0, ddz=0),
             ),
-        ]
-        boundary_v = [
-            TimedAtmosphereProfile(
-                time=0.0,
-                profile=AtmosphericProfile(
-                    variable=va,
-                    shape=lin(surf_val=0, ddz=0),
-                ),
+        ),
+    ]
+    boundary_v_timedep = [
+        TimedAtmosphereProfile(
+            time=0.0,
+            profile=AtmosphericProfile(
+                variable=va,
+                shape=lin(surf_val=0, ddz=0),
             ),
-            TimedAtmosphereProfile(
-                time=3600.0,
-                profile=AtmosphericProfile(
-                    variable=va,
-                    shape=lin(surf_val=3.0, ddz=1e-3),
-                ),
+        ),
+        TimedAtmosphereProfile(
+            time=3600.0,
+            profile=AtmosphericProfile(
+                variable=va,
+                shape=lin(surf_val=3.0, ddz=1e-3),
             ),
-        ]
+        ),
+    ]
 
     openbc = do_openboundary(
         time0="2025-01-01T00:00:00",
         start="2025-01-01T00:00:00",
         end="2025-01-01T00:10:00",
         e12=0.1,
-        dxint=grid.xsize / grid.itot,
-        dyint=grid.ysize / grid.jtot,
+        dxint=round(grid.xsize / grid.itot),
+        dyint=round(grid.ysize / grid.jtot),
     )
 
-    openbc += Nest_in_AtmosphereProfiles(
-        u=boundary_u,
-        v=boundary_v,
-        w=boundary_w,
-        thl=boundary_thl,
-        qt=boundary_qt,
-        e120=boundary_e12,
-        noise_boundaries=["south", "west"],
-        noise_std=0.1,
-        noise_seed=42,
-        noise_variables=["u", "v"],
-    )
+    if add_timedep:
+        openbc += Nest_in_AtmosphereProfiles(
+            u=boundary_u_timedep,
+            v=boundary_v_timedep,
+            w=boundary_w,
+            thl=boundary_thl,
+            qt=boundary_qt,
+            e120=boundary_e12,
+            noise_boundaries=["south", "west"],
+            noise_std=0.1,
+            noise_seed=42,
+            noise_variables=["u", "v"],
+        )
+    else:
+        openbc += Nest_in_AtmosphereProfiles(
+            u=boundary_u_const,
+            v=boundary_v_const,
+            w=boundary_w,
+            thl=boundary_thl,
+            qt=boundary_qt,
+            e120=boundary_e12,
+            noise_boundaries=["south", "west"],
+            noise_std=0.1,
+            noise_seed=42,
+            noise_variables=["u", "v"],
+        )
     sim += openbc
 
     sim += EasyOutputModule(

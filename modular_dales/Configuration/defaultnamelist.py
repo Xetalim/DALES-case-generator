@@ -2,9 +2,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
-from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -24,7 +22,6 @@ class DefaultNamelistModule(simulation_module):
         sim: Parent dales_simulation instance
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     iexpnr: int = field(
         default=1,
         init=True,

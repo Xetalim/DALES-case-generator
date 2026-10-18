@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Self
 
 import dask
 import xarray as xr
@@ -11,7 +11,6 @@ from modular_dales.Atmosphere import (
     AtmosphericProfile,
     InterpolatedProfile,
     TimedAtmosphereProfile,
-    profiles_to_forcings,
 )
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales import (
@@ -35,6 +34,7 @@ from modular_dales.modular.forcing import (
 )
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.vars import ProfileVariable
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -235,8 +235,14 @@ class Nest_in_AtmosphereProfiles:
                     raise TypeError(
                         f"Boundary profile '{name}' requires AtmosphericProfile or InterpolatedProfile"
                     )
+                variable = entry.profile.variable
                 required = name
-                if entry.profile.variable.name != required:
+                actual = (
+                    variable.boundary_name
+                    if isinstance(variable, ProfileVariable) and name in expected
+                    else variable.name
+                )
+                if actual != required:
                     raise ValueError(
                         f"Boundary field '{name}' requires variable '{required}', got '{entry.profile.variable.name}'"
                     )
@@ -305,7 +311,6 @@ class Nest_in_AtmosphereProfiles:
 class do_openboundary(simulation_module):
     forcing_priority = EXTERNAL_FORCING_PRIORITY
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     openBCgrid: GridDalesOpenBC = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
@@ -548,7 +553,7 @@ class do_openboundary(simulation_module):
             )
         return self
 
-    def __iadd__(self, modification) -> "do_openboundary":
+    def __iadd__(self, modification) -> Self:
         """In-place addition of modification."""
         return self.__add__(modification)
 

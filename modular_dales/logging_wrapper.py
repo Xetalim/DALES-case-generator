@@ -35,7 +35,7 @@ def logwrap(fn):
             out = fn(*args, **kwargs)
         except Exception as e:
             logger.error("Function %s failed with exception %s: ", fn.__name__, e.args)
-            raise e
+            raise
         if module:
             logger.debug("Exiting %s (module: %s)", fn.__name__, module)
         else:

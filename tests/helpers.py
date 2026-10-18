@@ -59,7 +59,7 @@ def assert_dirs_equal(left: Path, right: Path) -> None:
 
             if left_is_file and right_is_file:
                 if not filecmp.cmp(left_entry, right_entry, shallow=False):
-                    if not left_entry.suffix == ".nc":
+                    if left_entry.suffix != ".nc":
                         differing_files.append(name)
                     else:
                         # we want to make sure it differs only on date

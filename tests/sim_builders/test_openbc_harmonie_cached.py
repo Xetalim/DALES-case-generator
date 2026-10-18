@@ -67,9 +67,9 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         (qt, 0.01),
         (tke, 0.1),
     ):
-        atmosphere += AtmosphericProfile(
+        atmosphere.add(AtmosphericProfile(
             variable=variable, shape=lin(surf_val=value, ddz=0.0)
-        )
+        ))
     sim += atmosphere
     sim += ConstantSurfaceTemperatureModule(
         thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
@@ -161,6 +161,6 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
         smooth_initial_uv_to_geostrophic=False,
         infer_adv_tendencies=True,
     )
-    atmo += AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0))
+    atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0)))
     sim += atmo
     return sim

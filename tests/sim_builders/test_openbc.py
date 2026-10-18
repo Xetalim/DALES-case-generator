@@ -111,25 +111,35 @@ def _build_nested_sim_with_easyoutput(
 
     # Simple atmosphere with linear profiles for basic variables
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(
-        variable=ua,
-        shape=lin(surf_val=3.0, ddz=1e-3),
+    atmo.add(
+        AtmosphericProfile(
+            variable=ua,
+            shape=lin(surf_val=3.0, ddz=1e-3),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=va,
-        shape=lin(surf_val=0.0, ddz=0.0),
+    atmo.add(
+        AtmosphericProfile(
+            variable=va,
+            shape=lin(surf_val=0.0, ddz=0.0),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=w,
-        shape=lin(surf_val=0.0, ddz=0.0),
+    atmo.add(
+        AtmosphericProfile(
+            variable=w,
+            shape=lin(surf_val=0.0, ddz=0.0),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=thetal,
-        shape=lin(surf_val=293.15, ddz=1e-2),
+    atmo.add(
+        AtmosphericProfile(
+            variable=thetal,
+            shape=lin(surf_val=293.15, ddz=1e-2),
+        )
     )
-    atmo += AtmosphericProfile(
-        variable=qt,
-        shape=lin(surf_val=0.01, ddz=0.0),
+    atmo.add(
+        AtmosphericProfile(
+            variable=qt,
+            shape=lin(surf_val=0.01, ddz=0.0),
+        )
     )
 
     sim += atmo
@@ -254,7 +264,7 @@ def _assert_crosssection_matches_fielddump(
         index = list(ds_ref[fd_coord_dim].values).index(coord_value)
 
         # First try the requested index directly.
-        base_field_slice, base_cross_slice, base_other_index = _get_slices(index)
+        base_field_slice, base_cross_slice, _ = _get_slices(index)
 
         if np.allclose(
             base_field_slice.values, base_cross_slice.values, rtol=rtol, atol=atol

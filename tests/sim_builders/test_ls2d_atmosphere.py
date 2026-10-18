@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import numpy as np
 import pytest
@@ -64,8 +64,8 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
             "era5_path",
             "/Users/andrevanginkel/Documents/20_Code/28_dales_input/28.01_Dales_LSM_generator/jupyter_tests/era5_data",
         ),
-        start_date=datetime(2016, 8, 15, hour=6),
-        end_date=datetime(2016, 8, 16, hour=6),
+        start_date=datetime(2016, 8, 15, hour=6, tzinfo=UTC),
+        end_date=datetime(2016, 8, 16, hour=6, tzinfo=UTC),
         write_log=False,
         data_source=sim.machine_conf.get("ls2d_conf", {}).get("data_source", "CDS"),
         n_av=0,
@@ -166,9 +166,9 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
             "nudging_constant_thetal",
             "nudging_constant_qt",
         ):
-            assert (
-                name in ds_init.variables
-            ), f"Nudging variable {name} missing in init file"
+            assert name in ds_init.variables, (
+                f"Nudging variable {name} missing in init file"
+            )
             assert ds_init[name].shape == (ds_init.dims["time"], domain_info.kmax)
 
     with xr.open_dataset(forcings_path) as ds_forc:

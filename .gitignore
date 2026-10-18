@@ -12,7 +12,9 @@ tmp/*
 old/*
 jupyter_tests/*
 .coverage
-
+.ruff_cache
+.pytest_cache
+.mypy_cache
 docs/generated/
 
 logs/app.log

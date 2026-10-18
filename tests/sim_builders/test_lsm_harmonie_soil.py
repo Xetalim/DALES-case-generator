@@ -5,6 +5,7 @@ from modular_dales.Atmosphere import (
     AtmosphereModule,
     AtmosphericProfile,
     InterpolatedProfile,
+    lin,
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.output_modules import (
@@ -28,7 +29,7 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
     sim = dales_simulation("LSM_case", machine_conf)
 
     sim += DefaultNamelistModule()
-    293219, 277925
+    # 293219, 277925
     domain_info = GridDales(
         itot=64,
         jtot=64,
@@ -47,15 +48,17 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
     sim += domain_info
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=305.15, ddz=1e-2))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0))
-    atmo += InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=305.15, ddz=1e-2)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
     )
 
     sim += atmo

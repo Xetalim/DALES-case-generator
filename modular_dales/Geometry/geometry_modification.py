@@ -5,7 +5,7 @@ from typing import Any, Protocol, Union
 
 import numpy as np
 
-from modular_dales.Geometry import GridDales
+from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.MODULE_REGISTRY import register_module, register_special_serializing
 
 logger = logging.getLogger(__name__)

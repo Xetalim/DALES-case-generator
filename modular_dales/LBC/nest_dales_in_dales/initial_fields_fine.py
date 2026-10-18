@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +30,8 @@ def initial_fields_fine(
     vertical-profile file ``init.*.nc`` (where zh == zt) and build a
     horizontally uniform 3D initial field from those profiles.
     """
+    if input_json.inpath is None:
+        raise ValueError("input_json.inpath must be specified")
     inpath = Path(input_json.inpath)
 
     # Load data: prefer initfields.inp.*.nc, fall back to init.*.nc
@@ -130,7 +132,7 @@ def initial_fields_fine(
 
             kdim = dims.index(vertical_dim)
             for k in range(len(profile)):
-                idx = [slice(None)] * len(shape)
+                idx: list[slice | int] = [slice(None)] * len(shape)
                 idx[kdim] = k
                 data[tuple(idx)] = profile[k]
 
@@ -178,7 +180,7 @@ def initial_fields_fine(
     # Add global attributes
     initfields_fine = initfields_fine.assign_attrs(
         {
-            "history": f"Created on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
+            "history": f"Created on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')} UTC",
             "author": input_json.author,
             "time0": input_json.time0,
         }

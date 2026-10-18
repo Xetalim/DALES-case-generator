@@ -99,7 +99,9 @@ class NudgingVariable(TimeHeightVariable):
         file_name: str | None = None,
         long_name: str | None = None,
     ) -> None:
-        if not isinstance(target, ProfileVariable) or isinstance(target, NudgingVariable):
+        if not isinstance(target, ProfileVariable) or isinstance(
+            target, NudgingVariable
+        ):
             raise TypeError("A nudging target requires a non-nudging profile variable")
         super().__init__(
             name=name or f"{target.name}_nudge",
@@ -213,12 +215,8 @@ qnetav = SurfaceVariable(
     "W/m^2",
     time_dependent_name="qnetavsurf_timedep",
 )
-ua = UVariable(
-    "ua", "Initial eastward velocity profile", "m/s"
-)
-va = VVariable(
-    "va", "Initial northward velocity profile", "m/s"
-)
+ua = UVariable("ua", "Initial eastward velocity profile", "m/s")
+va = VVariable("va", "Initial northward velocity profile", "m/s")
 w = WVariable("w", "Vertical velocity profile", "m/s")
 thetal = ThetalVariable(
     "thetal",
@@ -278,7 +276,9 @@ wa_nudge = NudgingVariable(
     file_name="wa_nud",
     long_name="Nudging target for vertical velocity",
 )
-qt_nudge = NudgingVariable(qt, long_name="Nudging target for total water specific humidity")
+qt_nudge = NudgingVariable(
+    qt, long_name="Nudging target for total water specific humidity"
+)
 
 
 def nudging_timescale(target: str) -> VariableDefinition:
@@ -339,9 +339,7 @@ dthldt_ls = SeriesOnlyVariable(
 
 # Soil state (dimension ``zs``), requested by the LSM.
 t_soil = SoilVariable("t_soil", "Soil temperature", "K")
-theta_soil = SoilVariable(
-    "theta_soil", "Volumetric soil moisture", "m3/m3"
-)
+theta_soil = SoilVariable("theta_soil", "Volumetric soil moisture", "m3/m3")
 type_soil = SoilVariable("type_soil", "Soil type index", "-")
 z0m = SurfaceVariable("z0m", "Roughness length for momentum", "m")
 z0h = SurfaceVariable("z0h", "Roughness length for heat", "m")

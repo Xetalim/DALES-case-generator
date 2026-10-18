@@ -89,7 +89,7 @@ class AtmosphereProfileWriter:
                     self._plot_time_series(
                         ds[TIME_DIM].values,
                         da.values,
-                        var_name,
+                        str(var_name),
                         profiles_path / f"{prefix}_timeseries_{var_name}.png",
                         exp_id,
                     )
@@ -98,7 +98,7 @@ class AtmosphereProfileWriter:
                         ds[TIME_DIM].values,
                         ds[FILE_Z_DIM].values,
                         da.transpose(FILE_Z_DIM, TIME_DIM).values,
-                        var_name,
+                        str(var_name),
                         profiles_path / f"{prefix}_heatmap_{var_name}.png",
                         exp_id,
                     )

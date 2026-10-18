@@ -11,6 +11,7 @@ import tarfile
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 
 import requests
@@ -129,12 +130,12 @@ def _parse_forecast_datetime(value: str | dt.datetime) -> dt.datetime:
         "%Y-%m-%d %H:%M",
     ):
         try:
-            return dt.datetime.strptime(text, fmt)
+            return dt.datetime.strptime(text, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
 
     try:
-        return dt.datetime.fromisoformat(text)
+        return dt.datetime.fromisoformat(text).replace(tzinfo=UTC)
     except ValueError as exc:
         raise ValueError(
             "forecast_datetime must be a datetime or an ISO-like string such as '2026-06-27T21:00:00' or '2026062721'"
@@ -335,8 +336,7 @@ def _run_cdo_convert(cdo_path: str, source_path: Path, target_path: Path) -> Non
             str(target_path),
         ],
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
 

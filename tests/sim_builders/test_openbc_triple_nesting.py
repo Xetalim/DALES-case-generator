@@ -17,6 +17,7 @@ from modular_dales import (
     dales_simulation,
     do_openboundary,
 )
+from modular_dales.Atmosphere import lin
 from modular_dales.Configuration.output_modules import (
     CapeModule,
     CrossSectionOutputModule,
@@ -105,16 +106,18 @@ def _attach_common_physics(
     center_vertical_crosssections: bool = False,
 ) -> None:
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=1.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=1.5, ddz=1e-3))
-    atmo += InterpolatedProfile(
-        variable=thetal,
-        z=[0, 400, 410, 1600],
-        points=[293.15, 293.15, 298.15, 301.15],
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=1.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=1.5, ddz=1e-3)))
+    atmo.add(
+        InterpolatedProfile(
+            variable=thetal,
+            z=[0, 400, 410, 1600],
+            points=[293.15, 293.15, 298.15, 301.15],
+        )
     )
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0))
-    atmo += AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
+    atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0)))
     sim += atmo
 
     sim += TimeModule(
@@ -639,7 +642,8 @@ def _vertical_cross_nearest_match(
                 if dist < best_dist:
                     best_dist = dist
                     best_path = path
-        except Exception:
+        except Exception as e:
+            print(f"Failed to process file {path}: {e}")
             continue
 
     return best_path
@@ -751,10 +755,10 @@ def _select_time_by_coord(da: xr.DataArray, target_time):
             t = float(target_time)
             # If value looks like epoch nanoseconds, interpret accordingly.
             if abs(t) > 1e12:
-                sel_time = np.datetime64(int(round(t)), "ns")
+                sel_time = np.datetime64(round(t), "ns")
             else:
                 base = coord_vals[0].astype("datetime64[ns]")
-                sel_time = base + np.timedelta64(int(round(t)), "s")
+                sel_time = base + np.timedelta64(round(t), "s")
         out = da.sel(time=sel_time, method="nearest")
     else:
         out = da.sel(time=float(target_time), method="nearest")

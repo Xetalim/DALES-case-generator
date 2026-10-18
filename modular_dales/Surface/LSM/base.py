@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class BaseLSMModule(SurfaceModule):
     """Base class that owns required LSM namelist options."""
 
-    sim: simulation_module | None = field(default=None, repr=False)
     isurf: int = field(
         default=11,
         init=False,
@@ -107,17 +106,18 @@ class BaseLSMModule(SurfaceModule):
                     f"{self.module_name} requires '{param_name}' parameter"
                 )
             if not isinstance(value, int):
-                raise ValueError(f"{param_name} must be an integer")
+                raise TypeError(f"{param_name} must be an integer")
             if not 1 <= value <= 4:
                 raise ValueError(
                     f"{param_name} must be an integer between 1 and 4 (1=arithmetic mean, 2=geometric mean, 3=harmonic mean, 4=max)"
                 )
 
-        if self.dz_soil is not None and self.kmax_soil is not None:
-            if len(self.dz_soil) != int(self.kmax_soil):
-                raise ValueError(
-                    f"{self.module_name}: dz_soil length ({len(self.dz_soil)}) must match kmax_soil ({self.kmax_soil})."
-                )
+        if (self.dz_soil is not None and self.kmax_soil is not None) and (
+            len(self.dz_soil) != int(self.kmax_soil)
+        ):
+            raise ValueError(
+                f"{self.module_name}: dz_soil length ({len(self.dz_soil)}) must match kmax_soil ({self.kmax_soil})."
+            )
 
         logger.info("%s: configured base NAMSURFACE/NAMLSM options", self.module_name)
 

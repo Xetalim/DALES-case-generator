@@ -14,7 +14,10 @@ from .LSM import (
     LSMModule,
 )
 from .modular_temps_moisture import (
+    SkinTempSpec,
+    SoilMoistureSpec,
     SoilTemperatureMoistureFromHarmonie,
+    SoilTempSpec,
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
@@ -46,6 +49,9 @@ __all__ = [
     "SLURBModifications",
     "SLURBModule",
     "SLURBVariableModification",
+    "SkinTempSpec",
+    "SoilMoistureSpec",
+    "SoilTempSpec",
     "SoilTemperatureMoistureFromHarmonie",
     "UniformSkinTemperature",
     "UniformSoilMoisture",

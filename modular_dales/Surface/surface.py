@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
@@ -39,7 +39,6 @@ class ConstantFluxesModule(SurfaceModule):
       albedoav: Surface albedo (dimensionless)
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     isurf: int = field(
         default=4, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
     )
@@ -139,7 +138,6 @@ class ConstantFluxesWithShearModule(SurfaceModule):
       albedoav: Surface albedo (dimensionless)
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     isurf: int = field(
         default=3, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
     )
@@ -247,7 +245,6 @@ class ConstantSurfaceTemperatureModule(SurfaceModule):
       albedoav: Surface albedo (dimensionless)
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     isurf: int = field(
         default=2, init=False, metadata={"nml": "NAMSURFACE", "key": "isurf"}
     )

@@ -43,11 +43,11 @@ def cached_cog_subset_from_url(
 
     # ---- load from cache if present ----
     if cache_path.exists():
-        logger.debug("Loading %s from cache" % key_str)
+        logger.debug(f"Loading {key_str} from cache")
         with rasterio.open(cache_path) as src:
             data = src.read()
             return data, src.transform, src.crs, src.profile.copy()
-    logger.debug("Downloading and processing %s" % key_str)
+    logger.debug(f"Downloading and processing {key_str}")
 
     # ---- open COG and compute window ----
     with rasterio.open(cog_url) as ds:
@@ -137,11 +137,11 @@ def get_cached_esa(cache_dir, grid: GridDales):
 
     # ---- load from cache if present ----
     if cache_path.exists():
-        logger.debug("Loading %s from cache" % key_str)
+        logger.debug(f"Loading {key_str} from cache")
         with rasterio.open(cache_path) as src:
             data = src.read()
             return data, src.transform, dst_crs, src.profile.copy()
-    logger.debug("Downloading and processing %s" % key_str)
+    logger.debug(f"Downloading and processing {key_str}")
 
     # ---- open COG and compute window ----
     url = f"/vsicurl/{s3_url_prefix}/esa_worldcover_grid.geojson"
@@ -177,16 +177,16 @@ def get_cached_esa(cache_dir, grid: GridDales):
     mosaic, out_transform = merge(
         datasets, resampling=rasterio.enums.Resampling.nearest
     )
-    profile = dict(
-        driver="GTiff",
-        height=mosaic.shape[1],
-        width=mosaic.shape[2],
-        count=mosaic.shape[0],  # number of bands
-        dtype=mosaic.dtype,
-        crs=dst_crs,
-        transform=out_transform,
-        compress="deflate",  # optional compression
-    )
+    profile = {
+        "driver": "GTiff",
+        "height": mosaic.shape[1],
+        "width": mosaic.shape[2],
+        "count": mosaic.shape[0],  # number of bands
+        "dtype": mosaic.dtype,
+        "crs": dst_crs,
+        "transform": out_transform,
+        "compress": "deflate",  # optional compression
+    }
     with rasterio.open(cache_path, "w", **profile) as dst:
         dst.write(mosaic)
 

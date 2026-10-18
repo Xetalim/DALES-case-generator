@@ -1,9 +1,7 @@
 import logging
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional
 
-from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -25,7 +23,6 @@ class RunModule(simulation_module):
         dtmax: Maximum timestep
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     iexpnr: int | None = field(default=None, metadata={"nml": "RUN", "key": "iexpnr"})
     runtime: float | None = field(
         default=None, metadata={"nml": "RUN", "key": "runtime"}
@@ -68,7 +65,6 @@ class TimeModule(simulation_module):
         trestart: Restart file write interval in seconds
     """
 
-    sim: Optional["dales_simulation"] = field(default=None, repr=False)
     xtime: float = field(
         default=0.0,
         metadata={

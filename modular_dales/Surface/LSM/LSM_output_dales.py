@@ -86,7 +86,7 @@ class LSM_output_dales:
         zeros = np.zeros((grid.jtot, grid.itot), dtype=dtype_float)
         for lu in lu_types:
             for parname in self.parnames:
-                varname = "_".join([parname, lu])
+                varname = f"{parname}_{lu}"
                 self.value_dic[varname] = zeros.copy()
                 fields.append(varname)
         # total land use cover
@@ -393,7 +393,7 @@ class LSM_output_dales:
         # remove unused land use parameters from value_dic and fields
         for lu in unused_lu_types:
             for parname in self.parnames:
-                varname = "_".join([parname, lu])
+                varname = f"{parname}_{lu}"
                 del self.value_dic[varname]
                 self.fields.remove(varname)
 
@@ -474,7 +474,7 @@ class LSM_output_dales:
         shape = (self.grid.jtot, self.grid.itot)
         temp_arr = np.full(shape, temperature)
         if lu_type == "all":
-            for lu in self.lu_types.keys():
+            for lu in self.lu_types:
                 self.value_dic[f"tskin_{lu}"] = temp_arr
         else:
             self.value_dic[f"tskin_{lu_type}"] = temp_arr
@@ -504,7 +504,7 @@ class LSM_output_dales:
                 f"Incompatible shape of temperature array {temperature_array.shape} and grid shape {shape}"
             )
         if lu_type == "all":
-            for lu in self.lu_types.keys():
+            for lu in self.lu_types:
                 self.value_dic[f"tskin_{lu}"][:] = temperature_array
         else:
             self.value_dic[f"tskin_{lu_type}"] = temperature_array
@@ -533,7 +533,7 @@ class LSM_output_dales:
 
         """
         shape = (self.grid.jtot, self.grid.itot)
-        for lu in self.lu_types.keys():
+        for lu in self.lu_types:
             for parname in self.parnames:
                 if parname == "cover" or parname == "c_veg":
                     parfield = self.lu_types[lu]["lu_frac"].copy()
@@ -550,10 +550,7 @@ class LSM_output_dales:
                     pass
                 else:
                     parname_translation_dic = {"ar": "a_r", "br": "b_r"}
-                    if parname in parname_translation_dic:
-                        parname_ifs = parname_translation_dic[parname]
-                    else:
-                        parname_ifs = parname
+                    parname_ifs = parname_translation_dic.get(parname, parname)
                     # parfield[mask] = getattr(ifs_vegetation, parname_ifs) [iv]
                     parfield[:] = getattr(ifs_vegetation, parname_ifs)[
                         ifs_vegetation_index
@@ -571,18 +568,18 @@ class LSM_output_dales:
     def recalculate_remaining_cover(self):
         # TODO: more consistent way to check for LU type with bare soil
         try:
-            bs_name = [
+            # next means take first one
+            bs_name = next(
                 k
-                for k in self.lu_types.keys()
+                for k in self.lu_types
                 if (
                     "barren" in self.lu_types[k]["lu_long"].lower()
                     or "bare soil" in self.lu_types[k]["lu_long"].lower()
                 )
-            ][0]
+            )
         except IndexError:
-            bs_name = [
-                k for k in self.lu_types.keys() if self.lu_types[k]["bare_soil"]
-            ][0]
+            # next means take first one
+            bs_name = next(k for k in self.lu_types if self.lu_types[k]["bare_soil"])
         totcover = self.calc_totcover("cover")
         self.value_dic["cover_tot"] = totcover
 
@@ -621,7 +618,7 @@ class LSM_output_dales:
             Total LU cover.
 
         """
-        covers = [ctype + "_" + s for s in self.lu_types.keys()]
+        covers = [ctype + "_" + s for s in self.lu_types]
         totcover = np.zeros([self.grid.jtot, self.grid.itot])
         for c in covers:
             totcover += self.value_dic[c]
@@ -641,9 +638,9 @@ class LsmModifier(ModifierClass):
         if frac < 0 or frac > 1:
             raise ValueError(f"Land-use fraction must be in [0, 1], got {frac}")
 
-        if lu_type not in self.lsm_input.lu_types.keys():
+        if lu_type not in self.lsm_input.lu_types:
             raise KeyError(
-                f"Incorrect lu_type given {lu_type}, {self.lsm_input.lu_types.keys()}"
+                f"Incorrect lu_type given {lu_type}, {self.lsm_input.lu_types}"
             )
 
         mode_norm = str(mode).strip().lower()
@@ -652,7 +649,7 @@ class LsmModifier(ModifierClass):
         if mode_norm == "replace":
             lu_frac[mask] = frac
             if frac == 1:
-                for other_lu_type in self.lsm_input.lu_types.keys():
+                for other_lu_type in self.lsm_input.lu_types:
                     if lu_type != other_lu_type:
                         self.lsm_input.lu_types[other_lu_type]["lu_frac"][mask] = 0
             return

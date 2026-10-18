@@ -22,7 +22,6 @@ __all__ = [
     "SHAPE_FUNCTIONS",
     "AtmosphereModule",
     "AtmosphericProfile",
-    "profiles_to_forcings",
     "ExternalForcingModule",
     "FieldSpec",
     "FromLS2D",
@@ -35,5 +34,6 @@ __all__ = [
     "expsinw",
     "lin",
     "linmlsurf",
+    "profiles_to_forcings",
     "validate_les_input",
 ]

@@ -46,15 +46,15 @@ def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
     sim += TimedependentModule(timesteps=timesteps)
 
     atmo = AtmosphereModule()
-    atmo += AtmosphericProfile(variable=ua, shape=lin(surf_val=2, ddz=1e-3))
-    atmo += AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0))
-    atmo += AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=5e-4))
-    atmo += AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0))
-    atmo += InterpolatedProfile(
+    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=2, ddz=1e-3)))
+    atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=5e-4)))
+    atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0)))
+    atmo.add(InterpolatedProfile(
         variable=tke,
         z=[0, 4000, 5000],
         points=[1, 1e-8, 1e-8],
-    )
+    ))
 
     sim += ConstantSurfaceTemperatureModule(
         thls=TimeDependentScalar(

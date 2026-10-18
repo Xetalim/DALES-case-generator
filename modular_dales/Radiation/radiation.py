@@ -51,15 +51,12 @@ class RadiationModule(simulation_module):
         doclearsky: Use clear sky radiation in the calculation
     """
 
-    sim: Optional["simulation_module"] = field(default=None, repr=False)
     iradiation: int | None = field(
         default=None, metadata={"nml": "PHYSICS", "key": "IRADIATION"}
     )
     # NAMDE parameters
     ssa: float | None = field(default=None, metadata={"nml": "NAMDE", "key": "ssa"})
-    laero: float | None = field(
-        default=None, metadata={"nml": "NAMDE", "key": "laero"}
-    )
+    laero: float | None = field(default=None, metadata={"nml": "NAMDE", "key": "laero"})
     ide: int | None = field(default=None, metadata={"nml": "NAMDE", "key": "ide"})
 
     # NAMRADIATION parameters
@@ -156,7 +153,6 @@ class RadiationModule(simulation_module):
         else:
             raise ValueError("RadiationModule requires a SurfaceModule.")
 
-
     def check_settings(self):
         """Validate constant fluxes settings."""
 
@@ -164,13 +160,12 @@ class RadiationModule(simulation_module):
         iradiation = self.iradiation or 0
         if iradiation == 1:
             raise ValueError(
-                "RadiationModule: iradiation=1 is no longer supported. Use iradiation=4 or iradiation=5 instead."
+                "RadiationModule: iradiation=1 is not supported. Use iradiation=4 or iradiation=5 instead."
             )
-        if iradiation != 0 and self.surface_module is not None:
-            if getattr(self.surface_module, "albedoav", None) is None:
-                raise ValueError(
-                    "RadiationModule: albedoav must be set in surface config for radiation to work properly"
-                )
+        if iradiation != 0 and getattr(self.surface_module, "albedoav", None) is None:
+            raise ValueError(
+                "RadiationModule: albedoav must be set in surface config for radiation to work properly"
+            )
         if iradiation != 0 and self.surface_module is None:
             raise ValueError(
                 "RadiationModule: albedoav must be set in surface config for radiation to work properly"

@@ -1,6 +1,7 @@
-import pytest
-import numpy as np
 from types import SimpleNamespace
+
+import numpy as np
+import pytest
 
 from modular_dales import vars
 from modular_dales.Atmosphere import AtmosphereModule, AtmosphericProfile, lin
@@ -67,7 +68,9 @@ def test_custom_variable_nudger_is_registered_once():
     finally:
         vars.ALL_VARIABLES[:] = previous
         vars.ATMO_VARS_BY_NAME.clear()
-        vars.ATMO_VARS_BY_NAME.update({variable.name: variable for variable in previous})
+        vars.ATMO_VARS_BY_NAME.update(
+            {variable.name: variable for variable in previous}
+        )
 
 
 @pytest.mark.parametrize("variable", [vars.dudt_ls, vars.nudging_constant_ua])
