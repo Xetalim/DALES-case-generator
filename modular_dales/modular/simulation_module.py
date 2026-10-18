@@ -9,6 +9,7 @@ from modular_dales.modular.forcing import (
     ForcingSet,
     var_attrs,
 )
+from modular_dales.modular.namelist import get_namelist_spec
 from modular_dales.modular.time_dependent_scalars import (
     Z_DIM,
     TimeDependentScalar,
@@ -75,22 +76,17 @@ class simulation_module(ABC):
     def apply_namelist_from_fields(self) -> None:
         """Apply dataclass field values to the namelist using field metadata.
 
-        Field metadata keys:
-            nml: Namelist section (e.g., "NAMSURFACE")
-            key: Key in namelist section (defaults to field name)
-            required: Whether a value is required (raises if None)
+        Namelist bindings are declared with ``nml_field`` / ``NamelistSpec``.
+        Other field metadata keys:
             forcing_var: Variable whose t=0 value (from another module's time
                 series, e.g. LS2D) replaces a plain value of this field
         """
 
         for dataclass_field in fields(self):
             meta = dataclass_field.metadata or {}
-            nml_section = meta.get("nml")
-            if not nml_section:
+            spec = get_namelist_spec(dataclass_field)
+            if spec is None:
                 continue
-            key = meta.get("key", dataclass_field.name)
-            required = meta.get("required", False)
-            raise_conflict = meta.get("raise_conflict", False)
             value = getattr(self, dataclass_field.name)
 
             forcing_var = meta.get("forcing_var")
@@ -107,50 +103,25 @@ class simulation_module(ABC):
             if isinstance(value, TimeDependentScalar):
                 value = value.value_at_start()
             if value is None:
-                if required:
+                if spec.required:
                     raise ValueError(
                         f"Module '{self.module_name}' requires '{dataclass_field.name}'"
                     )
                 continue
-            if isinstance(key, list) or isinstance(nml_section, list):
-                if isinstance(value, list):
-                    for nml_section_i, key_i, value_i in zip(nml_section, key, value):
-                        self.set_nml_section(
-                            nml_section_i,
-                            key_i,
-                            value_i,
-                            raise_conflict=raise_conflict,
-                        )
-                    continue
-                elif isinstance(value, dict):
-                    for value_key, value_val in value.items():
-                        value_section = value_key.split(":")[
-                            0
-                        ]  # Extract section from "SECTION:KEY"
-                        value_key = value_key.split(":")[
-                            1
-                        ]  # Extract key from "SECTION:KEY"
-                        self.set_nml_section(
-                            value_section,
-                            value_key,
-                            value_val,
-                            raise_conflict=raise_conflict,
-                        )
-                else:
-                    for nml_section_i, key_i in zip(nml_section, key):
-                        self.set_nml_section(
-                            nml_section_i,
-                            key_i,
-                            value,
-                            raise_conflict=raise_conflict,
-                        )
-                    continue
-            self.set_nml_section(
-                nml_section,
-                key,
-                value,
-                raise_conflict=raise_conflict,
-            )
+            targets = spec.targets(dataclass_field.name)
+            multiple = isinstance(spec.section, tuple) or isinstance(spec.key, tuple)
+            if multiple and isinstance(value, dict):
+                for target, item in value.items():
+                    section, key = target.split(":", 1)
+                    self.set_nml_section(
+                        section, key, item, raise_conflict=spec.raise_conflict
+                    )
+                continue
+            values = value if multiple and isinstance(value, list) else [value] * len(targets)
+            for (section, key), item in zip(targets, values, strict=True):
+                self.set_nml_section(
+                    section, key, item, raise_conflict=spec.raise_conflict
+                )
 
     def set_nml_section(
         self,

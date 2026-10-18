@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from modular_dales.Configuration.output_modules import prepare_point_indices
+from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
 
@@ -18,13 +19,11 @@ class SprayingModule(simulation_module):
     configured i_glob_spray/j_glob_spray/k_glob_spray indices are used.
     """
 
-    x_idx: int | None = field(
+    x_idx: int | None = nml_field(
         default=None,
-        metadata={
-            "nml": "namspraying",
-            "key": "i_glob_spray",
-            "doc": "Global i-index location for spray source.",
-        },
+        section="namspraying",
+        key="i_glob_spray",
+        description="Global i-index location for spray source.",
     )
     y_idx: int | None = field(
         default=None,

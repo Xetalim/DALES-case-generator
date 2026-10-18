@@ -73,7 +73,7 @@ class SLURBModifications:
 class slbCreatorClass(ModifierClass):
     def __init__(self, grid: GridDales):
         super().__init__(grid)
-        self.vars = {}
+        self.vars: dict[str, dict[str, type[int | float] | int | None]] = {}
 
     def init_var(self, submod: SLURBVariableModification):
         varname = submod.varname
@@ -298,7 +298,7 @@ class SLURBModule(simulation_module):
         super().__init__(self.sim)
         self.module_name = "SLURBModule"
 
-    def __add__(self, obj) -> "SLURBModule":
+    def __add__(self, obj) -> Self:
         """Add SLURB modifications to module."""
         if isinstance(obj, SLURBModification):
             self.slb_modifications += obj
