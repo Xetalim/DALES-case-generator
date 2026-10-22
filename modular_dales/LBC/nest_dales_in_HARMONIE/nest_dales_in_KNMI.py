@@ -63,12 +63,11 @@ The resulting NetCDF files must preserve:
 - Variable short names as assigned by the GRIB encoding
 """
 
-import datetime as dt
 import glob
 import logging
 import os
-from datetime import UTC
 from pathlib import Path
+from typing import Any
 
 import dask
 import numpy as np
@@ -78,6 +77,7 @@ from pyproj import CRS, Transformer
 from rasterio.enums import Resampling
 from rasterio.transform import Affine
 
+from modular_dales.Geometry.GridDales import GridDalesOpenBC
 from modular_dales.IO_helpers.raster import fix_lambert_offsets
 from modular_dales.LBC.nest_dales_in_HARMONIE import hybrid_levels, prep_harmonie
 from modular_dales.LBC.nest_dales_in_HARMONIE.Transform import Transform
@@ -96,7 +96,7 @@ cp = 1004.0
 # ---------------------------------------------------------------------------
 
 
-def _saturation_vapour_pressure(T):
+def _saturation_vapour_pressure(T: xr.DataArray) -> xr.DataArray:
     """Tetens formula for saturation vapour pressure over liquid water.
 
     Parameters
@@ -110,10 +110,12 @@ def _saturation_vapour_pressure(T):
         Saturation vapour pressure in Pa.
     """
     T_C = T - 273.15
-    return 610.78 * np.exp(17.27 * T_C / (T_C + 237.3))
+    e_sat = T.copy(deep=True)
+    e_sat[:] = 610.78 * np.exp(17.27 * T_C / (T_C + 237.3))
+    return e_sat
 
 
-def q_from_rh(rh, T, p):
+def q_from_rh(rh: xr.DataArray, T: xr.DataArray, p: xr.DataArray) -> xr.DataArray:
     """Convert relative humidity to specific humidity.
 
     Parameters
@@ -136,7 +138,7 @@ def q_from_rh(rh, T, p):
     return q
 
 
-def q_from_td(td, p):
+def q_from_td(td: xr.DataArray, p: xr.DataArray) -> xr.DataArray:
     """Convert dew point temperature to specific humidity.
 
     The saturation vapour pressure evaluated at the dew point equals
@@ -159,7 +161,13 @@ def q_from_td(td, p):
     return q
 
 
-def w_from_continuity(u, v, p_sfc, ahalf, bhalfs):
+def w_from_continuity(
+    u: xr.DataArray,
+    v: xr.DataArray,
+    p_sfc: xr.DataArray,
+    ahalf: np.ndarray | list[float],
+    bhalfs: np.ndarray | list[float],
+) -> xr.DataArray:
     """Derive vertical velocity from horizontal wind divergence.
 
     Uses the incompressible continuity equation on hybrid levels:
@@ -224,7 +232,7 @@ def w_from_continuity(u, v, p_sfc, ahalf, bhalfs):
 # ---------------------------------------------------------------------------
 
 
-def _detect_source_crs(ds):
+def _detect_source_crs(ds: xr.Dataset) -> CRS:
     """Detect the CRS of the source dataset.
 
     Returns a pyproj CRS object.  Tries rioxarray first, then falls back
@@ -275,7 +283,9 @@ def _detect_source_crs(ds):
     )
 
 
-def _rotate_winds_to_crs(u, v, src_crs, dst_crs):
+def _rotate_winds_to_crs(
+    u: xr.DataArray, v: xr.DataArray, src_crs: CRS, dst_crs: CRS
+) -> tuple[xr.DataArray, xr.DataArray]:
     """Rotate (u, v) from source-grid axes to destination-grid axes."""
     fwd = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
     xx, yy = np.meshgrid(u["x"].values, u["y"].values)
@@ -284,7 +294,7 @@ def _rotate_winds_to_crs(u, v, src_crs, dst_crs):
     x1, y1 = fwd.transform(xx + eps, yy)
     x2, y2 = fwd.transform(xx, yy + eps)
 
-    def axis_angle(dx, dy):
+    def axis_angle(dx: np.ndarray, dy: np.ndarray) -> xr.DataArray:
         return xr.DataArray(
             np.arctan2(dy, dx), dims=("y", "x"), coords={"y": u["y"], "x": u["x"]}
         )
@@ -301,7 +311,9 @@ def _rotate_winds_to_crs(u, v, src_crs, dst_crs):
     return u_dst, v_dst
 
 
-def _build_target_grid(grid, buffer, resolution):
+def _build_target_grid(
+    grid: GridDalesOpenBC, buffer: float, resolution: float
+) -> tuple[np.ndarray, np.ndarray]:
     """Build 1-D x/y coordinate arrays for the target Lambert grid.
 
     Parameters
@@ -328,7 +340,13 @@ def _build_target_grid(grid, buffer, resolution):
 
 
 @logwrap
-def _reproject_dataset(ds, src_crs, dst_crs, x_target, y_target):
+def _reproject_dataset(
+    ds: xr.Dataset,
+    src_crs: CRS,
+    dst_crs: CRS,
+    x_target: np.ndarray,
+    y_target: np.ndarray,
+) -> xr.Dataset:
     """Reproject an xarray Dataset from *src_crs* to *dst_crs* onto a
     regular target grid using **rioxarray** (backed by GDAL/rasterio).
 
@@ -495,8 +513,8 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
 
     Additional ``input_json`` keys (beyond those of ``harmoniePrepper``):
 
-    - ``KNMI_ml_glob``  — glob pattern for pre-converted N55ML NetCDF (3D fields)
-    - ``KNMI_sfc_glob`` — glob pattern for pre-converted N55/N20 NetCDF (surface)
+    - ``HARMONIE_ml_glob``  — glob pattern for pre-converted N55ML NetCDF (3D fields)
+    - ``HARMONIE_sfc_glob`` — glob pattern for pre-converted N55/N20 NetCDF (surface)
     - ``w_from_continuity`` — bool, default False.  Derive w from continuity.
     - ``knmi_ml_var_map`` — dict, optional override for 3D variable name mapping
 
@@ -504,7 +522,7 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
     """
 
     @logwrap
-    def load_data(self):
+    def load_data(self) -> None:
         """Load KNMI GRIB or NetCDF and remap to harmoniePrepper format.
 
         Handles CDO naming conventions:
@@ -519,40 +537,46 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
         # Only chunk in time; keep lev, y, x as single chunks so spatial
         # operations (interpolation, reprojection) work on contiguous arrays.
         tchunk = input_json.tchunk
-        is_ml_grib = _is_grib_source(input_json.KNMI_ml_glob, input_json.use_grib)
+        if not input_json.HARMONIE_ml_glob:
+            raise ValueError("No model-level data glob pattern provided.")
+        is_ml_grib = _is_grib_source(input_json.HARMONIE_ml_glob, input_json.use_grib)
         if is_ml_grib:
             logger.info(
-                "Opening KNMI model-level GRIB data from %s", input_json.KNMI_ml_glob
+                "Opening KNMI model-level GRIB data from %s",
+                input_json.HARMONIE_ml_glob,
             )
             ds_ml = _open_knmi_grib_dataset(
-                input_json.KNMI_ml_glob,
+                input_json.HARMONIE_ml_glob,
                 chunks={"time": tchunk, "lev": -1, "y": -1, "x": -1},
             )
         else:
             logger.info(
-                "Opening KNMI model-level NetCDF data from %s", input_json.KNMI_ml_glob
+                "Opening KNMI model-level NetCDF data from %s",
+                input_json.HARMONIE_ml_glob,
             )
             ds_ml = _open_knmi_dataset(
-                input_json.KNMI_ml_glob,
+                input_json.HARMONIE_ml_glob,
                 chunks={"time": tchunk, "lev": -1, "y": -1, "x": -1},
             )
 
         # ── Open surface data (N55 / N20) ──────────────────────────────
-        is_sfc_grib = _is_grib_source(input_json.KNMI_sfc_glob, input_json.use_grib)
+        if not input_json.HARMONIE_sfc_glob:
+            raise ValueError("No surface data glob pattern provided.")
+        is_sfc_grib = _is_grib_source(input_json.HARMONIE_sfc_glob, input_json.use_grib)
         if is_sfc_grib:
             logger.info(
-                "Opening KNMI surface GRIB data from %s", input_json.KNMI_sfc_glob
+                "Opening KNMI surface GRIB data from %s", input_json.HARMONIE_sfc_glob
             )
             ds_sfc = _open_knmi_grib_dataset(
-                input_json.KNMI_sfc_glob,
+                input_json.HARMONIE_sfc_glob,
                 chunks={"time": tchunk, "y": -1, "x": -1},
             )
         else:
             logger.info(
-                "Opening KNMI surface NetCDF data from %s", input_json.KNMI_sfc_glob
+                "Opening KNMI surface NetCDF data from %s", input_json.HARMONIE_sfc_glob
             )
             ds_sfc = _open_knmi_dataset(
-                input_json.KNMI_sfc_glob,
+                input_json.HARMONIE_sfc_glob,
                 chunks={"time": tchunk, "y": -1, "x": -1},
             )
 
@@ -570,9 +594,6 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
         # ── Separate 3D and surface variables in the ML file ──────────
         # CDO puts 3D fields on dim 'lev' (hybrid); surface fields get
         # a singleton 'height' (or similar) dimension.
-        ml_map = input_json.knmi_ml_var_map or KNMI_ML_VAR_MAP
-        ds_ml = ds_ml.rename({k: v for k, v in ml_map.items() if k in ds_ml})
-
         ml_3d_vars = [v for v in ds_ml.data_vars if "lev" in ds_ml[v].dims]
         ds_3d = ds_ml[ml_3d_vars]
 
@@ -815,26 +836,20 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
 # ---------------------------------------------------------------------------
 
 
-def _is_grib_source(glob_pattern, use_grib_flag=None) -> bool:
+def _is_grib_source(glob_pattern: str, use_grib_flag: bool | None = None) -> bool:
     """Determine whether the source path or glob points to GRIB files."""
     if use_grib_flag is not None:
         return bool(use_grib_flag)
-    if not glob_pattern:
-        return False
-    if isinstance(glob_pattern, (list, tuple)) and glob_pattern:
-        pattern_str = str(glob_pattern[0])
-    else:
-        pattern_str = str(glob_pattern)
 
-    if pattern_str.endswith((".nc", ".nc4", ".netcdf", ".nc*", ".nc4*")):
+    if glob_pattern.endswith((".nc", ".nc4", ".netcdf", ".nc*", ".nc4*")):
         return False
 
-    if "_GB" in pattern_str or pattern_str.endswith(
+    if "_GB" in glob_pattern or glob_pattern.endswith(
         (".grib", ".grb", ".grib2", ".grb2")
     ):
         return True
 
-    matched = glob.glob(pattern_str)
+    matched = glob.glob(glob_pattern)
     if matched:
         files = [f for f in matched if os.path.isfile(f)]
         if files:
@@ -842,7 +857,7 @@ def _is_grib_source(glob_pattern, use_grib_flag=None) -> bool:
     return False
 
 
-def _get_grib_metadata(field, key, default=None):
+def _get_grib_metadata(field: Any, key: Any, default: Any = None) -> Any:
     """Safely extract metadata item from an earthkit GRIB Field."""
     for k in (f"metadata.{key}", key):
         try:
@@ -861,7 +876,9 @@ def _get_grib_metadata(field, key, default=None):
 
 
 @logwrap
-def _open_knmi_grib_dataset(glob_pattern, chunks=None):
+def _open_knmi_grib_dataset(
+    glob_pattern: str | Path, chunks: dict[str, int] | None = None
+) -> xr.Dataset:
     """Open KNMI GRIB dataset using earthkit-data, remapping duplicate parameters.
 
     Disambiguates parameter names across vertical level types and timeRangeIndicators
@@ -889,7 +906,8 @@ def _open_knmi_grib_dataset(glob_pattern, chunks=None):
     if len(fl) == 0:
         raise FileNotFoundError(f"No GRIB fields found matching {glob_pattern}")
 
-    new_fields = []
+    parameter_fields = {}
+    parameter_level_types = {}
     assignments = {}
     used_names = set()
 
@@ -920,67 +938,45 @@ def _open_knmi_grib_dataset(glob_pattern, chunks=None):
             assignments[key] = new_parameter
             used_names.add(new_parameter)
 
-        if new_parameter == parameter:
-            new_fields.append(field)
-        else:
-            new_fields.append(field.set({"parameter.variable": new_parameter}))
+        if new_parameter != parameter:
+            field = field.set({"parameter.variable": new_parameter})
+        parameter_fields.setdefault(new_parameter, []).append(field)
+        parameter_level_types[new_parameter] = level_type
 
-    new_fl = ekd.FieldList.from_fields(new_fields)
-    dataset = new_fl.to_xarray(allow_holes=True)
+    parameter_datasets = []
+    for parameter, fields in parameter_fields.items():
+        parameter_dataset = ekd.FieldList.from_fields(fields).to_xarray(
+            allow_holes=False,
+            level_dim_mode="level_per_type",
+            squeeze=False,
+        )
+        level_type = parameter_level_types[parameter]
+        if level_type != "hybrid" and level_type in parameter_dataset.dims:
+            parameter_dataset = parameter_dataset.rename(
+                {level_type: f"{level_type}_{parameter}"}
+            )
+        parameter_datasets.append(parameter_dataset)
+    dataset = xr.merge(parameter_datasets, join="exact", compat="no_conflicts")
 
     # 1. Resolve time coordinate
     first_field = fl[0]
-    base_time = None
-    try:
-        dt_info = first_field.datetime()
-        if isinstance(dt_info, dict):
-            base_time = dt_info.get("base_time") or dt_info.get(
-                "forecast_reference_time"
-            )
-        elif isinstance(dt_info, dt.datetime):
-            base_time = dt_info
-    except (AttributeError, KeyError, TypeError, ValueError):
-        pass
 
-    if base_time is None:
-        val = _get_grib_metadata(first_field, "forecast_reference_time")
-        if isinstance(val, dt.datetime):
-            base_time = val
-        elif isinstance(val, str):
-            try:
-                base_time = dt.datetime.fromisoformat(val)
-            except ValueError:
-                pass
+    base_time = dataset["forecast_reference_time"].values[0]
 
-    if base_time is None:
-        data_date = _get_grib_metadata(first_field, "dataDate")
-        data_time = _get_grib_metadata(first_field, "dataTime")
-        if data_date is not None and data_time is not None:
-            try:
-                data_date_str = str(data_date)
-                data_time_int = int(data_time)
-                hour = data_time_int // 100
-                minute = data_time_int % 100
-                base_time = dt.datetime.strptime(data_date_str, "%Y%m%d").replace(
-                    hour=hour, minute=minute, tzinfo=UTC
-                )
-            except (ValueError, TypeError):
-                pass
-
-    if "step" in dataset.dims and base_time is not None:
-        time_values = np.datetime64(base_time) + dataset["step"].values
-        dataset = dataset.assign_coords(time=("step", time_values)).swap_dims(
-            {"step": "time"}
-        )
-        dataset = dataset.drop_vars("step", errors="ignore")
-    elif "step" in dataset.dims and "time" not in dataset.dims:
-        dataset = dataset.rename({"step": "time"})
+    # if "step" in dataset.dims and base_time is not None:
+    time_values = np.datetime64(base_time) + dataset["step"].values
+    dataset = dataset.assign_coords(time=("step", time_values)).swap_dims(
+        {"step": "time"}
+    )
+    dataset = dataset.drop_vars("step", errors="ignore")
+    dataset = dataset.drop_vars("forecast_reference_time", errors="ignore")
+    dataset = dataset.squeeze("forecast_reference_time")
+    # elif "step" in dataset.dims and "time" not in dataset.dims:
+    #     dataset = dataset.rename({"step": "time"})
 
     # 2. Normalise hybrid level dimension: for 91-level datasets (0..90), select 1..90 and rename to lev
-    if "level" in dataset.dims:
-        if 0 in dataset["level"].values and len(dataset["level"]) == 91:
-            dataset = dataset.sel(level=slice(1, 90))
-            dataset = dataset.rename({"level": "lev"})
+    if "hybrid" in dataset.dims and len(dataset["hybrid"]) == 90:
+        dataset = dataset.rename({"hybrid": "lev"})
 
     # Drop level_type if unused by data variables
     if "level_type" in dataset.dims and not any(
@@ -1122,7 +1118,7 @@ def _open_knmi_dataset(glob_pattern, chunks):
     return ds
 
 
-def _squeeze_vertical(da):
+def _squeeze_vertical(da: xr.DataArray) -> xr.DataArray:
     """Remove any singleton vertical dimensions from a DataArray.
 
     Keeps ``time``, ``x``, ``y`` dimensions.  All other singleton dims
@@ -1135,7 +1131,7 @@ def _squeeze_vertical(da):
     return da
 
 
-def _select_height_level(da, target_height=2.0):
+def _select_height_level(da: xr.DataArray, target_height: float = 2.0) -> xr.DataArray:
     """Select the level closest to *target_height* from a multi-level variable.
 
     Handles CDO's various height dimension names (``height``, ``height_2``,
@@ -1164,6 +1160,6 @@ def _select_height_level(da, target_height=2.0):
     return da
 
 
-def _get_time(ds):
+def _get_time(ds: xr.Dataset) -> xr.DataArray:
     """Extract time coordinate from dataset."""
     return ds["time"]

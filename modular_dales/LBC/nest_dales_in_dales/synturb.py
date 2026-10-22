@@ -5,18 +5,22 @@ from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.logging_wrapper import logwrap
 
 
-def _project_zero_into_interval(lower: xr.DataArray, upper: xr.DataArray):
+def _project_zero_into_interval(
+    lower: xr.DataArray, upper: xr.DataArray
+) -> xr.DataArray:
     return xr.where(lower > 0.0, lower, xr.where(upper < 0.0, upper, 0.0))
 
 
-def _clip_covariance(cov: xr.DataArray, var_a: xr.DataArray, var_b: xr.DataArray):
+def _clip_covariance(
+    cov: xr.DataArray, var_a: xr.DataArray, var_b: xr.DataArray
+) -> xr.DataArray:
     limit = np.sqrt(xr.where(var_a * var_b > 0.0, var_a * var_b, 0.0))
     return cov.clip(min=-limit, max=limit)
 
 
 def _interp_profile_to_zt(
     var: xr.DataArray, target_time: xr.DataArray, target_zt: xr.DataArray
-):
+) -> xr.DataArray:
     out = var
     out = out.interp(time=target_time, kwargs={"fill_value": "extrapolate"})
 
@@ -43,7 +47,7 @@ def _load_synturb_profiles(
     input_json: OpenBoundaryConfig,
     target_time: xr.DataArray,
     target_zt: xr.DataArray,
-):
+) -> dict[str, xr.DataArray]:
     with xr.open_dataset(
         f"{input_json.outpath_coarse}/profiles.001.nc",  # TODO robust for expnr
     ) as ds_prof:
@@ -113,7 +117,9 @@ def _load_synturb_profiles(
 
 @logwrap
 def add_synthetic_turbulence(
-    input_json: OpenBoundaryConfig, openboundaries: xr.Dataset, chunks=None
+    input_json: OpenBoundaryConfig,
+    openboundaries: xr.Dataset,
+    chunks: dict[str, int] | None = None,
 ) -> xr.Dataset:
     synturb_profiles = _load_synturb_profiles(
         input_json,

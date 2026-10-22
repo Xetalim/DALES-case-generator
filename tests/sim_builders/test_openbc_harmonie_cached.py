@@ -13,13 +13,12 @@ from modular_dales import (
     GridDales,
     HarmonieAtmosphereModule,
     KNMIHarmonieForecastDownloadModule,
+    Nest_in_KNMI,
     TimedependentModule,
     TimeModule,
     dales_simulation,
-    do_openboundary,
 )
 from modular_dales.Atmosphere import lin
-from modular_dales.LBC.openbc import Nest_in_KNMI
 from modular_dales.vars import qt, thetal, tke, ua, va, w
 
 FORECAST_ROOT = Path(
@@ -67,9 +66,9 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         (qt, 0.01),
         (tke, 0.1),
     ):
-        atmosphere.add(AtmosphericProfile(
-            variable=variable, shape=lin(surf_val=value, ddz=0.0)
-        ))
+        atmosphere.add(
+            AtmosphericProfile(variable=variable, shape=lin(surf_val=value, ddz=0.0))
+        )
     sim += atmosphere
     sim += ConstantSurfaceTemperatureModule(
         thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
@@ -91,14 +90,13 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         convert_to_netcdf=False,
         check_disk_space=False,
     )
-    boundaries = do_openboundary(
+    boundaries = Nest_in_KNMI(
         time0="2026-03-26T18:00:00",
         start="2026-03-26T18:00:00",
         end="2026-03-26T19:00:00",
         e12=0.1,
         tchunk=1,
     )
-    boundaries += Nest_in_KNMI()
     sim += boundaries
     return sim
 

@@ -2,14 +2,17 @@ import hashlib
 import logging
 import os
 from pathlib import Path
+from typing import Any
 from zipfile import ZipFile
 
 import geopandas as gpd
+import numpy as np
 import rasterio
 from pyproj import Transformer
+from rasterio.enums import Resampling
 from rasterio.merge import merge
+from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
-from rasterio.warp import Resampling
 from rasterio.windows import Window, from_bounds
 from shapely.geometry import box
 
@@ -22,11 +25,11 @@ logger.debug("Entered module: %s", __name__)
 
 
 def cached_cog_subset_from_url(
-    cog_url,
-    grid,
-    cache_dir,
-    pad=10,
-):
+    cog_url: str,
+    grid: GridDales,
+    cache_dir: Path,
+    pad: int = 10,
+) -> tuple[np.ndarray, rasterio.Affine, str, dict[str, Any] | Profile]:
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -94,17 +97,17 @@ def cached_cog_subset_from_url(
         return data, transform, ds.crs, ds.profile.copy()
 
 
-def get_cog(grid: GridDales, out_file):
+def get_cog(grid: GridDales, out_file: Path) -> None:
 
     cog_url = "https://lcz-generator.rub.de/cogs/lcz_filter_v3_cog.tif"
 
-    subset, src_transform, src_crs, profile = cached_cog_subset_from_url(
+    data_to_reproject, src_transform, src_crs, profile = cached_cog_subset_from_url(
         cog_url, grid, cache_root("cog"), pad=10
     )
     get_reproject(
         grid,
         out_file,
-        subset,
+        data_to_reproject,
         src_transform,
         src_crs,
         profile,
@@ -113,7 +116,9 @@ def get_cog(grid: GridDales, out_file):
     )
 
 
-def get_cached_esa(cache_dir, grid: GridDales):
+def get_cached_esa(
+    cache_dir: Path, grid: GridDales
+) -> tuple[np.ndarray, rasterio.Affine, str, dict[str, Any] | Profile]:
     os.environ["AWS_NO_SIGN_REQUEST"] = "YES"
     # -------------------------------
     # Parameters
@@ -193,14 +198,14 @@ def get_cached_esa(cache_dir, grid: GridDales):
     return mosaic, out_transform, dst_crs, profile.copy()
 
 
-def get_esa(grid: GridDales, out_file):
-    mosaic, out_transform, mosaic_crs, mosaic_profile = get_cached_esa(
+def get_esa(grid: GridDales, out_file: str | Path) -> None:
+    data_to_reproject, out_transform, mosaic_crs, mosaic_profile = get_cached_esa(
         cache_root("esa_worldcover"), grid
     )
     get_reproject(
         grid,
         out_file,
-        mosaic,
+        data_to_reproject,
         src_transform=out_transform,
         src_crs=mosaic_crs,
         profile=mosaic_profile,
@@ -209,7 +214,9 @@ def get_esa(grid: GridDales, out_file):
     )
 
 
-def query_zip_virtual_mosaic(zip_file_path, grid, pad=0):
+def query_zip_virtual_mosaic(
+    zip_file_path: str, grid: GridDales, pad: int = 0
+) -> np.ndarray:
     """
     Query a virtual mosaic of all TIFFs in a ZIP given a grid, returns data for the requested window.
     Reads only the overlapping pixels (lazy, efficient).

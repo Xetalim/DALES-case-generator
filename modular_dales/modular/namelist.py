@@ -23,9 +23,12 @@ class NamelistSpec:
                 object.__setattr__(self, name, tuple(value))
         if not self.section:
             raise ValueError("A namelist section is required")
-        if isinstance(self.section, tuple) and isinstance(self.key, tuple):
-            if len(self.section) != len(self.key):
-                raise ValueError("Namelist sections and keys must have equal lengths")
+        if (
+            isinstance(self.section, tuple)
+            and isinstance(self.key, tuple)
+            and len(self.section) != len(self.key)
+        ):
+            raise ValueError("Namelist sections and keys must have equal lengths")
 
     def targets(self, field_name: str) -> tuple[tuple[str, str], ...]:
         """Resolve the default key and broadcast single sections or keys."""

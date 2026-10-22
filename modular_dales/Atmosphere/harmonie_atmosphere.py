@@ -31,6 +31,10 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
     provided exactly as for :class:`LS2DAtmosphereModule`.
     """
 
+    module_name: str = field(
+        default="HarmonieAtmosphereModule", init=False, metadata={"serialize": False}
+    )
+
     harmonie_ml_glob: str | None = field(
         default=None,
         init=True,
@@ -87,13 +91,11 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
         metadata={"serialize": False},
     )
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         super().check_settings()
 
         knmi_download_module = None
-        if self.sim is not None and self.sim.module_exists(
-            KNMIHarmonieForecastDownloadModule
-        ):
+        if self.sim.module_exists(KNMIHarmonieForecastDownloadModule):
             knmi_download_module = self.sim.retrieve_module(
                 KNMIHarmonieForecastDownloadModule
             )
@@ -120,8 +122,7 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
 
     def load_les_input(self) -> LESInput:
         knmi_download_module = None
-        if self.sim is not None:
-            knmi_download_module = resolve_knmi_harmonie_download_module(self.sim)
+        knmi_download_module = resolve_knmi_harmonie_download_module(self.sim)
 
         if knmi_download_module is not None:
             if not self.harmonie_ml_glob:
@@ -135,9 +136,10 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
             start=str(self.harmonie_start),
             time0=str(self.harmonie_time0),
             end=str(self.harmonie_end),
-            KNMI_ml_glob=str(self.harmonie_ml_glob),
-            KNMI_sfc_glob=str(self.harmonie_sfc_glob),
+            HARMONIE_ml_glob=str(self.harmonie_ml_glob),
+            HARMONIE_sfc_glob=str(self.harmonie_sfc_glob),
             tchunk=int(self.harmonie_tchunk),
+            e12=0,  # TODO this should not be 0
         )
 
         logger.info(

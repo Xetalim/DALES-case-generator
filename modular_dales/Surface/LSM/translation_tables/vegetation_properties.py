@@ -20,7 +20,7 @@ import numpy as np
 
 
 class _IFS_vegetation:
-    def __init__(self):
+    def __init__(self) -> None:
         # fmt: off
         raw_data = np.array([
             # vt    z0m      z0h        rsmin cveg  gD         a_r     b_r     L_us  L_st  f_rs   rs  lai
@@ -205,7 +205,6 @@ top10_to_ifs = {
 # fmt: on
 
 if __name__ == "__main__":
-
     # Check/print lookup tables
     for i in range(1, 31):
         ii = top10_to_ifs[i]

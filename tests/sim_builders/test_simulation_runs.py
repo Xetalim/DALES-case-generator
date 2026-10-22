@@ -12,7 +12,6 @@ from modular_dales import (
     NestingTopology,
     TimeModule,
     dales_simulation,
-    do_openboundary,
 )
 from modular_dales.Atmosphere import InterpolatedProfile, lin
 from modular_dales.Configuration.output_modules import EasyOutputModule
@@ -87,29 +86,39 @@ def test_triple_nested_simulation_setup(machine_conf):
         # atmo += AtmosphericProfile(
         #     variable=thetal, shape=lin(surf_val=293.15,ddz=1e-2)
         # )
-        atmo.add(InterpolatedProfile(
-            variable=thetal,
-            z=[0, 400, 410, 1600],
-            points=[293.15, 293.15, 298.15, 301.15],
-        ))
-        atmo.add(InterpolatedProfile(
-            variable=thl_nudge,
-            z=[0, 400, 410, 1600],
-            points=[293.15, 293.15, 298.15, 301.15],
-        ))
+        atmo.add(
+            InterpolatedProfile(
+                variable=thetal,
+                z=[0, 400, 410, 1600],
+                points=[293.15, 293.15, 298.15, 301.15],
+            )
+        )
+        atmo.add(
+            InterpolatedProfile(
+                variable=thl_nudge,
+                z=[0, 400, 410, 1600],
+                points=[293.15, 293.15, 298.15, 301.15],
+            )
+        )
         atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0018, ddz=0)))
-        atmo.add(AtmosphericProfile(variable=qt_nudge, shape=lin(surf_val=0.0018, ddz=0)))
+        atmo.add(
+            AtmosphericProfile(variable=qt_nudge, shape=lin(surf_val=0.0018, ddz=0))
+        )
         atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0)))
         atmo.add(AtmosphericProfile(variable=wa_nudge, shape=lin(surf_val=0, ddz=0)))
-        atmo.add(InterpolatedProfile(
-            variable=tke,
-            z=[0, 4000, 5000],
-            points=[1, 1e-8, 1e-8],
-        ))
-        atmo.add(AtmosphericProfile(
-            variable=w,
-            shape=lin(surf_val=0.0, ddz=0.0),
-        ))
+        atmo.add(
+            InterpolatedProfile(
+                variable=tke,
+                z=[0, 4000, 5000],
+                points=[1, 1e-8, 1e-8],
+            )
+        )
+        atmo.add(
+            AtmosphericProfile(
+                variable=w,
+                shape=lin(surf_val=0.0, ddz=0.0),
+            )
+        )
         sim += atmo
 
         sim += TimeModule(
@@ -137,7 +146,7 @@ def test_triple_nested_simulation_setup(machine_conf):
         sim += EasyOutputModule(output_interval=5)
 
         if idx != 0:
-            openbc = do_openboundary(
+            openbc = Nest_in_Dales(
                 time0="2023-01-01T12:00:00",
                 start="2023-01-01T12:00:00",
                 end="2023-01-02T12:00:00",
@@ -146,8 +155,6 @@ def test_triple_nested_simulation_setup(machine_conf):
                 dyint=grid.ysize / grid.jtot,
                 tauh=20,
                 taum=0,
-            )
-            openbc += Nest_in_Dales(
                 inpath_coarse=sims[-1].output_path / "input/",
                 outpath_coarse=sims[-1].output_path / "run_001/",
                 outpath_coarse_old=sims[-1].output_path / "run_001/",

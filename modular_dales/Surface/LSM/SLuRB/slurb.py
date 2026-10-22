@@ -27,7 +27,7 @@ class SLURBVariableModification:
     dtype: Literal["float", "real", "int", "integer"] = "float"
     n_layers: int | None = None
 
-    def to_numpy_dtype(self):
+    def to_numpy_dtype(self) -> type[int | float]:
         """Map supported dtype labels to numpy-compatible dtypes."""
         if self.dtype in ("float", "real"):
             return float
@@ -71,12 +71,20 @@ class SLURBModifications:
         return self.__add__(modification)
 
 
-class slbCreatorClass(ModifierClass):
+@dataclass
+class SLURBVariableMetadata:
+    """Storage metadata for an initialized SLURB variable."""
+
+    dtype: type[int] | type[float]
+    n_layers: int | None = None
+
+
+class slbCreatorClass(ModifierClass[SLURBModification]):
     def __init__(self, grid: GridDales):
         super().__init__(grid)
-        self.vars: dict[str, dict[str, type[int | float] | int | None]] = {}
+        self.vars: dict[str, SLURBVariableMetadata] = {}
 
-    def init_var(self, submod: SLURBVariableModification):
+    def init_var(self, submod: SLURBVariableModification) -> None:
         varname = submod.varname
         dtype = submod.to_numpy_dtype()
         if not (varname in self.vars):
@@ -87,10 +95,12 @@ class slbCreatorClass(ModifierClass):
             else:
                 n_layers = None
 
-            self.vars[varname] = {"dtype": dtype, "n_layers": n_layers}
+            self.vars[varname] = SLURBVariableMetadata(dtype=dtype, n_layers=n_layers)
             setattr(self, varname, np.zeros(shape, dtype=dtype))
 
-    def do_modification(self, geometry, modification):
+    def do_modification(
+        self, geometry: np.ndarray, modification: SLURBModification
+    ) -> None:
         for submod in modification.vars:
             self.init_var(submod)
             if submod.n_layers is not None:
@@ -99,7 +109,7 @@ class slbCreatorClass(ModifierClass):
             else:
                 getattr(self, submod.varname)[geometry] = submod.value
 
-    def output_nc(self, filename):
+    def output_nc(self, filename: str) -> None:
         with netCDF4.Dataset(filename, "w") as nc:
             nc.createDimension("x", len(self.x))
             nc.createDimension("y", len(self.y))
@@ -110,13 +120,13 @@ class slbCreatorClass(ModifierClass):
             var_x[:] = self.x[:]
             var_y[:] = self.y[:]
 
-            for var, var_dic in self.vars.items():
-                dtype = var_dic["dtype"]
+            for var, metadata in self.vars.items():
+                dtype = metadata.dtype
 
-                if var_dic["n_layers"]:
-                    nc.createDimension(f"z_{var}", var_dic["n_layers"])
+                if metadata.n_layers:
+                    nc.createDimension(f"z_{var}", metadata.n_layers)
                     nc.createVariable(f"z_{var}", float, f"z_{var}")[:] = np.arange(
-                        var_dic["n_layers"]
+                        metadata.n_layers
                     )
                     nc.createVariable(var, dtype, ["y", "x", f"z_{var}"])[:, :, :] = (
                         np.transpose(getattr(self, var)[:, :, :], [1, 2, 0])
@@ -125,7 +135,7 @@ class slbCreatorClass(ModifierClass):
                     nc.createVariable(var, dtype, ["y", "x"])[:, :] = getattr(
                         self, var
                     )[:, :]
-            self.grid.set_cf_grid_mapping(nc, "crs", list(self.vars.keys()))
+            self.grid.set_cf_grid_mapping_netcdf(nc, "crs", list(self.vars.keys()))
 
 
 @register_module
@@ -265,11 +275,11 @@ class SLURBModule(simulation_module):
         metadata={"serialize": True},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "SLURBModule"
+    module_name: str = field(
+        default="SLURBModule", init=False, metadata={"serialize": False}
+    )
 
-    def __add__(self, obj) -> Self:
+    def __add__(self, obj: SLURBModification | SLURBModifications) -> Self:
         """Add SLURB modifications to module."""
         if isinstance(obj, SLURBModification):
             self.slb_modifications += obj
@@ -281,28 +291,16 @@ class SLURBModule(simulation_module):
             )
         return self
 
-    def __iadd__(self, obj) -> Self:
+    def __iadd__(self, obj: SLURBModification | SLURBModifications) -> Self:
         return self.__add__(obj)
 
-    def do_config(self):
-        """Apply SLURB modifications to configuration."""
-        return
-
-    def prepare_calculation(self):
-        return self.prepare_calculations()
-
-    def init_generator(self):
+    def init_generator(self) -> None:
         """Initialize SLURB generator."""
         if self.slb_generator is None:
             self.slb_generator = slbCreatorClass(self.grid)
 
-    def prepare_calculations(self):
+    def prepare_calculations(self) -> None:
         """Set up SLURB geometry and update namelist."""
-        # just to check, is grid even there???
-        if self.grid is None:
-            raise ValueError(
-                "Grid must be set before preparing SLURB calculations (you did something wrong!)"
-            )
         # Initialize generator if not already done
         self.init_generator()
 
@@ -311,11 +309,7 @@ class SLURBModule(simulation_module):
             if modification is not None:
                 self.slb_generator.apply_modification(modification)
 
-    def check_settings(self):
-        """Check SLURB settings validity."""
-        return
-
-    def write_files(self):
+    def write_files(self) -> None:
         """Write SLURB files."""
         # Note: NAMSLURB section exists but doesn't have a simple enable flag
         # The presence of SLURB data controls whether it's used

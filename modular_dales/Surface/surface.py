@@ -1,7 +1,8 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Union
 
+from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
@@ -16,9 +17,8 @@ logger = logging.getLogger(__name__)
 class SurfaceModule(simulation_module):
     """Surface simulation module base class."""
 
-    def _initialize_from_sim(self, sim):
+    def _initialize_from_sim(self, sim: dales_simulation) -> None:
         sim.has_surface_module = True
-        return super()._initialize_from_sim(sim)
 
 
 @register_module
@@ -83,28 +83,9 @@ class ConstantFluxesModule(SurfaceModule):
         metadata={"serialize": True},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "ConstantFluxesModule"
-
-    def do_config(self):
-        """Configure surface settings and namelist."""
-        return
-
-    def prepare_calculation(self):
-        return self.prepare_calculations()
-
-    def prepare_calculations(self):
-        """No additional preparation needed."""
-        return
-
-    def check_settings(self):
-        """Validate constant fluxes settings."""
-        return
-
-    def write_files(self):
-        """No files to write."""
-        return
+    module_name: str = field(
+        default="ConstantFluxesModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -176,28 +157,11 @@ class ConstantFluxesWithShearModule(SurfaceModule):
         metadata={"serialize": True},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "ConstantFluxesWithShearModule"
-
-    def do_config(self):
-        """Configure surface settings and namelist."""
-        return
-
-    def prepare_calculation(self):
-        return self.prepare_calculations()
-
-    def prepare_calculations(self):
-        """No additional preparation needed."""
-        return
-
-    def check_settings(self):
-        """Validate constant fluxes with shear settings."""
-        return
-
-    def write_files(self):
-        """No files to write."""
-        return
+    module_name: str = field(
+        default="ConstantFluxesWithShearModule",
+        init=False,
+        metadata={"serialize": False},
+    )
 
 
 @register_module
@@ -254,25 +218,8 @@ class ConstantSurfaceTemperatureModule(SurfaceModule):
         metadata={"serialize": True},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "ConstantSurfaceTemperatureModule"
-
-    def do_config(self):
-        """Configure surface settings and namelist."""
-        return
-
-    def prepare_calculation(self):
-        return self.prepare_calculations()
-
-    def prepare_calculations(self):
-        """No additional preparation needed."""
-        return
-
-    def check_settings(self):
-        """Validate constant surface temperature settings."""
-        return
-
-    def write_files(self):
-        """No files to write."""
-        return
+    module_name: str = field(
+        default="ConstantSurfaceTemperatureModule",
+        init=False,
+        metadata={"serialize": False},
+    )

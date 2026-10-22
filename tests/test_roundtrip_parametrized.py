@@ -42,7 +42,6 @@ from .sim_builders.test_runtime_special_cases import (
     lsm_homogeneous_runtime_case,
     radiation_backrad_interpolated_case,
     radiation_backrad_profile_case,
-    radiation_backrad_source_case,
     radiation_type_4_case,
     radiation_type_5_case,
     spraying_runtime_case,
@@ -51,6 +50,10 @@ from .sim_builders.test_sim2 import sim_2_case
 from .sim_builders.test_slurb import (
     assert_slurb_files_written,
     simple_SLURB_case,
+)
+from .sim_builders.test_slurb_depac import (
+    SLURB_DEPAC_case,
+    assert_slurb_depac_files_written,
 )
 from .sim_builders.test_slurb_lcz import (
     SLURB_LCZ_case,
@@ -79,6 +82,7 @@ from .sim_builders.test_timedep_atmosphere_params import (
         pytest.param(simple_LSM_case, id="simple_LSM_case"),
         pytest.param(LSM_with_HARM_soil, id="LSM_with_HARM_soil"),
         pytest.param(SLURB_LCZ_case, id="SLURB_LCZ_case"),
+        pytest.param(SLURB_DEPAC_case, id="SLURB_DEPAC_case"),
         pytest.param(simple_SLURB_case, id="simple_SLURB_case"),
         pytest.param(emission_case, id="emission_case"),
         pytest.param(
@@ -108,6 +112,7 @@ def sim_builder(request) -> Callable[[dict], dales_simulation]:
         pytest.param(simple_LSM_case, id="simple_LSM_case"),
         pytest.param(LSM_with_HARM_soil, id="LSM_with_HARM_soil"),
         pytest.param(SLURB_LCZ_case, id="SLURB_LCZ_case"),
+        pytest.param(SLURB_DEPAC_case, id="SLURB_DEPAC_case"),
         pytest.param(simple_SLURB_case, id="simple_SLURB_case"),
         pytest.param(emission_case, id="emission_case"),
         pytest.param(
@@ -138,10 +143,6 @@ def sim_builder(request) -> Callable[[dict], dales_simulation]:
         pytest.param(
             radiation_backrad_profile_case,
             id="radiation_backrad_profile_case",
-        ),
-        pytest.param(
-            radiation_backrad_source_case,
-            id="radiation_backrad_source_case",
         ),
         pytest.param(
             radiation_backrad_interpolated_case,
@@ -189,6 +190,7 @@ def sim_builder_to_run(request):
         pytest.param(sim_2_case, id="sim_2_case"),
         pytest.param(assert_ibm_files_written, id="IBM_case"),
         pytest.param(assert_slurb_lcz_files_written, id="SLURB_LCZ_case"),
+        pytest.param(assert_slurb_depac_files_written, id="SLURB_DEPAC_case"),
         pytest.param(assert_slurb_files_written, id="SLURB_case"),
         pytest.param(
             assert_openbc_atmosphere_profiles_files_written,

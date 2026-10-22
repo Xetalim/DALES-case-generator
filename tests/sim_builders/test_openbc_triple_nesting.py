@@ -15,7 +15,6 @@ from modular_dales import (
     NestingTopology,
     TimeModule,
     dales_simulation,
-    do_openboundary,
 )
 from modular_dales.Atmosphere import lin
 from modular_dales.Configuration.output_modules import (
@@ -29,11 +28,11 @@ from modular_dales.Configuration.output_modules import (
 from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.Radiation.radiation import RadiationModule
+from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
 from modular_dales.Surface.LSM.LSM import (
     FromBofek,
     FromLCZ,
     FromTop10,
-    LandUseModification,
     LSMModule,
 )
 from modular_dales.Surface.LSM.modular_temps_moisture import (
@@ -203,7 +202,7 @@ def _attach_common_physics(
     if sim.nml.get("thermodynamics") is None:
         sim.nml["thermodynamics"] = {}
     # Keep nested domains thermodynamically consistent with base-state exner.
-    sim.nml["thermodynamics"]["lbaseexner"] = True
+    # sim.nml["thermodynamics"]["lbaseexner"] = True
     # sim.nml["thermodynamics"]["lconstexner"] = False
 
 
@@ -245,7 +244,7 @@ def _build_middle_nested_sim(
     nesting.my_idx = nesting.nestings.index(midgrid)
     sim += nesting
 
-    openbc = do_openboundary(
+    openbc = Nest_in_Dales(
         time0="2023-01-01T12:00:10",
         start="2023-01-01T12:00:00",
         end="2023-01-01T12:01:00",
@@ -254,8 +253,6 @@ def _build_middle_nested_sim(
         dyint=midgrid.ysize / midgrid.jtot * 4,
         tauh=20,
         taum=0,
-    )
-    openbc += Nest_in_Dales(
         inpath_coarse=parent_sim.output_path / "input",
         outpath_coarse=parent_sim.output_path / "run_001",
         outpath_coarse_old=parent_sim.output_path / "run_001",
@@ -283,7 +280,7 @@ def _build_inner_nested_sim(
     nesting.my_idx = nesting.nestings.index(innergrid)
     sim += nesting
 
-    openbc = do_openboundary(
+    openbc = Nest_in_Dales(
         time0="2023-01-01T12:00:10",
         start="2023-01-01T12:00:00",
         end="2023-01-01T12:01:00",
@@ -292,8 +289,6 @@ def _build_inner_nested_sim(
         dyint=innergrid.ysize / innergrid.jtot * 4,
         tauh=20,
         taum=0,
-    )
-    openbc += Nest_in_Dales(
         inpath_coarse=middle_sim.output_path / "input",
         outpath_coarse=middle_sim.output_path / "run_001",
         outpath_coarse_old=middle_sim.output_path / "run_001",
@@ -497,7 +492,7 @@ def _build_middle_nested_sim_scaled64(
     sim += nesting
     dxturb = midgrid.xsize / midgrid.itot * 4.0
     dyturb = midgrid.ysize / midgrid.jtot * 4.0
-    openbc = do_openboundary(
+    openbc = Nest_in_Dales(
         time0="2023-01-01T12:00:00",
         start="2023-01-01T12:00:00",
         end="2023-01-01T13:00:00",
@@ -510,8 +505,6 @@ def _build_middle_nested_sim_scaled64(
         taum=100,
         lambda_=dxturb,
         lsynturb=False,
-    )
-    openbc += Nest_in_Dales(
         inpath=parent_sim.output_path / "input",
         inpath_coarse=parent_sim.output_path / "input",
         outpath_coarse=parent_sim.output_path / "run_001",
@@ -545,7 +538,7 @@ def _build_inner_nested_sim_scaled64(
 
     dxturb = innergrid.xsize / innergrid.itot * 4.0
     dyturb = innergrid.ysize / innergrid.jtot * 4.0
-    openbc = do_openboundary(
+    openbc = Nest_in_Dales(
         time0="2023-01-01T12:00:00",
         start="2023-01-01T12:00:00",
         end="2023-01-01T13:00:00",
@@ -558,8 +551,6 @@ def _build_inner_nested_sim_scaled64(
         taum=100,
         lambda_=dxturb,
         lsynturb=False,
-    )
-    openbc += Nest_in_Dales(
         inpath=middle_sim.output_path / "input",
         inpath_coarse=middle_sim.output_path / "input",
         outpath_coarse=middle_sim.output_path / "run_001",

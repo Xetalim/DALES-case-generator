@@ -403,7 +403,7 @@ ALL_VARIABLES: list[VariableDefinition] = [
 ATMO_VARS_BY_NAME: dict[str, VariableDefinition] = {v.name: v for v in ALL_VARIABLES}
 
 
-def register_var(var):
+def register_var(var: VariableDefinition) -> None:
     ALL_VARIABLES.append(var)
     ATMO_VARS_BY_NAME.clear()
     ATMO_VARS_BY_NAME.update({v.name: v for v in ALL_VARIABLES})

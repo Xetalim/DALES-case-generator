@@ -1,4 +1,3 @@
-
 import numpy as np
 import pytest
 import xarray as xr
@@ -13,7 +12,6 @@ from modular_dales import (
     NestingTopology,
     TimeModule,
     dales_simulation,
-    do_openboundary,
 )
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.modular.simulation_module import set_nml_section
@@ -120,7 +118,7 @@ def _build_coarse_sim_with_easyoutput(
 
     if sim.nml.get("thermodynamics") is None:
         sim.nml["thermodynamics"] = {}
-    sim.nml["thermodynamics"]["lconstexner"] = True
+    # sim.nml["thermodynamics"]["lconstexner"] = True
 
     return sim
 
@@ -173,7 +171,7 @@ def _build_nested_openbc_sim_from_coarse(
     nesting.my_idx = nesting.nestings.index(subgrid)
     sim2 += nesting
 
-    openbc = do_openboundary(
+    openbc = Nest_in_Dales(
         time0="2023-01-01T12:00:10",
         start="2023-01-01T12:00:00",
         end="2023-01-02T12:00:00",
@@ -182,8 +180,6 @@ def _build_nested_openbc_sim_from_coarse(
         dyint=subgrid.ysize / subgrid.jtot,
         tauh=20,
         taum=0,
-    )
-    openbc += Nest_in_Dales(
         inpath_coarse=coarse_sim.output_path / "input/",
         outpath_coarse=coarse_sim.output_path / "run_001/",
         outpath_coarse_old=coarse_sim.output_path / "run_001/",
@@ -197,7 +193,7 @@ def _build_nested_openbc_sim_from_coarse(
     sim2.nml["namchecksim"]["tcheck"] = 60
     if sim2.nml.get("thermodynamics") is None:
         sim2.nml["thermodynamics"] = {}
-    sim2.nml["thermodynamics"]["lconstexner"] = True
+    # sim2.nml["thermodynamics"]["lconstexner"] = True
 
     return sim2
 

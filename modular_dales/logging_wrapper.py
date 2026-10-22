@@ -4,14 +4,19 @@
 import logging
 import logging.config
 import pathlib
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import yaml
 
 from modular_dales.helpers import package_resource_path
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
 
 # At the beginning of every .py file in the project
-def logwrap(fn):
+def logwrap[**P, R](fn: Callable[P, R]) -> Callable[P, R]:
     return fn
     from functools import wraps
 
@@ -46,7 +51,7 @@ def logwrap(fn):
     return wrapper
 
 
-def setup_logging(config_path="logging.yaml"):
+def setup_logging(config_path: str = "logging.yaml") -> None:
     path = pathlib.Path(config_path)
     if path.exists():
         _configure_logging(path)
@@ -60,7 +65,7 @@ def setup_logging(config_path="logging.yaml"):
     logging.basicConfig()
 
 
-def _configure_logging(config_path):
+def _configure_logging(config_path: pathlib.Path) -> None:
     with config_path.open(encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 

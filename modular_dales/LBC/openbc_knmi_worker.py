@@ -1,9 +1,7 @@
-"""Worker for building KNMI-based open-boundary fields."""
-
-from __future__ import annotations
+"""KNMI-backed open-boundary module."""
 
 import logging
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
 
 import dask
 import numpy as np
@@ -19,63 +17,90 @@ from modular_dales.LBC.nest_dales_in_HARMONIE import (
 from modular_dales.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
     resolve_knmi_harmonie_download_module,
 )
+from modular_dales.LBC.openbc import do_openboundary
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
-
-if TYPE_CHECKING:
-    from modular_dales.LBC.openbc import do_openboundary
-
+from modular_dales.MODULE_REGISTRY import register_module
 
 logger = logging.getLogger(__name__)
 
 
-class OpenBCKNMIWorker:
-    """Build open boundaries from KNMI operational HARMONIE output."""
+@dataclass(kw_only=True)
+class _KNMIOpenBCOptions:
+    """Options for nesting DALES inside KNMI HARMONIE output."""
 
-    def __init__(self, module: do_openboundary) -> None:
-        self.module = module
+    ml_glob: str | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    sfc_glob: str | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    w_from_continuity: bool = field(
+        default=False, repr=True, metadata={"serialize": True}, init=True
+    )
+    use_grib: bool | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    noise_std: float | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    noise_seed: int | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    noise_boundaries: list[str] | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    noise_variables: list[str] | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    noise_minzt: float | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
+    noise_maxzt: float | None = field(
+        default=None, repr=True, metadata={"serialize": True}, init=True
+    )
 
-    def prepare(self) -> tuple[xr.Dataset, xr.Dataset]:
+
+@register_module
+@dataclass
+class Nest_in_KNMI(do_openboundary, _KNMIOpenBCOptions):
+    module_name: str = field(default="Nest_in_KNMI", init=False)
+
+    def prepare_calculation(self) -> None:
+        self._prepare_from_knmi()
+
+    def _prepare_from_knmi(self) -> None:
         config = self._build_config()
-        prepper = nest_dales_in_KNMI.KNMIPrepper(
-            config,
-            self.module.openBCgrid,
-        )
+        prepper = nest_dales_in_KNMI.KNMIPrepper(config, self.openBCgrid)
         prepper.load_data()
         data, transform = prepper.prep_harmonie()
-        self.module.harmonieprepper = prepper
+        self.harmonieprepper = prepper
 
         logger.info("Setting namelist NAMSURFACE:ps to %f", prepper.ps)
-        self.module.set_nml_section("NAMSURFACE", "ps", prepper.ps)
+        self.set_nml_section("NAMSURFACE", "ps", prepper.ps)
         logger.info("Setting namelist NAMSURFACE:thls to %f", prepper.thls)
-        self.module.set_nml_section("NAMSURFACE", "thls", prepper.thls)
+        self.set_nml_section("NAMSURFACE", "thls", prepper.thls)
 
         (data,) = dask.optimize(data)
 
         logger.debug("Setting up boundary fields (KNMI source)")
-        boundaries = harmonie_boundary.boundary_fields(
-            config,
-            self.module.openBCgrid,
-            data,
-            output_path=self.module.output_path,
-        )
+        boundaries = harmonie_boundary.boundary_fields(config, self.openBCgrid, data)
         logger.debug("Setting up initial fields (KNMI source)")
         initfields_ds = initfields.initial_fields(
             config,
-            self.module.openBCgrid,
+            self.openBCgrid,
             data,
             transform,
-            output_path=self.module.output_path,
+            output_path=self.output_path,
         )
 
         boundaries = self._apply_noise(boundaries)
-        boundaries, initfields_ds = dask.optimize(boundaries, initfields_ds)
-        return boundaries, initfields_ds
+        self.boundaries, self.initfields = dask.optimize(boundaries, initfields_ds)
 
     def _build_config(self) -> OpenBoundaryConfig:
-        download_module = resolve_knmi_harmonie_download_module(self.module)
-        ml_glob = self.module.nest_in_knmi.ml_glob
-        sfc_glob = self.module.nest_in_knmi.sfc_glob
-        use_grib = self.module.nest_in_knmi.use_grib
+        download_module = resolve_knmi_harmonie_download_module(self)
+        ml_glob = self.ml_glob
+        sfc_glob = self.sfc_glob
+        use_grib = self.use_grib
         if download_module is not None:
             if ml_glob in (None, ""):
                 ml_glob = download_module.ml_glob
@@ -88,30 +113,30 @@ class OpenBCKNMIWorker:
                 use_grib = True
 
         return OpenBoundaryConfig(
-            e12=self.module.e12,
-            tracernames=list(self.module.tracernames or []),
-            tchunk=self.module.tchunk,
-            start=self.module.start,
+            e12=self.e12,
+            tracernames=list(self.tracernames or []),
+            tchunk=self.tchunk,
+            start=self.start,
             author="author",
-            time0=self.module.time0,
-            end=self.module.end,
-            KNMI_ml_glob=ml_glob,
-            KNMI_sfc_glob=sfc_glob,
-            w_from_continuity=self.module.nest_in_knmi.w_from_continuity,
+            time0=self.time0,
+            end=self.end,
+            HARMONIE_ml_glob=ml_glob,
+            HARMONIE_sfc_glob=sfc_glob,
+            w_from_continuity=self.w_from_continuity,
             use_grib=use_grib,
         )
 
     def _resolve_noise_window(
         self,
     ) -> tuple[float | None, float | None, float | None]:
-        noise_std = self.module.nest_in_knmi.noise_std
-        noise_minzt = self.module.nest_in_knmi.noise_minzt
-        noise_maxzt = self.module.nest_in_knmi.noise_maxzt
+        noise_std = self.noise_std
+        noise_minzt = self.noise_minzt
+        noise_maxzt = self.noise_maxzt
         if noise_std is None or (noise_minzt is None and noise_maxzt is None):
             return noise_std, noise_minzt, noise_maxzt
 
-        zt = self.module.openBCgrid.zt
-        zm = self.module.openBCgrid.zm
+        zt = self.openBCgrid.zt
+        zm = self.openBCgrid.zm
         mask = np.ones_like(zt, dtype=bool)
         mask_zm = np.ones_like(zm, dtype=bool)
         if noise_minzt is not None:
@@ -138,16 +163,15 @@ class OpenBCKNMIWorker:
     def _selected_noise_targets(self) -> tuple[set[str], set[str]]:
         all_boundaries = {"west", "east", "south", "north", "top"}
         base_vars = {"u", "v", "w", "thl", "qt", "e12"}
-        requested_bounds = self.module.nest_in_knmi.noise_boundaries
-        requested_vars = self.module.nest_in_knmi.noise_variables
-
         active_bounds = (
-            set(requested_bounds) & all_boundaries
-            if requested_bounds is not None
+            set(self.noise_boundaries) & all_boundaries
+            if self.noise_boundaries is not None
             else all_boundaries
         )
         active_vars = (
-            set(requested_vars) & base_vars if requested_vars is not None else base_vars
+            set(self.noise_variables) & base_vars
+            if self.noise_variables is not None
+            else base_vars
         )
         return active_bounds, active_vars
 
@@ -156,7 +180,7 @@ class OpenBCKNMIWorker:
         if noise_std is None or noise_std <= 0.0:
             return boundaries
 
-        rng = np.random.default_rng(self.module.nest_in_knmi.noise_seed)
+        rng = np.random.default_rng(self.noise_seed)
         active_bounds, active_vars = self._selected_noise_targets()
 
         for var in active_vars:

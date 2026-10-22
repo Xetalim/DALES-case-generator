@@ -8,9 +8,10 @@ from types import SimpleNamespace
 import pytest
 
 from docs.conf import _append_namelist_field_docs
+from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.namelist import get_namelist_spec, nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from tests.test_namelist_fields import NamelistModule, attached
+from tests.test_namelist_fields import NamelistModule
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY_KEYS = {"nml", "key", "required", "raise_conflict", "doc", "units"}
@@ -115,7 +116,8 @@ def test_migrated_forcing_metadata(monkeypatch):
         item for item in fields(ConstantFluxesModule) if item.name == "ps"
     )
     assert definition.metadata["forcing_var"] == "psurf"
-    module = attached(ConstantFluxesModule(z0mav=0.1, z0hav=0.01))
+    module = ConstantFluxesModule(z0mav=0.1, z0hav=0.01)
+    module._attach_to_sim(dales_simulation("test", {}))
     monkeypatch.setattr(
         module, "_external_forcing_start_value", lambda variable: 99000.0
     )

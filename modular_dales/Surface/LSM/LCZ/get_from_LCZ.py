@@ -2,11 +2,13 @@ import logging
 import pathlib
 import tempfile
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import rasterio
 import xarray as xr
 
+from modular_dales.Geometry import GridDales
 from modular_dales.IO_helpers import ensure_sorted, raster_to_xarray
 from modular_dales.Surface.LSM.LCZ.downloaders import get_cog, get_esa
 
@@ -89,15 +91,15 @@ class LCZ:
 
     def __init__(
         self,
-        svf,
-        aspect_ratio,
-        building_surface_fraction,
-        impervious_surface_fraction,
-        pervious_surface_fraction,
-        height_roughness_element,
-        terrain_roughness_class,
-        albedo,
-    ):
+        svf: float,
+        aspect_ratio: float,
+        building_surface_fraction: float,
+        impervious_surface_fraction: float,
+        pervious_surface_fraction: float,
+        height_roughness_element: float,
+        terrain_roughness_class: int,
+        albedo: float,
+    ) -> None:
         self.svf = svf
         self.aspect_ratio = aspect_ratio
         self.building_surface_fraction = building_surface_fraction / 100
@@ -150,11 +152,11 @@ LCZ_URBAN_NATURAL_TO_IFS = {
 
 
 def apply_urban_natural_lcz_overrides(
-    lcz_da,
-    ifs_da,
-    urban_natural_lcz_to_10=False,
-    urban_natural_lcz_to_natural_lsm=False,
-):
+    lcz_da: xr.DataArray,
+    ifs_da: xr.DataArray,
+    urban_natural_lcz_to_10: bool = False,
+    urban_natural_lcz_to_natural_lsm: bool = False,
+) -> tuple[xr.DataArray, xr.DataArray]:
     """Apply optional overrides for urban pixels with natural LCZ classes (11-17)."""
     lcz_values = np.asarray(lcz_da.values, dtype=float).copy()
     ifs_values = np.asarray(ifs_da.values, dtype=float).copy()
@@ -190,8 +192,14 @@ def apply_urban_natural_lcz_overrides(
 
 
 def map_lcz_raster(
-    lcz, lcz_profile, dst_tif, lcz_dict, field, nodata_in=0, nodata_out=np.nan
-):
+    lcz: np.ndarray,
+    lcz_profile: dict[str, Any],
+    dst_tif: str,
+    lcz_dict: dict[int, LCZ],
+    field: str,
+    nodata_in: float = 0,
+    nodata_out: float = np.nan,
+) -> None:
     # build lookup table (index 0 unused)
     lut = np.full(18, nodata_out, dtype=float)
     for k, v in lcz_dict.items():
@@ -210,7 +218,7 @@ def map_lcz_raster(
         dst.write(mapped[0, :, :].astype("float32"), 1)  # band=1
 
 
-def map_esa_to_ifs(esa_da):
+def map_esa_to_ifs(esa_da: xr.DataArray) -> xr.DataArray:
     """
     Map ESA WorldCover raster to IFS land-cover codes.
     """
@@ -227,7 +235,9 @@ def map_esa_to_ifs(esa_da):
     )
 
 
-def map_lcz_to_fields(lcz_da, ifs_da, lcz_dict):
+def map_lcz_to_fields(
+    lcz_da: xr.DataArray, ifs_da: xr.DataArray, lcz_dict: dict[int, LCZ]
+) -> dict[str, xr.DataArray]:
     """
     Create LCZ-derived fields as xarray DataArrays.
     Values are mapped from LCZ wherever LCZ is valid.
@@ -254,7 +264,7 @@ def map_lcz_to_fields(lcz_da, ifs_da, lcz_dict):
     return out
 
 
-def map_soil_type(esa_da):
+def map_soil_type(esa_da: xr.DataArray) -> xr.DataArray:
     """
     Create soil type map:
     - built-up -> derived from LCZ
@@ -280,12 +290,12 @@ def map_soil_type(esa_da):
 
 
 def build_land_surface_dataset(
-    esa_tif,
-    lcz_tif,
-    lcz_dict,
-    urban_natural_lcz_to_10=False,
-    urban_natural_lcz_to_natural_lsm=False,
-):
+    esa_tif: str,
+    lcz_tif: str,
+    lcz_dict: dict[int, LCZ],
+    urban_natural_lcz_to_10: bool = False,
+    urban_natural_lcz_to_natural_lsm: bool = False,
+) -> xr.Dataset:
     # --- ESA WorldCover ---
     esa = raster_to_xarray(esa_tif, "esa_worldcover")
 
@@ -320,10 +330,10 @@ def build_land_surface_dataset(
 
 
 def do_everything(
-    grid,
-    urban_natural_lcz_to_10=False,
-    urban_natural_lcz_to_natural_lsm=False,
-):
+    grid: GridDales,
+    urban_natural_lcz_to_10: bool = False,
+    urban_natural_lcz_to_natural_lsm: bool = False,
+) -> xr.Dataset:
     with tempfile.TemporaryDirectory() as tmpdirname:
         path = pathlib.Path(tmpdirname)
         lcz_file = path / "lcz.tif"

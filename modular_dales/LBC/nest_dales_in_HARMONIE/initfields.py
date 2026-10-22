@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
+from Transform import Transform
 
 from modular_dales.Geometry.GridDales import GridDalesOpenBC
 from modular_dales.logging_wrapper import logwrap
@@ -21,10 +22,10 @@ logger.debug("Entered module: %s", __name__)
 def initial_fields(
     input_json: "OpenBoundaryConfig",
     grid: GridDalesOpenBC,
-    data,
-    transform,
-    output_path,
-):
+    data: xr.Dataset,
+    transform: Transform,
+    output_path: str,
+) -> xr.Dataset:
     data = data.isel({"time": 0}, drop=True).transpose(
         "z", "y", "x", ..., missing_dims="warn"
     )
@@ -100,7 +101,7 @@ def initial_fields(
 
 
 @logwrap
-def add_units_and_names(initfields):
+def add_units_and_names(initfields: xr.Dataset) -> None:
     initfields["xt"] = initfields["xt"].assign_attrs(
         {"longname": "West-East displacement of cell centers", "units": "m"}
     )

@@ -5,6 +5,7 @@ import pytest
 
 from modular_dales import vars
 from modular_dales.Atmosphere import AtmosphereModule, AtmosphericProfile, lin
+from modular_dales.modular.dales_simulation import dales_simulation
 
 
 @pytest.mark.parametrize(
@@ -82,7 +83,9 @@ def test_non_state_profiles_have_no_nudger(variable):
 @pytest.mark.parametrize("variable", [vars.ua, vars.va, vars.w, vars.thetal, vars.qt])
 def test_add_routes_physical_profiles_by_destination(variable):
     atmo = AtmosphereModule()
-    atmo.sim = SimpleNamespace(grid=SimpleNamespace(zt=np.array([5.0, 15.0])))
+    sim = dales_simulation("routing", {})
+    sim.grid = SimpleNamespace(zt=np.array([5.0, 15.0]))
+    sim += atmo
     state = AtmosphericProfile(variable=variable, shape=lin(surf_val=2.0, ddz=0.0))
     target = AtmosphericProfile(variable=variable, shape=lin(surf_val=4.0, ddz=0.0))
     assert atmo.add([(0.0, target), (60.0, target)], nudging=True) is atmo

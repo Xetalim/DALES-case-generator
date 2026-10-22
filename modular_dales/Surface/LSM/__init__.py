@@ -2,6 +2,7 @@
 
 from .base import BaseLSMModule
 from .homogeneous import LSMHomogeneousModule
+from .LandUseModifications import LandUseModification, LandUseModifications
 from .LSM import (
     AGSParameters,
     FromBofek,
@@ -9,8 +10,6 @@ from .LSM import (
     FromLS2D,
     FromNetCDF,
     FromTop10,
-    LandUseModification,
-    LandUseModifications,
     LSMModule,
 )
 from .modular_temps_moisture import (
@@ -32,6 +31,7 @@ from .SLuRB.slurb import (
     SLURBVariableModification,
     slbCreatorClass,
 )
+from .translation_tables.landuse_types import LandUseSet
 
 __all__ = [
     "AGSParameters",
@@ -45,6 +45,7 @@ __all__ = [
     "LSMModule",
     "LandUseModification",
     "LandUseModifications",
+    "LandUseSet",
     "SLURBModification",
     "SLURBModifications",
     "SLURBModule",

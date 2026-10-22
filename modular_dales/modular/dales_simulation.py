@@ -6,11 +6,12 @@ import pathlib
 import subprocess
 from dataclasses import is_dataclass
 from pathlib import Path, PosixPath
-from typing import Self, Union
+from typing import Any, Self, cast
 
 import f90nml
 import yaml
 
+from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.helpers import package_resource_path
 from modular_dales.modular.forcing import ForcingSet, collect_forcings
 from modular_dales.modular.simulation_module import set_nml_section, simulation_module
@@ -21,6 +22,9 @@ from .serialize_deserialize import _deserialize_dataclass, asdict_user_set
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
+type Namelist = dict[str, dict[str, Any]]
+type NamelistDoc = dict[str, dict[str, str]]
+
 
 def yaml_equivalent_of_path(dumper, data):
     return dumper.represent_str(str(data))
@@ -30,7 +34,7 @@ yaml.add_multi_representer(Path, yaml_equivalent_of_path)
 yaml.add_multi_representer(PosixPath, yaml_equivalent_of_path)
 
 
-def check_core_amounts(machine_conf, nml) -> tuple[int, int, int]:
+def check_core_amounts(machine_conf: Any, nml: Namelist) -> tuple[int, int, int]:
     """Adjust core count and MPI decomposition for DALES.
 
     This helper chooses a decomposition (nprocx, nprocy, nprocs) such that:
@@ -185,7 +189,7 @@ class dales_simulation:
         sim.write_module_files()       # Write output files
     """
 
-    def __init__(self, case_name: str, machine_conf):
+    def __init__(self, case_name: str, machine_conf: Any):
         """Initialize DALES simulation with case name and machine settings.
 
         Only reads configuration at this stage. All work is deferred to
@@ -202,18 +206,17 @@ class dales_simulation:
         self.has_surface_module = False  # set by SurfaceModule when added
         self.has_atmosphere_module = False  # set by AtmosphereModule when added
         # Start with empty namelist - will be populated by modules
-        self.nml = f90nml.namelist.Namelist()
-        self.nml_docs: dict[
-            str, dict[str, str]
-        ] = {}  # stores info about which module set which namelist variables for better error messages and debugging
+        # we cast to dict[str,dict[str,any]] to make the type checking okay. this function does nothing at runtime
+        self.nml: Namelist = cast(Namelist, f90nml.namelist.Namelist())
+        self.nml_docs: NamelistDoc = {}  # stores info about which module set which namelist variables for better error messages and debugging
 
         # These will be initialized by init_output_folder()
-        self.output_path = None
-        self.exp_id = None
-        self.grid = None
+        self.output_path_: pathlib.Path | None = None
+        self.exp_id: int | None = None
+        self.grid: GridDales | None = None
         # map output files to their paths
         self.required_files: dict[str, str] = {}
-        self.required_folder_list = []
+        self.required_folder_list: list[str] = []
         self._initialized = False
         self._forcings: ForcingSet | None = None
         self._forcings_in_progress = False
@@ -233,7 +236,13 @@ class dales_simulation:
                 self._forcings_in_progress = False
         return self._forcings
 
-    def init_output_folder(self):
+    @property
+    def output_path(self) -> pathlib.Path:
+        if self.output_path_ is None:
+            raise RuntimeError("Output folder has not been initialized")
+        return self.output_path_
+
+    def init_output_folder(self) -> None:
         """Initialize output folder and paths.
 
         This method is called explicitly at the start of the workflow.
@@ -251,10 +260,10 @@ class dales_simulation:
                 "No BASE_OUTPUT_PATH set in machine configuration, using current directory for output"
             )
             output_path = pathlib.Path.cwd() / "generated_cases" / self.case_name
-        self.output_path = output_path
+        self.output_path_ = output_path
 
-        os.makedirs(self.output_path, exist_ok=True)
-        os.makedirs(self.output_path / "input", exist_ok=True)
+        os.makedirs(self.output_path_, exist_ok=True)
+        os.makedirs(self.output_path_ / "input", exist_ok=True)
 
         # Note: grid creation and additional validation are deferred to
         # the explicit do_config() and check_settings() phases so that
@@ -280,16 +289,13 @@ class dales_simulation:
                 f"Module {module} must have a module_name for identification"
             )
 
-        # Initialize module with this simulation if not already initialized
-        if module.sim is None:
-            module._initialize_from_sim(self)
-        else:
-            logger.debug(
-                "Module %s already has a simulation reference; skipping initialization",
-                module,
-            )
+        module._attach_to_sim(self)
+        if any(existing is module for existing in self.modules):
+            return self
         self.modules.append(module)
         self._forcings = None
+        if isinstance(module, GridDales):
+            self.grid = module
         return self
 
     def __iadd__(self, module: "simulation_module") -> Self:
@@ -304,7 +310,7 @@ class dales_simulation:
         self.__add__(module)
         return self
 
-    def do_config(self):
+    def do_config(self) -> None:
         """Configure all modules.
 
         Call this explicitly after adding all modules but before check_settings().
@@ -313,7 +319,7 @@ class dales_simulation:
             module.do_config()
             module.do_config_done = True
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         """Check settings and validate configuration for all modules.
 
         Call this explicitly after do_config() but before prepare_all_calculations().
@@ -334,7 +340,7 @@ class dales_simulation:
             module.check_settings()
             module.check_settings_done = True
 
-    def prepare_all_calculations(self):
+    def prepare_all_calculations(self) -> None:
         """Prepare all modules for calculations.
 
         Call this explicitly after check_settings().
@@ -361,35 +367,25 @@ class dales_simulation:
         else:
             self.exp_id = self.nml["RUN"]["iexpnr"]
 
-    def retrieve_module(
-        self, module_name: Union[str, "simulation_module", type]
-    ) -> "simulation_module":
-        """Helper to retrieve another module by name."""
+    def retrieve_module[T: simulation_module](self, module_type: type[T]) -> T:
+        """Retrieve a module instance matching the supplied module class."""
         for module in self.modules:
-            if isinstance(module_name, str):
-                if module.module_name == module_name:
-                    return module
-                else:
-                    continue
-            elif isinstance(module, module_name):
+            if isinstance(module, module_type):
                 return module
-        raise KeyError(f"Module with name '{module_name}' not found!")
+        raise KeyError(f"Module with type '{module_type}' not found!")
 
-    def module_exists(self, module_name: Union[str, "simulation_module", type]) -> bool:
-        """Check if a module with the given name exists."""
-        return any(
-            module.module_name == module_name or isinstance(module, module_name)
-            for module in self.modules
-        )
+    def module_exists(self, module_type: type["simulation_module"]) -> bool:
+        """Check if a module with the given type exists."""
+        return any(isinstance(module, module_type) for module in self.modules)
 
-    def write_module_files(self):
+    def write_module_files(self) -> None:
         """Call write_files on all registered modules."""
 
         for module in self.modules:
             module.write_files()
             module.write_files_done = True
 
-    def write_simulation_files(self):
+    def write_simulation_files(self) -> None:
         """Write namelist and required files to case directory."""
         for file, originalpath in self.required_files.items():
             subprocess.call(
@@ -426,16 +422,18 @@ class dales_simulation:
                     f"- **{var}**: {desc}\n" for var, desc in variables.items()
                 )
                 f.write("\n")
+        try:
+            yaml_str = self.save_sim_to_yaml()
+            with open(
+                self.output_path / f"input/simulation_config.{self.exp_id:03d}.yaml",
+                "w",
+                encoding="utf-8",
+            ) as f:
+                f.write(yaml_str)
+        except Exception as exc:
+            logger.critical("Failed to save simulation configuration to YAML: %s", exc)
 
-        yaml_str = self.save_sim_to_yaml()
-        with open(
-            self.output_path / f"input/simulation_config.{self.exp_id:03d}.yaml",
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write(yaml_str)
-
-    def apply_job_configuration(self):
+    def apply_job_configuration(self) -> None:
         """Apply job configuration and set up file transfers."""
         job_conf = self.machine_conf.get("job_conf", {})
         configured_template = job_conf.get("job_template", None)
@@ -508,10 +506,10 @@ class dales_simulation:
             ]
         )
 
-    def setup_module_links(self):
+    def setup_module_links(self) -> None:
         pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         cls = self.__class__.__name__
         parts = ""
         if self.exp_id is not None:
@@ -559,7 +557,7 @@ class dales_simulation:
         #   the key is the module class name and the value is the config dict:
         #     - GridModule:
         #         domain_info: {...}
-        modules_yaml = []
+        modules_yaml: list[str | dict[str, Any]] = []
         for m in self.modules:
             name = type(m).__name__
             body = asdict_user_set(m)
@@ -574,7 +572,7 @@ class dales_simulation:
         }
 
         class NoAliasDumper(yaml.SafeDumper):
-            def ignore_aliases(self, data):
+            def ignore_aliases(self, data: Any) -> bool:
                 return True
 
         return yaml.dump(
@@ -582,13 +580,13 @@ class dales_simulation:
         )
 
     @staticmethod
-    def load_sim_from_yaml(txt, machine_conf=None) -> "dales_simulation":
+    def load_sim_from_yaml(txt: str, machine_conf: Any = None) -> "dales_simulation":
         """
         Load a YAML file into a dales_simulation instance.
 
         Args:
-            path: str or Path to YAML file
-            machine_conf:
+            txt: str containing YAML content
+            machine_conf: machine configuration object
 
         Returns:
             sim: populated dales_simulation
@@ -613,7 +611,7 @@ class dales_simulation:
             if isinstance(item, str):
                 # Bare module name, e.g. "DefaultNamelistModule"
                 mod_type = item
-                mod_cfg = {}
+                mod_cfg: dict[str, Any] = {}
             elif isinstance(item, dict) and len(item) == 1:
                 # Single-key mapping: {"GridModule": { ... }}
                 mod_type, mod_cfg = next(iter(item.items()))
@@ -634,7 +632,7 @@ class dales_simulation:
             # that nested structures like LandUseModifications and
             # LandUseModification objects are reconstructed correctly.
             if is_dataclass(cls):
-                module = _deserialize_dataclass(cls, mod_cfg)
+                module = _deserialize_dataclass(cls, mod_cfg, sim=sim)
             else:
                 module = cls(**mod_cfg)
 

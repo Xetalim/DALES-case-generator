@@ -13,6 +13,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC
 from pathlib import Path
+from typing import Any
 
 import requests
 
@@ -80,14 +81,14 @@ class OpenDataAPI:
         self.base_url = API_URL
         self.headers = {"Authorization": api_token}
 
-    def _get_json(self, url: str, params: dict | None = None) -> dict:
+    def _get_json(self, url: str, params: dict[str, str] | None = None) -> Any:
         response = requests.get(url, headers=self.headers, params=params, timeout=60)
         response.raise_for_status()
         return response.json()
 
     def get_file_url(
         self, dataset_name: str, dataset_version: str, file_name: str
-    ) -> dict:
+    ) -> Any:
         return self._get_json(
             f"{self.base_url}/datasets/{dataset_name}/versions/{dataset_version}/files/{file_name}/url"
         )
@@ -233,7 +234,10 @@ def _download_file(
                     offset = 0
                     mode = "wb"
                     content_length = response.headers.get("Content-Length")
-                    expected_bytes = int(content_length) if content_length else None
+                    if content_length is not None:
+                        expected_bytes = int(content_length)
+                    else:
+                        expected_bytes = None
                     total_bytes = expected_bytes
                 else:
                     raise OSError(
@@ -391,7 +395,6 @@ def _download_archive(
 def download_harmonie_forecast_pair(
     forecast_datetime: str | dt.datetime,
     target_root: str | os.PathLike[str],
-    *,
     api_key_file: str = DEFAULT_API_KEY_FILE,
     cdo_path: str = "cdo",
     check_disk_space: bool = True,

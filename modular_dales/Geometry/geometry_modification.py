@@ -1,9 +1,10 @@
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Protocol, Union
+from typing import Any, Protocol
 
 import numpy as np
+import numpy.typing as npt
 
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.MODULE_REGISTRY import register_module, register_special_serializing
@@ -12,13 +13,22 @@ logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
+class GeometryModifier(Protocol):
+    """Horizontal meshes required to evaluate geometry masks."""
+
+    meshx: npt.NDArray[np.floating[Any]]
+    meshy: npt.NDArray[np.floating[Any]]
+    idxmesh: npt.NDArray[np.integer[Any]]
+    idymesh: npt.NDArray[np.integer[Any]]
+
+
 @register_special_serializing
 @register_module
 @dataclass
 class AllGeometry:
     """Select the full 2D horizontal domain."""
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         return np.ones_like(modifier.meshx, dtype=bool)
 
 
@@ -32,10 +42,11 @@ class CircleRealGeometry:
     y0: float
     size: float
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
-        return (modifier.meshx - self.x0) ** 2 + (
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
+        mask = (modifier.meshx - self.x0) ** 2 + (
             modifier.meshy - self.y0
         ) ** 2 <= self.size**2
+        return mask
 
 
 @register_special_serializing
@@ -49,7 +60,7 @@ class RectangleRealGeometry:
     miny: float
     maxy: float
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         return (
             (modifier.meshx >= self.minx)
             & (modifier.meshx <= self.maxx)
@@ -69,7 +80,7 @@ class RectangleIdxGeometry:
     miny: int
     maxy: int
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         return (
             (modifier.idxmesh >= self.minx)
             & (modifier.idxmesh <= self.maxx)
@@ -88,7 +99,7 @@ class CircleIdxGeometry:
     idy0: int
     size: float
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         return (modifier.idxmesh - self.idx0) ** 2 + (
             modifier.idymesh - self.idy0
         ) ** 2 <= self.size**2
@@ -106,7 +117,7 @@ class MaskGeometry:
 
     mask: Any
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         mask_arr = np.asarray(self.mask)
         if mask_arr.shape != modifier.meshx.shape:
             raise ValueError(
@@ -126,9 +137,9 @@ class FuncGeometry:
     after conversion to a numpy array and will be interpreted as a boolean selection.
     """
 
-    func: Callable[["ModifierClass"], np.ndarray]
+    func: Callable[[GeometryModifier], np.ndarray]
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         mask_arr = np.asarray(self.func(modifier))
         if mask_arr.shape != modifier.meshx.shape:
             raise ValueError(
@@ -153,13 +164,13 @@ class CheckerboardIdxGeometry:
     phase_y: int = 0
     select_even: bool = True
 
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray:
+    def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         if self.block <= 0:
             raise ValueError(
                 f"CheckerboardIdxGeometry.block must be > 0, got {self.block}"
             )
 
-        parity = (
+        parity: npt.NDArray[np.bool_] = (
             ((modifier.idxmesh - self.phase_x) // self.block)
             + ((modifier.idymesh - self.phase_y) // self.block)
         ) % 2 == 0
@@ -168,22 +179,16 @@ class CheckerboardIdxGeometry:
         return ~parity
 
 
-class GeometryLike(Protocol):
-    """Protocol for typed geometry objects that produce a boolean mask."""
-
-    def to_mask(self, modifier: "ModifierClass") -> np.ndarray: ...
-
-
-GeometrySpec = Union[
-    AllGeometry,
-    CircleRealGeometry,
-    RectangleRealGeometry,
-    RectangleIdxGeometry,
-    CircleIdxGeometry,
-    MaskGeometry,
-    FuncGeometry,
-    CheckerboardIdxGeometry,
-]
+GeometrySpec = (
+    AllGeometry
+    | CircleRealGeometry
+    | RectangleRealGeometry
+    | RectangleIdxGeometry
+    | CircleIdxGeometry
+    | MaskGeometry
+    | FuncGeometry
+    | CheckerboardIdxGeometry
+)
 
 
 @dataclass
@@ -193,7 +198,13 @@ class GeometricModification:
     geometry: GeometrySpec = field(default_factory=AllGeometry)
 
 
-class ModifierClass:
+# ModificationT = TypeVar(
+#     "ModificationT",
+#     bound=GeometricModification,
+# )
+
+
+class ModifierClass[ModificationT: GeometricModification]:
     """
     A class for generating and applying geometric modifications to DALES grid data.
 
@@ -213,7 +224,15 @@ class ModifierClass:
         grid (GridDales): A GridDales object containing grid coordinate information.
     """
 
-    def __init__(self, grid: "GridDales"):
+    x: npt.NDArray[np.floating[Any]]
+    y: npt.NDArray[np.floating[Any]]
+    meshx: npt.NDArray[np.floating[Any]]
+    meshy: npt.NDArray[np.floating[Any]]
+    idxmesh: npt.NDArray[np.integer[Any]]
+    idymesh: npt.NDArray[np.integer[Any]]
+    grid: GridDales
+
+    def __init__(self, grid: GridDales):
         self.x = grid.xt
         self.y = grid.yt
         self.meshx, self.meshy = np.meshgrid(self.x, self.y)
@@ -222,7 +241,7 @@ class ModifierClass:
         )
         self.grid = grid
 
-    def apply_modification(self, modification: GeometricModification):
+    def apply_modification(self, modification: ModificationT) -> None:
         """Apply a typed modification object to this modifier."""
 
         if not isinstance(modification, GeometricModification):
@@ -238,7 +257,9 @@ class ModifierClass:
         geometry = geometry_obj.to_mask(self)
         self.do_modification(geometry, modification)
 
-    def do_modification(self, geometry, modification):
+    def do_modification(
+        self, geometry: npt.NDArray[np.bool_], modification: ModificationT
+    ) -> None:
         raise NotImplementedError(
             "Can't call do_modification of superclass, call the subclass instead"
         )

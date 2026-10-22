@@ -1,7 +1,7 @@
 import glob
 import logging
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import xarray as xr
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
-def _as_scalar_float(value) -> float:
+def _as_scalar_float(value: Any) -> float:
     """Convert scalar-like inputs (numpy/xarray scalars) to plain float."""
     arr = np.asarray(value)
     if arr.size != 1:
@@ -86,7 +86,9 @@ def _prepare_boundary_variable(
     return _promote_boundary_stagger_dims(selected, boundary).reset_coords(drop=True)
 
 
-def _file_matches_boundary_selection(file_path: str, sel_index: dict) -> bool:
+def _file_matches_boundary_selection(
+    file_path: str, sel_index: dict[str, float]
+) -> bool:
     """Return True when a cross-section file contains the requested section coords."""
 
     try:
@@ -112,7 +114,7 @@ def _file_matches_boundary_selection(file_path: str, sel_index: dict) -> bool:
 
 
 def _select_boundary_files(
-    boundary_files: list[str], sel_index: dict, boundary: str
+    boundary_files: list[str], sel_index: dict[str, float], boundary: str
 ) -> list[str]:
     """Keep only files that match requested section coordinates for this boundary."""
 
@@ -191,8 +193,8 @@ def get_all_dales_boundaries(
     input_json: OpenBoundaryConfig,
     grid: GridDalesOpenBC,
     indices: "NestingIndices",
-    chunks=None,
-):
+    chunks: dict[str, int] | None = None,
+) -> xr.Dataset:
     """
     This function gets DALES boundaries from a host DALES simulation.
 
@@ -200,7 +202,7 @@ def get_all_dales_boundaries(
     :param grid: Grid object describing the output grid for open boundaries, which is different from the normal DALES grid.
     :type grid: GridDalesOpenBC
     :param indices: Indices describing where in the supergrid the edges of the current grid lie.
-    :type indices: nesting_idx
+    :type indices: "NestingIndices"
     """
     ds_boundaries_timestep0 = boundaries_timestep0(
         input_json, grid, indices, chunks=chunks

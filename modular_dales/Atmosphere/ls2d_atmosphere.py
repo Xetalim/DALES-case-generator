@@ -20,7 +20,7 @@ def retry_exponential(
     max_total_time: float = 60.0,
     base_delay: float = 1.0,
     max_delay: float = 30.0,
-):
+) -> None:
     """
     Retry a function with exponential backoff.
 
@@ -90,6 +90,10 @@ class LS2DAtmosphereModule(ExternalForcingModule):
     :class:`TimedependentModule`; see :class:`ExternalForcingModule`.
     """
 
+    module_name: str = field(
+        default="LS2DAtmosphereModule", init=False, metadata={"serialize": False}
+    )
+
     area_size: float = field(
         default=1.0,
         init=True,
@@ -145,7 +149,7 @@ class LS2DAtmosphereModule(ExternalForcingModule):
         metadata={"serialize": True},
     )
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         """Basic validation of configuration before running LS2D."""
 
         super().check_settings()

@@ -16,7 +16,8 @@ from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LSM import LandUseModification, LSMModule
+from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
+from modular_dales.Surface.LSM.LSM import LSMModule
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     SoilTemperatureMoistureFromHarmonie,
     UniformSkinTemperature,

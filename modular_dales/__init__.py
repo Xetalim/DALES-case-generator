@@ -59,6 +59,8 @@ from .LBC import (
     KNMIHarmonieForecastDownloadModule,
     Nest_in_AtmosphereProfiles,
     Nest_in_Dales,
+    Nest_in_Harmonie,
+    Nest_in_KNMI,
     NestingTopology,
     OpenBoundaryConfig,
     do_openboundary,
@@ -91,13 +93,12 @@ from .Radiation.radiation_types import (
 )
 from .Surface.LSM.base import BaseLSMModule
 from .Surface.LSM.homogeneous import LSMHomogeneousModule
+from .Surface.LSM.LandUseModifications import LandUseModification, LandUseModifications
 from .Surface.LSM.LSM import (
     AGSParameters,
     FromBofek,
     FromLCZ,
     FromTop10,
-    LandUseModification,
-    LandUseModifications,
     LSMModule,
 )
 from .Surface.LSM.modular_temps_moisture import (
@@ -178,6 +179,8 @@ __all__ = [
     "ModifierClass",
     "Nest_in_AtmosphereProfiles",
     "Nest_in_Dales",
+    "Nest_in_Harmonie",
+    "Nest_in_KNMI",
     "NestingTopology",
     "NoRadiationModule",
     "OpenBoundaryConfig",

@@ -27,8 +27,8 @@ def boundaries_timestep0(
     input_json: OpenBoundaryConfig,
     grid: GridDalesOpenBC,
     indices: "NestingIndices",
-    chunks=None,
-):
+    chunks: dict[str, int] | None = None,
+) -> xr.Dataset:
     """Return boundary fields for the initial timestep.
 
     If the host run produced ``initfields.inp.*.nc`` we use that file for
@@ -50,7 +50,7 @@ def boundaries_timestep0(
     if input_json.time0 == input_json.start:
         # Prefer initfields.inp.*.nc if available
         try:
-            all_ls = []
+            all_ls: list[xr.DataArray] = []
             with xr.open_mfdataset(
                 (inpath_coarse / "initfields.inp.*.nc").as_posix(),
                 join="outer",
@@ -71,14 +71,14 @@ def boundaries_timestep0(
                             )
                         )
                     if len(input_json.tracernames) > 0:
-                        sv_boundary = []
+                        sv_boundary: list[xr.DataArray] = []
                         for tracername in input_json.tracernames:
                             sv_boundary.append(
                                 xr.zeros_like(all_ls[-1]).rename(
                                     f"{tracername}{boundary}"
                                 )
                             )
-                        all_ls.append(xr.merge(sv_boundary))
+                        all_ls.extend(sv_boundary)
             return xr.merge(all_ls)
         except (OSError, FileNotFoundError, ValueError) as exc:
             # xarray raises ValueError("no files to open") when the glob is empty.
@@ -150,7 +150,7 @@ def boundaries_timestep0(
 
             def _build_uniform_boundary(
                 profile_zt: np.ndarray, var: str, boundary: str
-            ):
+            ) -> xr.DataArray:
                 # Determine base dims for this boundary and variable
                 if var in var_dims_dic:
                     var_dims = var_dims_dic[var]

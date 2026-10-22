@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 
 from modular_dales.modular.namelist import nml_field
 from modular_dales.MODULE_REGISTRY import register_module
@@ -299,10 +299,18 @@ class LSMHomogeneousModule(BaseLSMModule):
         metadata={"serialize": True},
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "LSMHomogeneousModule"
-        self.nlu = 6
+    module_name: str = field(
+        default="LSMHomogeneousModule", init=False, metadata={"serialize": False}
+    )
+
+    nlu: int = nml_field(
+        default=6,
+        init=False,
+        repr=False,
+        section="NAMLSM",
+        key="nlu",
+        metadata={"serialize": False},
+    )
 
     def do_config(self):
         # Homogeneous LSM always uses the six fixed land-use tiles.

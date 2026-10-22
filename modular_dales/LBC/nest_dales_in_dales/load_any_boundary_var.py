@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+import xarray as xr
 
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nesting_idx import NestingIndices
@@ -13,16 +14,16 @@ logger.debug("Entered module: %s", __name__)
 
 @logwrap
 def load_any_boundary_var(
-    ds,
+    ds: xr.Dataset,
     var: str,
     boundary: str,
     grid: GridDalesOpenBC,
     indices: "NestingIndices",
     isel: bool | None = False,
-    expand_dims=False,
-    expand_dims_time0=None,
-    var_postfix="",
-):
+    expand_dims: bool = False,
+    expand_dims_time0: str | None = None,
+    var_postfix: str = "",
+) -> xr.DataArray:
     """
     This function is a bit of a very generalised function to read in DALES staggered grid boundary variables.
     Should be made more readable or separated into 2 functions later.
@@ -175,7 +176,9 @@ def load_any_boundary_var(
     return interpolated_ds
 
 
-def get_boundary_dict(path, grid: GridDalesOpenBC, indices: "NestingIndices"):
+def get_boundary_dict(
+    path: str | Path, grid: GridDalesOpenBC, indices: "NestingIndices"
+) -> dict[str, tuple[Path, dict[str, float]]]:
     if indices.supergrid is None:
         raise ValueError("Supergrid indices are not provided.")
     return {
@@ -215,25 +218,25 @@ def get_boundary_dict(path, grid: GridDalesOpenBC, indices: "NestingIndices"):
             },
         ),
     }
-    return {
-        "west": (
-            Path(path) / ".." / "crossyz.nc",
-            {"xm": indices.ix_west + 1, "xt": indices.ix_west + 1},
-        ),
-        "east": (
-            Path(path) / ".." / "crossyz.nc",
-            {"xm": indices.ix_east + 1, "xt": indices.ix_east + 1},
-        ),
-        "south": (
-            Path(path) / ".." / "crossxz.nc",
-            {"ym": indices.iy_south + 1, "yt": indices.iy_south + 1},
-        ),
-        "north": (
-            Path(path) / ".." / "crossxz.nc",
-            {"ym": indices.iy_north + 1, "yt": indices.iy_north + 1},
-        ),
-        "top": (
-            Path(path) / ".." / "crossxy.nc",
-            {"zt": grid.kmax},
-        ),
-    }
+    # return {
+    #     "west": (
+    #         Path(path) / ".." / "crossyz.nc",
+    #         {"xm": indices.ix_west + 1, "xt": indices.ix_west + 1},
+    #     ),
+    #     "east": (
+    #         Path(path) / ".." / "crossyz.nc",
+    #         {"xm": indices.ix_east + 1, "xt": indices.ix_east + 1},
+    #     ),
+    #     "south": (
+    #         Path(path) / ".." / "crossxz.nc",
+    #         {"ym": indices.iy_south + 1, "yt": indices.iy_south + 1},
+    #     ),
+    #     "north": (
+    #         Path(path) / ".." / "crossxz.nc",
+    #         {"ym": indices.iy_north + 1, "yt": indices.iy_north + 1},
+    #     ),
+    #     "top": (
+    #         Path(path) / ".." / "crossxy.nc",
+    #         {"zt": grid.kmax},
+    #     ),
+    # }

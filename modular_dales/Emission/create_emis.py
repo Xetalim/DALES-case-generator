@@ -3,6 +3,8 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import UTC
+from pathlib import Path
+from typing import Any
 
 import netCDF4 as nc
 import numpy as np
@@ -41,31 +43,33 @@ class PointSource:
 @dataclass
 class Tracer:
     info: TracerInfo
-    profile: list | np.ndarray
+    profile: np.ndarray
     pointsources: list[PointSource]
 
 
 class emissions:
     @logwrap
-    def __init__(self, output_path, grid: GridDales):
+    def __init__(self, output_path: Path, grid: GridDales) -> None:
         self.output_path = output_path
         self.tracers: dict[str, Tracer] = {}
         self.tracer_profiles: dict[str, np.ndarray] = {}
         self.grid = grid
 
-    def add_tracer(self, info: TracerInfo):
+    def add_tracer(self, info: TracerInfo) -> None:
         self.tracers[info.name] = Tracer(info, np.zeros_like(self.grid.zt), [])
 
-    def add_pointsource(self, tracername, source_info: PointSource):
+    def add_pointsource(self, tracername: str, source_info: PointSource) -> None:
         self.tracers[tracername].pointsources.append(source_info)
 
-    def add_pre_existing_tracer(self, tracername):
+    def add_pre_existing_tracer(self, tracername: str) -> None:
         self.add_tracer(pre_existing_tracers[tracername])
 
-    def set_profile(self, tracername, profile):
+    def set_profile(self, tracername: str, profile: np.ndarray) -> None:
         self.tracers[tracername].profile = profile
 
-    def set_tracer_property(self, tracername, property_name, property_value):
+    def set_tracer_property(
+        self, tracername: str, property_name: str, property_value: str | float | bool
+    ) -> None:
         # check if the property is valid
         if property_name == "name":
             raise KeyError("Can't change name of tracer!")
@@ -77,7 +81,7 @@ class emissions:
         setattr(self.tracers[tracername].info, property_name, property_value)
 
     @logwrap
-    def tracerinfo_to_netcdf(self, file, tracername):
+    def tracerinfo_to_netcdf(self, file: nc.Dataset, tracername: str) -> None:
         info = self.tracers[tracername].info
 
         new_tracer = file.createVariable(info.name, float, "z")
@@ -91,7 +95,7 @@ class emissions:
         new_tracer[:] = self.tracers[tracername].profile
 
     @logwrap
-    def emissionmap_to_netcdf(self, datetime_str, tracername):
+    def emissionmap_to_netcdf(self, datetime_str: str, tracername: str) -> None:
         with nc.Dataset(
             self.output_path
             / "input"
@@ -111,7 +115,7 @@ class emissions:
             tracer_var[:, :, :] = 0
 
     @logwrap
-    def pointsources_to_netcdf(self, datetime_str, tracername):
+    def pointsources_to_netcdf(self, datetime_str: str, tracername: str) -> None:
         num_pointsources = len(self.tracers[tracername].pointsources)
         source_list = self.tracers[tracername].pointsources
 
@@ -145,14 +149,14 @@ class emissions:
             ]
 
     @logwrap
-    def write_tracers_file(self):
+    def write_tracers_file(self) -> None:
         os.makedirs(self.output_path / "input" / "emissions", exist_ok=True)
         with nc.Dataset(self.output_path / "input" / "tracers.001.nc", "w") as file:
             file.createDimension("z", len(self.grid.zt))
             for tracername in self.tracers:
                 self.tracerinfo_to_netcdf(file, tracername)
 
-    def write_hourly_emission_data(self, datetime_str):
+    def write_hourly_emission_data(self, datetime_str: str) -> None:
         for tracername in self.tracers:
             self.emissionmap_to_netcdf(datetime_str, tracername)
             self.pointsources_to_netcdf(datetime_str, tracername)
@@ -164,7 +168,7 @@ co2 = TracerInfo(
 pre_existing_tracers = {"co2": co2}
 
 
-def get_emis_sim_hours(nml):
+def get_emis_sim_hours(nml: dict[str, dict[str, Any]]) -> list[str]:
     sim_start_time = datetime.datetime(
         year=int(nml["NAMDATETIME"]["startyear"]),
         month=int(nml["NAMDATETIME"]["startmonth"]),
@@ -181,7 +185,3 @@ def get_emis_sim_hours(nml):
         cur_sim_time = cur_sim_time + datetime.timedelta(hours=1)
 
     return [dt.strftime("%Y%m%d%H00") for dt in required_datetimes]
-
-
-def parse_tracer_type(tracer_conf) -> TracerInfo:
-    return TracerInfo(**tracer_conf)

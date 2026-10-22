@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
+from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.serialize_deserialize import (
     _deserialize_dataclass,
     _deserialize_value,
@@ -77,3 +79,21 @@ def test_runtime_fields_are_not_passed_to_constructor():
     assert _deserialize_dataclass(
         Configuration, {"value": 7, "runtime": 99}
     ) == Configuration(7)
+
+
+def test_module_binding_and_runtime_flags_are_not_serialized():
+    module = DefaultNamelistModule()
+    configured = asdict_user_set(module)
+    sim = dales_simulation("test", {})
+    sim += module
+    module.do_config_done = True
+    module.ensure_prepared()
+    assert asdict_user_set(module) == configured
+    restored = _deserialize_dataclass(DefaultNamelistModule, configured)
+    with pytest.raises(RuntimeError, match="detached"):
+        _ = restored.sim
+    restored = _deserialize_dataclass(DefaultNamelistModule, configured, sim=sim)
+    assert restored.sim is sim
+    assert not restored.do_config_done
+    assert not restored.prepare_calculation_done
+    assert sim.modules == [module]

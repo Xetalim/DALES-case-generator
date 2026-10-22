@@ -12,7 +12,8 @@ from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LSM import LandUseModification, LSMModule
+from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
+from modular_dales.Surface.LSM.LSM import LSMModule
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -54,11 +55,13 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
     atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0)))
     atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0, ddz=0)))
-    atmo.add(InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
-    ))
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
+    )
 
     sim += atmo
     lsm = LSMModule(

@@ -55,9 +55,6 @@ class _RadiationTypedBase(simulation_module):
         },
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-
     def do_config(self):
         return None
 
@@ -100,9 +97,9 @@ class NoRadiationModule(_RadiationTypedBase):
         description="Radiation scheme selector 0: no radiation.",
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "NoRadiationModule"
+    module_name: str = field(
+        default="NoRadiationModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -137,9 +134,11 @@ class ParameterizedRadiationModule(_RadiationTypedBase):
         description="Scalar index used for aerosols when laero=true.",
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "ParameterizedRadiationModule"
+    module_name: str = field(
+        default="ParameterizedRadiationModule",
+        init=False,
+        metadata={"serialize": False},
+    )
 
 
 @register_module
@@ -156,9 +155,9 @@ class SurfaceLSMRadiationModule(_RadiationTypedBase):
         description="Radiation scheme selector 3: simple surface radiation for LSM.",
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "SurfaceLSMRadiationModule"
+    module_name: str = field(
+        default="SurfaceLSMRadiationModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -253,9 +252,9 @@ class RRTMGRadiationModule(_RadiationTypedBase):
         description="Enable ocean radiation treatment.",
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "RRTMGRadiationModule"
+    module_name: str = field(
+        default="RRTMGRadiationModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -368,9 +367,9 @@ class RteRrtmgpRadiationModule(_RadiationTypedBase):
         description="Enable clear-sky radiation diagnostics.",
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "RteRrtmgpRadiationModule"
+    module_name: str = field(
+        default="RteRrtmgpRadiationModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -387,6 +386,6 @@ class UserRadiationModule(_RadiationTypedBase):
         description="Radiation scheme selector 10: user-defined radiation behavior.",
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "UserRadiationModule"
+    module_name: str = field(
+        default="UserRadiationModule", init=False, metadata={"serialize": False}
+    )

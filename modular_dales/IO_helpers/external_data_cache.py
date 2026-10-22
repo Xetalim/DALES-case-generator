@@ -7,13 +7,14 @@ import pathlib
 from pathlib import Path
 
 from modular_dales.helpers import _machine_conf_value
+from modular_dales.modular.dales_simulation import dales_simulation
 
 logger = logging.getLogger(__name__)
 
 CASE_ATTRIBUTION_DIRNAME = "external_data_attribution"
 
 
-def cache_root(cache_name: str, sim=None) -> pathlib.Path:
+def cache_root(cache_name: str, sim: dales_simulation) -> pathlib.Path:
     """Return the cache directory for a named helper cache."""
     machine_root = _machine_conf_value(
         sim,

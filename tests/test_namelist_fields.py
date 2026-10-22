@@ -1,8 +1,8 @@
 from dataclasses import FrozenInstanceError, dataclass, field, fields
-from types import SimpleNamespace
 
 import pytest
 
+from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.namelist import NamelistSpec, get_namelist_spec, nml_field
 from modular_dales.modular.simulation_module import simulation_module
 
@@ -25,7 +25,7 @@ class NamelistModule(simulation_module):
 
 
 def attached(module):
-    module.sim = SimpleNamespace(nml={}, nml_docs={})
+    module._attach_to_sim(dales_simulation("test", {}))
     return module
 
 
@@ -57,7 +57,7 @@ def test_spec_and_dataclass_options():
 def test_default_key_and_optional_value():
     module = attached(NamelistModule())
     module.apply_namelist_from_fields()
-    assert module.nml == {"TEST": {"value": 2.0}}
+    assert module.nml == {"test": {"value": 2.0}}
     module = attached(NamelistModule(value=None))
     module.apply_namelist_from_fields()
     assert module.nml == {}
@@ -94,13 +94,13 @@ def test_multiple_targets(value, expected):
 
     module = attached(Multiple(value=value))
     module.apply_namelist_from_fields()
-    assert module.nml == {"A": {"x": expected[0]}, "B": {"y": expected[1]}}
+    assert module.nml == {"a": {"x": expected[0]}, "b": {"y": expected[1]}}
 
 
 def test_single_target_array_is_not_split():
     module = attached(NamelistModule(value=[1, 2]))
     module.apply_namelist_from_fields()
-    assert module.nml == {"TEST": {"value": [1, 2]}}
+    assert module.nml == {"test": {"value": [1, 2]}}
 
 
 @pytest.mark.parametrize(

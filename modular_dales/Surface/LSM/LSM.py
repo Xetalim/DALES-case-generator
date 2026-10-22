@@ -1,19 +1,21 @@
 import logging
 import pathlib
 from dataclasses import dataclass, field
-from typing import Optional, Self
+from typing import Optional, Self, cast
 
 import numpy as np
 import xarray as xr
 
 from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D
-from modular_dales.Geometry.geometry_modification import (
-    GeometricModification,
-)
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.time_dependent_scalars import SOIL_DIM, value_at
 from modular_dales.MODULE_REGISTRY import register_module
-from modular_dales.Surface.LSM import plot_lsm
+from modular_dales.Surface.LSM import lsm_netcdf, lsm_slurb, lsm_sources, plot_lsm
+from modular_dales.Surface.LSM.LandUseModifications import (
+    LandUseModification,
+    LandUseModifications,
+)
+from modular_dales.Surface.LSM.LCZ import get_from_LCZ
 from modular_dales.Surface.LSM.LSM_output_dales import LSM_output_dales, LsmModifier
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     SkinTempSpec,
@@ -32,11 +34,11 @@ from modular_dales.Surface.LSM.top10_bofek_ags import (
     apply_bofek_to_lsm_writer,
     apply_top10_to_lsm_writer,
 )
-from modular_dales.Surface.LSM.translation_tables import landuse_types
+from modular_dales.Surface.LSM.translation_tables.landuse_types import LandUseSet
 from modular_dales.vars import t_soil, theta_soil, thls, type_soil, z0h, z0m
 
 from .base import BaseLSMModule
-from .SLuRB.slurb import SLURBModule
+from .SLuRB.slurb import SLURBModule, slbCreatorClass
 
 logger = logging.getLogger(__name__)
 
@@ -56,38 +58,6 @@ def _soil_profile_on_levels(
         return profile.interp({SOIL_DIM: np.clip(target_depths, depths[0], depths[-1])})
     relative = profile.assign_coords({SOIL_DIM: np.linspace(0.0, 1.0, n_source)})
     return relative.interp({SOIL_DIM: np.linspace(0.0, 1.0, nz_soil)})
-
-
-@register_module
-@dataclass
-class LandUseModification(GeometricModification):
-    """Single land use modification."""
-
-    type: str = "grs"
-    """Land use type (grs, urb, fbd, etc.)"""
-    frac: float = 1.0
-    """Optional fractional land-use coverage for selected cells."""
-    mode: str = field(default="replace")
-    """How to apply fraction on selected cells: replace or add."""
-
-
-@register_module
-@dataclass
-class LandUseModifications:
-    """Collection of land use modifications."""
-
-    modifications: list[LandUseModification] = field(
-        default_factory=list, metadata={"serialize": True}
-    )
-
-    def __add__(self, modification: LandUseModification) -> Self:
-        """Add a modification."""
-        self.modifications.append(modification)
-        return self
-
-    def __iadd__(self, modification: LandUseModification) -> Self:
-        """In-place addition."""
-        return self.__add__(modification)
 
 
 @register_module
@@ -210,6 +180,7 @@ class LSMModule(BaseLSMModule):
         required=True,
         metadata={"serialize": True},
     )
+    land_use_set: LandUseSet | None = field(default=None, metadata={"serialize": True})
     land_use_modifications: LandUseModifications = field(
         default_factory=LandUseModifications,
         init=True,
@@ -283,9 +254,9 @@ class LSMModule(BaseLSMModule):
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.module_name = "LSMModule"
+    module_name: str = field(
+        default="LSMModule", init=False, metadata={"serialize": False}
+    )
 
     def __add__(self, obj) -> Self:
         """Add configurations to LSM module.
@@ -348,163 +319,166 @@ class LSMModule(BaseLSMModule):
     def prepare_calculation(self):
         return self.prepare_calculations()
 
-    def prepare_calculations(self):
-        """Set up LSM with land use types and soil configuration."""
-
+    def prepare_calculations(self) -> None:
+        """Build land use, apply overlays and soil state, then finalize tile counts."""
         self.exists_soil_temp_moisture_skin_temp()
-
-        if self.module_exists(SLURBModule):
-            self.slurb_module = self.retrieve_module(SLURBModule)
-
-        # Determine land use types
-        if self.from_lcz is not None or self.from_netcdf is not None:
-            lu_types = landuse_types.lu_types_ifs
-        else:
-            lu_types = landuse_types.lu_types_depac.copy()
-            if self.slurb_module:
-                lu_types["slb"] = landuse_types.slb
-
-        # Initialize LSM writer
-        self.lsm_writer = LSM_output_dales(
-            self.grid,
-            lu_types,
-            soil_levels=self.kmax_soil,
+        self.slurb_module = (
+            cast(SLURBModule, self.retrieve_module(SLURBModule))
+            if self.module_exists(SLURBModule)
+            else None
         )
-
-        # Fill standard geometry
-        self.lsm_writer.standard_fill_geometry_modification()
-
-        # Configure data source path for land-use + optional SLURB morphology.
-        if self.from_netcdf is not None:
-            from pathlib import Path
-
-            from modular_dales.Surface.LSM.LCZ.from_netcdf import load_from_netcdf
-
-            esa_cache = (
-                Path(self.from_netcdf.esa_cache_dir)
-                if self.from_netcdf.esa_cache_dir is not None
-                else None
-            )
-            nc_ds = load_from_netcdf(
-                self.from_netcdf.path, self.grid, esa_cache_dir=esa_cache
-            )
-
-            if self.slurb_module is not None:
-                self.slurb_module.init_generator()
-            slb_gen = (
-                self.slurb_module.slb_generator
-                if self.slurb_module is not None
-                else None
-            )
-            self.lsm_writer.apply_from_netcdf(nc_ds, slb_gen)
-        elif self.from_lcz is not None:
-            if (
-                self.from_lcz.urban_natural_lcz_to_10
-                and self.from_lcz.urban_natural_lcz_to_natural_lsm
-            ):
-                raise ValueError(
-                    "FromLCZ options urban_natural_lcz_to_10 and "
-                    "urban_natural_lcz_to_natural_lsm are mutually exclusive"
-                )
-
-            self.lsm_writer.from_lcz(
-                urban_natural_lcz_to_10=self.from_lcz.urban_natural_lcz_to_10,
-                urban_natural_lcz_to_natural_lsm=self.from_lcz.urban_natural_lcz_to_natural_lsm,
-            )
-
-            # Apply LCZ-derived SLURB parameters if SLURB is enabled.
-            if self.slurb_module is not None:
-                self.slurb_module.init_generator()
-                self.lsm_writer.apply_slurb_parameters_lcz(
-                    self.slurb_module.slb_generator
-                )
-        else:
-            # Standard non-LCZ path: apply explicit land-use modifications only.
-            modifier = LsmModifier(self.lsm_writer, self.grid)
-            for modification in self.land_use_modifications.modifications:
-                modifier.apply_modification(modification)
-            self.lsm_writer = modifier.lsm_input
-            self.lsm_writer.init_lutypes_ifs()
-            self.lsm_writer.recalculate_remaining_cover()
-
-        # Optional overlay from Top10NL; this can be used standalone or on top
-        # of LCZ-derived fields.
-        if self.from_top10 is not None:
-            if (
-                self.from_top10.urban_natural_lcz_to_10
-                and self.from_top10.urban_natural_lcz_to_natural_lsm
-            ):
-                raise ValueError(
-                    "FromTop10 options urban_natural_lcz_to_10 and "
-                    "urban_natural_lcz_to_natural_lsm are mutually exclusive"
-                )
-
-            top10_path = (
-                pathlib.Path(self.from_top10.spatial_data_path)
-                / self.from_top10.top10_filename
-            )
-            if not top10_path.exists():
-                raise FileNotFoundError(
-                    f"Top10 file not found: {top10_path}. "
-                    "Set FromTop10.spatial_data_path/top10_filename accordingly."
-                )
-            # Pass optional LCZ-over-Top10 overrides via writer attributes to keep
-            # apply_top10_to_lsm_writer backward-compatible.
-            self.lsm_writer.top10_urban_natural_lcz_to_10 = (
-                self.from_top10.urban_natural_lcz_to_10
-            )
-            self.lsm_writer.top10_urban_natural_lcz_to_natural_lsm = (
-                self.from_top10.urban_natural_lcz_to_natural_lsm
-            )
-            apply_top10_to_lsm_writer(
-                self.lsm_writer,
-                top10_path=top10_path,
-                fill_north_sea=self.from_top10.fill_north_sea,
-            )
-
-        # Optional BOFEK soil index mapping.
-        if self.from_bofek is not None:
-            bofek_nc_path = (
-                pathlib.Path(self.from_bofek.spatial_data_path)
-                / self.from_bofek.bofek_filename
-            )
-            bofek_csv_path = (
-                pathlib.Path(self.from_bofek.spatial_data_path)
-                / self.from_bofek.bofek_profile_csv
-            )
-            if not bofek_nc_path.exists():
-                raise FileNotFoundError(
-                    f"BOFEK map file not found: {bofek_nc_path}. "
-                    "Set FromBofek.spatial_data_path/bofek_filename accordingly."
-                )
-            if not bofek_csv_path.exists():
-                raise FileNotFoundError(
-                    f"BOFEK profile table not found: {bofek_csv_path}. "
-                    "Set FromBofek.spatial_data_path/bofek_profile_csv accordingly."
-                )
-            apply_bofek_to_lsm_writer(
-                self.lsm_writer,
-                bofek_nc_path=bofek_nc_path,
-                bofek_csv_path=bofek_csv_path,
-            )
-        # Apply soil temperature profiles, skin temperature, soil moisture profiles
-        self.apply_soil_temp_moisture_skin_temp()
-
-        # If LS2D-derived soil information is available, override the
-        # default soil temperature / moisture / index with LS2D data.
-        self._override_soil_from_ls2d_if_available()
-
-        # Optional AGS setup fields (additive; does not alter existing fields).
+        writer = self._create_lsm_writer()
+        self.lsm_writer = writer
+        writer.standard_fill_geometry_modification()
+        self._apply_land_use_source(writer)
+        self._apply_top10_overlay(writer)
+        self._apply_bofek_overlay(writer)
+        self._apply_thermal_moisture(writer)
+        self._apply_ls2d_override(writer)
         if self.ags_parameters is not None:
             apply_ags_parameters_to_lsm_writer(
-                self.lsm_writer,
-                grass_planttype=self.ags_parameters.grass_planttype,
+                writer, grass_planttype=self.ags_parameters.grass_planttype
+            )
+        writer.trim_landuse()
+        self.nlu = writer.nlu + 1
+
+    def _create_lsm_writer(self) -> LSM_output_dales:
+        """Select the explicit or source-default catalogue, independently of SLURB."""
+        land_use_set = self.land_use_set
+        if land_use_set is None:
+            land_use_set = (
+                LandUseSet.IFS
+                if self.from_lcz is not None or self.from_netcdf is not None
+                else LandUseSet.DEPAC
             )
 
-        # Finalize
-        self.lsm_writer.trim_landuse()
+        return LSM_output_dales(
+            self.grid,
+            land_use_set,
+            soil_levels=cast(int, self.kmax_soil),
+            include_slurb=self.slurb_module is not None,
+        )
 
-        self.nlu = self.lsm_writer.nlu + 1
+    def _apply_land_use_source(self, writer: LSM_output_dales) -> None:
+        """Apply one source in priority order: NetCDF, LCZ, explicit geometry."""
+        if self.from_netcdf is not None:
+            self._apply_netcdf_source(writer, self.from_netcdf)
+        elif self.from_lcz is not None:
+            self._apply_lcz_source(writer, self.from_lcz)
+        else:
+            self._apply_land_use_modifications(writer)
+
+    def _init_slurb_generator(self) -> slbCreatorClass | None:
+        """Initialize source-driven SLURB morphology only when SLURB is present."""
+        if self.slurb_module is None:
+            return None
+        self.slurb_module.init_generator()
+        return self.slurb_module.slb_generator
+
+    @staticmethod
+    def _validate_lcz_options(source: FromLCZ | FromTop10) -> None:
+        """Reject conflicting urban-to-natural remapping options for either source."""
+        if source.urban_natural_lcz_to_10 and source.urban_natural_lcz_to_natural_lsm:
+            raise ValueError(
+                f"{type(source).__name__} options urban_natural_lcz_to_10 and "
+                "urban_natural_lcz_to_natural_lsm are mutually exclusive"
+            )
+
+    def _apply_netcdf_source(
+        self, writer: LSM_output_dales, source: FromNetCDF
+    ) -> None:
+        """Load external fractions and optional morphology onto the simulation grid."""
+        from modular_dales.Surface.LSM.LCZ.from_netcdf import load_from_netcdf
+
+        esa_cache = (
+            pathlib.Path(source.esa_cache_dir)
+            if source.esa_cache_dir is not None
+            else None
+        )
+        dataset = load_from_netcdf(source.path, self.grid, esa_cache_dir=esa_cache)
+        lsm_sources.apply_from_netcdf(writer.land_use, writer.soil, dataset)
+        writer.init_lutypes_ifs()
+        writer.recalculate_remaining_cover()
+        generator = self._init_slurb_generator()
+        if generator is not None:
+            lsm_slurb.apply_from_netcdf(dataset, generator)
+
+    def _apply_lcz_source(self, writer: LSM_output_dales, source: FromLCZ) -> None:
+        """Build LCZ fractions before applying optional LCZ-derived SLURB fields."""
+        self._validate_lcz_options(source)
+        if self.grid.crs is None:
+            raise ValueError("A valid projection is required for real-world LSM maps")
+        dataset = get_from_LCZ.do_everything(
+            self.grid,
+            urban_natural_lcz_to_10=source.urban_natural_lcz_to_10,
+            urban_natural_lcz_to_natural_lsm=source.urban_natural_lcz_to_natural_lsm,
+        )
+        lsm_sources.apply_lcz(writer.land_use, writer.soil, dataset)
+        writer.LCZ_ds = dataset
+        writer.init_lutypes_ifs()
+        writer.recalculate_remaining_cover()
+        generator = self._init_slurb_generator()
+        if generator is not None:
+            urban_cover = next(
+                (
+                    writer.land_use_fields[name].cover
+                    for name, state in writer.land_use.items()
+                    if state.definition.ifs_id == 20
+                ),
+                None,
+            )
+            lsm_slurb.apply_slurb_parameters_lcz(dataset, generator, urban_cover)
+
+    def _apply_land_use_modifications(self, writer: LSM_output_dales) -> None:
+        """Apply geometric fractions, initialize tile parameters and fill bare soil."""
+        modifier = LsmModifier(writer, self.grid)
+        for modification in self.land_use_modifications.modifications:
+            modifier.apply_modification(modification)
+        writer.init_lutypes_ifs()
+        writer.recalculate_remaining_cover()
+
+    def _apply_top10_overlay(self, writer: LSM_output_dales) -> None:
+        """Overlay optional Top10NL fractions after validating options and input."""
+        source = self.from_top10
+        if source is None:
+            return
+        self._validate_lcz_options(source)
+        top10_path = pathlib.Path(source.spatial_data_path) / source.top10_filename
+        if not top10_path.exists():
+            raise FileNotFoundError(
+                f"Top10 file not found: {top10_path}. "
+                "Set FromTop10.spatial_data_path/top10_filename accordingly."
+            )
+        apply_top10_to_lsm_writer(
+            writer,
+            top10_path=top10_path,
+            fill_north_sea=source.fill_north_sea,
+            urban_natural_lcz_to_10=source.urban_natural_lcz_to_10,
+            urban_natural_lcz_to_natural_lsm=source.urban_natural_lcz_to_natural_lsm,
+        )
+
+    def _apply_bofek_overlay(self, writer: LSM_output_dales) -> None:
+        """Map optional BOFEK soil classes after validating both required files."""
+        source = self.from_bofek
+        if source is None:
+            return
+        bofek_nc_path = pathlib.Path(source.spatial_data_path) / source.bofek_filename
+        bofek_csv_path = (
+            pathlib.Path(source.spatial_data_path) / source.bofek_profile_csv
+        )
+        if not bofek_nc_path.exists():
+            raise FileNotFoundError(
+                f"BOFEK map file not found: {bofek_nc_path}. "
+                "Set FromBofek.spatial_data_path/bofek_filename accordingly."
+            )
+        if not bofek_csv_path.exists():
+            raise FileNotFoundError(
+                f"BOFEK profile table not found: {bofek_csv_path}. "
+                "Set FromBofek.spatial_data_path/bofek_profile_csv accordingly."
+            )
+        apply_bofek_to_lsm_writer(
+            writer, bofek_nc_path=bofek_nc_path, bofek_csv_path=bofek_csv_path
+        )
 
     def exists_soil_temp_moisture_skin_temp(self):
         # check if soil temp exists
@@ -538,15 +512,14 @@ class LSMModule(BaseLSMModule):
             return None
         return float(candidate)
 
-    def _apply_laqu_skin_temperature_override(self) -> None:
-        if self.lsm_writer is None:
-            return
+    def _set_laqu_skin_temperature(self, writer: LSM_output_dales) -> None:
+        """Apply the aquatic skin-temperature override when configured."""
         laqu_skin_temp = self._resolve_laqu_skin_temperature_override()
         if laqu_skin_temp is None:
             return
-        self.lsm_writer.set_skin_temperature_laqu(laqu_skin_temp)
+        writer.set_skin_temperature_laqu(laqu_skin_temp)
 
-    def _override_soil_from_ls2d_if_available(self) -> None:
+    def _apply_ls2d_override(self, writer: LSM_output_dales) -> None:
         """Apply provided soil state, roughness and skin temperature (opt-in via ``FromLS2D``).
 
         Requests ``t_soil``/``theta_soil`` (on ``zs``), ``type_soil``,
@@ -555,11 +528,12 @@ class LSMModule(BaseLSMModule):
         taken from the provided ``psurf`` through the ``ps`` field itself.
         """
 
-        if self.lsm_writer is None or getattr(self, "from_ls2d", None) is None:
+        if self.from_ls2d is None:
             return
 
         forcings = self.sim.forcings()
-        nz_soil, jtot, itot = self.lsm_writer.value_dic["t_soil"].shape
+        soil = writer.soil
+        nz_soil, jtot, itot = soil.t_soil.shape
         dz_soil = (
             np.asarray(self.dz_soil, dtype=float)
             if self.dz_soil is not None and len(self.dz_soil) == nz_soil
@@ -567,25 +541,22 @@ class LSMModule(BaseLSMModule):
         )
         target_depths = None if dz_soil is None else np.cumsum(dz_soil) - 0.5 * dz_soil
 
-        for name in (t_soil.name, theta_soil.name):
+        for name, target in (
+            (t_soil.name, soil.t_soil),
+            (theta_soil.name, soil.theta_soil),
+        ):
             provided = forcings.initial.get(name)
             if provided is not None:
                 profile = _soil_profile_on_levels(provided, nz_soil, target_depths)
-                self.lsm_writer.value_dic[name][:, :, :] = profile.values[
-                    :, np.newaxis, np.newaxis
-                ]
+                target[:, :, :] = profile.values[:, np.newaxis, np.newaxis]
 
         provided_type = forcings.initial.get(type_soil.name)
         if provided_type is not None:
             values = np.asarray(provided_type.values)
             if values.shape == (jtot, itot):
-                self.lsm_writer.value_dic["index_soil"][:, :, :] = values.astype(int)[
-                    np.newaxis, :, :
-                ]
+                soil.index_soil[:, :, :] = values.astype(int)[np.newaxis, :, :]
             else:
-                self.lsm_writer.value_dic["index_soil"][:, :, :] = int(
-                    values.ravel()[0]
-                )
+                soil.index_soil[:, :, :] = int(values.ravel()[0])
 
         for name, attr in ((z0m.name, "z0mav"), (z0h.name, "z0hav")):
             if name in forcings.initial:
@@ -593,27 +564,24 @@ class LSMModule(BaseLSMModule):
 
         skin = forcings.series.get(thls.name)
         if skin is not None:
-            self.lsm_writer.set_skin_temperature(
-                float(value_at(skin, 0.0)), lu_type="all"
-            )
-            self._apply_laqu_skin_temperature_override()
+            writer.set_skin_temperature(float(value_at(skin, 0.0)), lu_type="all")
+            self._set_laqu_skin_temperature(writer)
 
         logger.info(
             "LSMModule: applied provided soil profiles, soil index, roughness and skin temperature where available"
         )
 
-    def apply_soil_temp_moisture_skin_temp(self):
-        if self.lsm_writer is None:
-            raise ValueError(
-                "Can't apply soil temperature/moisture/skin temp without initializing LSM writer first"
-            )
+    def _apply_thermal_moisture(self, writer: LSM_output_dales) -> None:
+        """Set configured moisture and temperatures, then the aquatic override."""
         if isinstance(self.soil_moisture, (UniformSoilMoisture)):
-            self.lsm_writer.set_uniform_soil_moisture(self.soil_moisture.soil_moisture)
+            writer.soil.set_uniform_moisture(self.soil_moisture.soil_moisture)
         elif isinstance(self.soil_moisture, (VaryingSoilMoisture)):
-            self.lsm_writer.set_soil_moisture_array(self.soil_moisture.soil_moisture)
+            writer.soil.set_moisture(self.soil_moisture.soil_moisture)
         elif isinstance(self.soil_moisture, (SoilTemperatureMoistureFromHarmonie)):
-            self.lsm_writer.set_soil_moisture_array(
-                self.soil_moisture.get_soil_moisture_array(self.grid, self.dz_soil)
+            writer.soil.set_moisture(
+                self.soil_moisture.get_soil_moisture_array(
+                    self.grid, cast(list[float], self.dz_soil)
+                )
             )
         else:
             raise TypeError(
@@ -624,20 +592,16 @@ class LSMModule(BaseLSMModule):
             self.soil_temperature,
             (UniformSoilTemperature),
         ):
-            self.lsm_writer.set_uniform_soil_temperature(
-                self.soil_temperature.soil_temperature
-            )
+            writer.soil.set_uniform_temperature(self.soil_temperature.soil_temperature)
         elif isinstance(
             self.soil_temperature,
             (VaryingSoilTemperature),
         ):
-            self.lsm_writer.set_soil_temperature_array(
-                self.soil_temperature.soil_temperature
-            )
+            writer.soil.set_temperature(self.soil_temperature.soil_temperature)
         elif isinstance(self.soil_temperature, (SoilTemperatureMoistureFromHarmonie)):
-            self.lsm_writer.set_soil_temperature_array(
+            writer.soil.set_temperature(
                 self.soil_temperature.get_soil_temperature_array(
-                    self.grid, self.dz_soil
+                    self.grid, cast(list[float], self.dz_soil)
                 )
             )
         else:
@@ -646,15 +610,15 @@ class LSMModule(BaseLSMModule):
             )
 
         if isinstance(self.skin_temperature, (UniformSkinTemperature)):
-            self.lsm_writer.set_skin_temperature(
+            writer.set_skin_temperature(
                 self.skin_temperature.skin_temperature, lu_type="all"
             )
         elif isinstance(self.skin_temperature, (VaryingSkinTemperature)):
-            self.lsm_writer.set_skin_temperature_array(
+            writer.set_skin_temperature_array(
                 self.skin_temperature.skin_temperature, lu_type="all"
             )
         elif isinstance(self.skin_temperature, (SoilTemperatureMoistureFromHarmonie)):
-            self.lsm_writer.set_skin_temperature_array(
+            writer.set_skin_temperature_array(
                 self.skin_temperature.get_tskin_array(),
                 lu_type="all",
             )
@@ -663,7 +627,7 @@ class LSMModule(BaseLSMModule):
                 "Invalid skin temperature configuration. Must be UniformSkinTemperature or VaryingSkinTemperature."
             )
 
-        self._apply_laqu_skin_temperature_override()
+        self._set_laqu_skin_temperature(writer)
 
     def write_files(self):
         """Write LSM input files and generate plots."""
@@ -671,10 +635,12 @@ class LSMModule(BaseLSMModule):
         # Re-apply LS2D-derived overrides at write time. This guarantees
         # values such as ps/z0 are available even when LSM prepare happened
         # before LS2D prepare due to module ordering.
-        self._override_soil_from_ls2d_if_available()
+        if self.lsm_writer is None:
+            raise ValueError("Prepare the LSM before writing files")
+        self._apply_ls2d_override(self.lsm_writer)
         self.apply_namelist_from_fields()
 
-        self.lsm_writer.save_netcdf(self.output_path / "input", self.exp_id)
+        lsm_netcdf.save_netcdf(self.lsm_writer, self.output_path / "input", self.exp_id)
         plot_lsm.plot_lsm_cover(
             pathlib.Path(self.output_path) / "input" / f"lsm.inp_{self.exp_id:03d}.nc",
             pathlib.Path(self.output_path) / "profiles",

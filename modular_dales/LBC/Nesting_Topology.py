@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Self
 
 from modular_dales.Geometry import GridDales, GridDalesOpenBC
 from modular_dales.LBC.nesting_idx import NestingIndices
@@ -60,11 +60,11 @@ class NestingTopology(simulation_module):
         init=False,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "nesting_topology"
+    module_name: str = field(
+        default="nesting_topology", init=False, metadata={"serialize": False}
+    )
 
-    def __add__(self, other):
+    def __add__(self, other: GridDales) -> Self:
         """Combine nesting topologies if needed."""
         if isinstance(other, GridDales):
             logger.info("Adding GridDales to Nesting_Topology: %s", other)
@@ -73,11 +73,11 @@ class NestingTopology(simulation_module):
             raise TypeError("Can only add GridDales instances to Nesting_Topology")
         return self
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: GridDales) -> Self:
         """In-place addition for combining nesting topologies."""
         return self.__add__(other)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         parts = ""
         for idx, nesting in enumerate(self.nestings):
             parts += f"\n  Nesting {idx + 1}: itot={nesting.itot}, jtot={nesting.jtot}, kmax={nesting.kmax}, xsize={nesting.xsize}, ysize={nesting.ysize}, x0={nesting.x0}, y0={nesting.y0}"
@@ -89,7 +89,7 @@ class NestingTopology(simulation_module):
             parts = "No nestings defined"
         return f"Nesting_Topology with {len(self.nestings)} nestings:{parts}"
 
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         """Return nesting info for a specific index if available."""
 
         if self.my_idx is None or not 0 <= self.my_idx < len(self.nestings):
@@ -146,6 +146,3 @@ class NestingTopology(simulation_module):
             self.openbc_module.indices = NestingIndices.from_grids(
                 supernest_supergrid, supernest_subgrid
             )
-
-    def write_files(self):
-        pass

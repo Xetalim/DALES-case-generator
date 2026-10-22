@@ -14,19 +14,21 @@ logger.debug("Entered module: %s", __name__)
 # Correction factor for aspect ratio of plots
 ASPECT_CORR = 2
 
-# @logwrap
 
-
-#     return lsm_input, lu_types
-
-
-def _decode_text(val):
+def _decode_text(val: bytes | str) -> str:
     if isinstance(val, bytes):
         return val.decode("utf-8")
     return str(val)
 
 
-def _plot_2d_field(ax, x, y, data_2d, title, cmap="viridis"):
+def _plot_2d_field(
+    ax: plt.Axes,
+    x: np.ndarray,
+    y: np.ndarray,
+    data_2d: np.ndarray,
+    title: str,
+    cmap: str = "viridis",
+) -> plt.collections.QuadMesh:
     mesh = ax.pcolormesh(
         x - np.min(x),
         y - np.min(y),
@@ -41,7 +43,15 @@ def _plot_2d_field(ax, x, y, data_2d, title, cmap="viridis"):
     return mesh
 
 
-def _plot_soil_layers(ds, x, y, field_name, title_prefix, output_path, nlevels=4):
+def _plot_soil_layers(
+    ds: xr.Dataset,
+    x: np.ndarray,
+    y: np.ndarray,
+    field_name: str,
+    title_prefix: str,
+    output_path: pathlib.Path,
+    nlevels: int = 4,
+) -> None:
     if field_name not in ds:
         logger.info("Skipping %s plot: variable not present", field_name)
         return
@@ -79,7 +89,9 @@ def _plot_soil_layers(ds, x, y, field_name, title_prefix, output_path, nlevels=4
     plt.close(fig)
 
 
-def _get_cover_weighted_variable_names(ds, short_names):
+def _get_cover_weighted_variable_names(
+    ds: xr.Dataset, short_names: list[str]
+) -> list[str]:
     """Return sorted base variable names that can be cover-weighted.
 
     A variable is considered cover-weightable when for at least one short
@@ -92,10 +104,10 @@ def _get_cover_weighted_variable_names(ds, short_names):
     for var_name in data_var_names:
         for short in short_names:
             suffix = f"_{short}"
-            if not var_name.endswith(suffix):
+            if not str(var_name).endswith(suffix):
                 continue
 
-            base_name = var_name[: -len(suffix)]
+            base_name = str(var_name)[: -len(suffix)]
             if base_name == "cover":
                 continue
 
@@ -106,7 +118,13 @@ def _get_cover_weighted_variable_names(ds, short_names):
     return sorted(cover_weighted)
 
 
-def _plot_all_cover_weighted_spatial_maps(ds, x, y, short_names, output_path):
+def _plot_all_cover_weighted_spatial_maps(
+    ds: xr.Dataset,
+    x: np.ndarray,
+    y: np.ndarray,
+    short_names: list[str],
+    output_path: pathlib.Path,
+) -> None:
     """Plot one spatial map per base variable using cover-weighted blending.
 
     For each base variable ``var``, computes:
@@ -166,14 +184,18 @@ def _plot_all_cover_weighted_spatial_maps(ds, x, y, short_names, output_path):
         plt.close(fig)
 
 
-def _plot_lcz_variables(lsm_netcdf_path, output_path, urban_cover_mask=None):
-    lsm_name = pathlib.Path(lsm_netcdf_path).name
+def _plot_lcz_variables(
+    lsm_netcdf_path: pathlib.Path,
+    output_path: pathlib.Path,
+    urban_cover_mask: np.ndarray | None = None,
+) -> None:
+    lsm_name = lsm_netcdf_path.name
     if not lsm_name.startswith("lsm.inp_"):
         logger.info("Could not infer LCZ dataset from %s", lsm_name)
         return
 
     lcz_name = lsm_name.replace("lsm.inp_", "lcz_ds_")
-    lcz_path = pathlib.Path(lsm_netcdf_path).parent / lcz_name
+    lcz_path = lsm_netcdf_path.parent / lcz_name
 
     if not lcz_path.exists():
         logger.info("Skipping LCZ plots: file does not exist at %s", lcz_path)
@@ -190,7 +212,7 @@ def _plot_lcz_variables(lsm_netcdf_path, output_path, urban_cover_mask=None):
 
         if values.ndim == 2:
             fig, ax = plt.subplots(figsize=(8, 6))
-            is_lcz_class_map = var_name.lower() == "lcz"
+            is_lcz_class_map = str(var_name).lower() == "lcz"
 
             if is_lcz_class_map:
                 lcz_cmap, lcz_norm, lcz_ticks, lcz_ticklabels = _get_lcz_plot_style()
@@ -288,7 +310,7 @@ def _plot_lcz_variables(lsm_netcdf_path, output_path, urban_cover_mask=None):
             ax.plot(values)
             ax.set_title(f"LCZ: {var_name}")
             ax.set_xlabel("index")
-            ax.set_ylabel(var_name)
+            ax.set_ylabel(str(var_name))
             ax.grid(alpha=0.3)
             fig.tight_layout()
             fig.savefig(output_path / "lcz" / f"{var_name}.png", dpi=300)
@@ -334,7 +356,7 @@ def _plot_lcz_variables(lsm_netcdf_path, output_path, urban_cover_mask=None):
     ds_lcz.close()
 
 
-def _get_lcz_plot_style():
+def _get_lcz_plot_style() -> tuple[ListedColormap, BoundaryNorm, np.ndarray, list[str]]:
     """Return a discrete LCZ style with urban grays (1-10) and green natural classes (11-17)."""
     lcz_colors = [
         "#4a4a4a",  # 1
@@ -365,7 +387,7 @@ def _get_lcz_plot_style():
     return cmap, norm, ticks, ticklabels
 
 
-def _build_urban_cover_mask(lsm_ds):
+def _build_urban_cover_mask(lsm_ds: xr.Dataset) -> np.ndarray | None:
     """Infer a 2D urban cover mask from available LSM cover fractions."""
     mask = None
 
@@ -397,16 +419,16 @@ def _build_urban_cover_mask(lsm_ds):
     return mask
 
 
-def plot_lsm_cover(lsm_netcdf_path, plot_base_path):
+def plot_lsm_cover(lsm_netcdf_path: pathlib.Path, plot_base_path: pathlib.Path) -> None:
     """
     Generate some standard plots of Land Surface Model input data
 
     Parameters
     ----------
-    lsm_input : LSM_input_DALES
-        Class containing Dales input parameters for all LU types.
-    plotvars : list
-        List of variables to plot.
+    lsm_netcdf_path : pathlib.Path
+        NetCDF output written by the LSM writer.
+    plot_base_path : pathlib.Path
+        Directory for generated plots.
 
     Returns
     -------

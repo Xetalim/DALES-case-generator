@@ -1,7 +1,7 @@
 """Default configuration modules and base surface module."""
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
@@ -78,23 +78,6 @@ class DefaultNamelistModule(simulation_module):
         metadata={"serialize": True},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "DefaultNamelistModule"
-
-    def do_config(self):
-        """Configure RUN section defaults."""
-        # RUN defaults
-        self.apply_namelist_from_fields()
-
-    def check_settings(self):
-        """Check defaults validity."""
-        return
-
-    def prepare_calculation(self):
-        """No calculation work needed."""
-        return
-
-    def write_files(self):
-        """No files to write."""
-        return
+    module_name: str = field(
+        default="DefaultNamelistModule", init=False, metadata={"serialize": False}
+    )

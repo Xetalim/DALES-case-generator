@@ -177,7 +177,7 @@ def _build_nested_sim_with_easyoutput(
 
     if sim.nml.get("thermodynamics") is None:
         sim.nml["thermodynamics"] = {}
-    sim.nml["thermodynamics"]["lconstexner"] = True
+    # sim.nml["thermodynamics"]["lconstexner"] = True
 
     return sim
 

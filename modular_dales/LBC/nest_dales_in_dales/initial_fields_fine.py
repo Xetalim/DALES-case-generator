@@ -15,15 +15,20 @@ logger.debug("Entered module: %s", __name__)
 
 @logwrap
 def initial_fields_fine(
-    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, output_path
-):
-    """
-    Docstring for initial_fields_fine
+    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, output_path: Path
+) -> xr.Dataset:
+    """Get initial fields for the fine grid in a nested DALES simulation.
+
+    This function attempts to load the initial fields from the host simulation's
+    ``initfields.inp.*.nc`` files. If those are not available, it falls back to
+    the vertical-profile file ``init.*.nc`` and constructs horizontally uniform
+    3D fields on the fine grid.
 
     :param input_json: Configuration dict for LBC
     :param grid: Grid object describing the output grid for open boundaries, which is different from the normal DALES grid.
     :type grid: GridDalesOpenBC
     :param output_path: Where the data should be output.
+    :type output_path: Path
 
     Gets the initial fields for the current simulation from the host
     ``initfields.inp.*.nc``. If that file is not available, fall back to the

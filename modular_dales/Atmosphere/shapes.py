@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Self
 
 import numpy as np
+import numpy.typing as npt
 
 from modular_dales.modular.time_dependent_scalars import TimeDependentScalar
 from modular_dales.MODULE_REGISTRY import register_module, register_special_serializing
@@ -15,7 +16,7 @@ class ShapeFunction:
     # def evaluate(*args, **kwargs):
     #     raise NotImplementedError("This method should be implemented by subclasses.")
 
-    def params_at(self, time_value: float = 0.0) -> dict:
+    def params_at(self, time_value: float = 0.0) -> dict[str, float]:
         return {
             key: (
                 value.at(time_value)
@@ -27,7 +28,7 @@ class ShapeFunction:
         }
 
     @property
-    def params(self) -> dict:
+    def params(self) -> dict[str, float]:
         return {key: value for key, value in self.__dict__.items() if key != "name"}
 
     def at_time(self, time_value: float = 0.0) -> Self:
@@ -62,7 +63,9 @@ class lin(ShapeFunction):
         super().__init__(name="lin")
 
     @staticmethod
-    def evaluate(z, surf_val, ddz):
+    def evaluate(
+        z: npt.NDArray[np.float64] | float, surf_val: float, ddz: float
+    ) -> npt.NDArray[np.float64] | float:
         return surf_val + ddz * z
 
 
@@ -105,7 +108,13 @@ class expsinw(ShapeFunction):
         super().__init__(name="expsinw")
 
     @staticmethod
-    def evaluate(z, surf_val, H, amp, Hp):
+    def evaluate(
+        z: npt.NDArray[np.float64] | float,
+        surf_val: float,
+        H: float,
+        amp: float,
+        Hp: float,
+    ) -> npt.NDArray[np.float64] | float:
         wbase = -surf_val * (1 - np.exp(-z / H))
         wonion = amp * np.sin(2.0 * np.pi / Hp * z)
         wonion[z > Hp] = 0.0
@@ -151,7 +160,13 @@ class linmlsurf(ShapeFunction):
         super().__init__(name="linmlsurf")
 
     @staticmethod
-    def evaluate(z, lapse_rate, surf_val, offset_val=1.25, z_ml=500):
+    def evaluate(
+        z: npt.NDArray[np.float64],
+        lapse_rate: float,
+        surf_val: float,
+        offset_val: float = 1.25,
+        z_ml: float = 500,
+    ) -> npt.NDArray[np.float64]:
         u = np.zeros(z.shape)
         u[z <= z_ml] = surf_val - offset_val
         u[z > z_ml] = surf_val - offset_val + (z[z > z_ml] - z_ml) * lapse_rate
@@ -192,7 +207,12 @@ class exp(ShapeFunction):
         super().__init__(name="exp")
 
     @staticmethod
-    def evaluate(z, surf_val, lambda_val, z_ml=500):
+    def evaluate(
+        z: npt.NDArray[np.float64],
+        surf_val: float,
+        lambda_val: float,
+        z_ml: float = 500,
+    ) -> npt.NDArray[np.float64]:
         u = surf_val * np.exp(-(z - z_ml) / lambda_val)
         u[z <= z_ml] = surf_val
         return u

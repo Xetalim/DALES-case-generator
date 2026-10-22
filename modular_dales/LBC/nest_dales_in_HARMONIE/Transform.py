@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from pyproj import Transformer
 
@@ -7,7 +8,7 @@ logger.debug("Entered module: %s", __name__)
 
 
 class Transform:
-    def __init__(self, parameters):
+    def __init__(self, parameters: Any) -> None:
         self.parameters = parameters
         self.crs_latlon = "epsg:4326"
         # Construct transformation objects
@@ -18,8 +19,8 @@ class Transform:
             self.parameters["proj4"], self.crs_latlon
         )
 
-    def latlon_to_xy(self, lat, lon):
+    def latlon_to_xy(self, lat: float, lon: float) -> tuple[float, float]:
         return self.latlon_to_xy_transform.transform(lat, lon)
 
-    def xy_to_latlon(self, x, y):
+    def xy_to_latlon(self, x: float, y: float) -> tuple[float, float]:
         return self.xy_to_latlon_transform.transform(x, y)

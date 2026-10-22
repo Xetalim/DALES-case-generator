@@ -9,6 +9,7 @@ import subprocess
 from dataclasses import dataclass
 
 from modular_dales.IO_helpers.external_data_cache import cache_root
+from modular_dales.modular.dales_simulation import dales_simulation
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ def _checkout_repo_ref(repo: pathlib.Path, ref: str) -> None:
     _run_git(["checkout", ref], cwd=repo)
 
 
-def _dales_checkout_dir(sim) -> pathlib.Path:
+def _dales_checkout_dir(sim: dales_simulation) -> pathlib.Path:
     return cache_root("dales_dev", sim)
 
 
@@ -146,7 +147,7 @@ def _repo_https_url(url: str | None) -> str:
     return url
 
 
-def _resolve_case_input_dir(sim) -> pathlib.Path | None:
+def _resolve_case_input_dir(sim: dales_simulation) -> pathlib.Path | None:
     output_path = getattr(sim, "output_path", None)
     if output_path is None:
         return None
@@ -174,7 +175,7 @@ def _copy_docs_from_roots_to_target(
 
 
 def _stage_case_attribution(
-    sim,
+    sim: dales_simulation,
     repo: pathlib.Path,
     *,
     include_rrtmg: bool,
@@ -262,7 +263,7 @@ def _stage_case_attribution(
     (target_dir / "SOURCES.md").write_text("\n".join(lines), encoding="utf-8")
 
 
-def _ensure_dales_dev_checkout(sim) -> pathlib.Path:
+def _ensure_dales_dev_checkout(sim: dales_simulation) -> pathlib.Path:
     repo = _dales_checkout_dir(sim)
     repo.parent.mkdir(parents=True, exist_ok=True)
 
@@ -365,7 +366,7 @@ def _require_dir(path: pathlib.Path, hint: str) -> pathlib.Path:
     return path
 
 
-def resolve_external_data_paths(sim) -> ExternalDataPaths:
+def resolve_external_data_paths(sim: dales_simulation) -> ExternalDataPaths:
     """Resolve radiation and LSM datasets from fixed DALES dev checkout."""
     repo = _ensure_dales_dev_checkout(sim)
     _stage_case_attribution(
@@ -397,7 +398,7 @@ def resolve_external_data_paths(sim) -> ExternalDataPaths:
     )
 
 
-def resolve_rrtmg_data_paths(sim) -> RrtmgDataPaths:
+def resolve_rrtmg_data_paths(sim: dales_simulation) -> RrtmgDataPaths:
     """Resolve only RRTMG/RRTMGP datasets needed by radiation schemes."""
     repo = _ensure_dales_dev_checkout(sim)
     _stage_case_attribution(
@@ -424,7 +425,7 @@ def resolve_rrtmg_data_paths(sim) -> RrtmgDataPaths:
     )
 
 
-def resolve_van_genuchten_path(sim) -> pathlib.Path:
+def resolve_van_genuchten_path(sim: dales_simulation) -> pathlib.Path:
     """Resolve only the LSM van Genuchten parameter file."""
     repo = _ensure_dales_dev_checkout(sim)
     _stage_case_attribution(

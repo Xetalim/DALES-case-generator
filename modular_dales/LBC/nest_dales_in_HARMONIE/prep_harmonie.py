@@ -77,7 +77,7 @@ class harmoniePrepper:
         self.ps = None
         self.thls = None
         self.data = None
-        self.transform = None
+        self.transform: Transform | None = None
         self.p = None
         self.z = None
         self.z_int = None
@@ -88,7 +88,7 @@ class harmoniePrepper:
         self.ug: xr.DataArray | None = None
         self.vg: xr.DataArray | None = None
 
-    def load_data(self):
+    def load_data(self) -> None:
         variables = ["ua", "va", "wa", "ta", "hus", "clw", "ps", "tas", "huss"]
         if self.input_json.synturb is not None:
             variables = variables + ["tke", "tauu", "tauv", "cb", "hfss"]
@@ -101,8 +101,11 @@ class harmoniePrepper:
         self.transform = update_transform(self.transform, x_sw, y_sw)
 
     @logwrap
-    def prep_harmonie(self):
-
+    def prep_harmonie(self) -> tuple[xr.Dataset, Transform]:
+        if self.data is None:
+            raise ValueError(
+                "Data not loaded. Call load_data() before prep_harmonie()."
+            )
         # Calculate pressure levels
         self.p = calculate_pressure(self.data)
 
@@ -131,7 +134,7 @@ class harmoniePrepper:
         self.data = merge_steps(self.data, variables)
         # Calculate 3D height levels
 
-        self.z = calculate_3d_height_levels(self.input_json, self.data).persist()
+        self.z = calculate_3d_height_levels(self.data).persist()
         self.data = self.data.assign({"z3d": self.z})
         # Get reference height levels (mean of height field first time step) and crop to grid.zsize
         self.z_int = get_ref_height_crop(
@@ -249,7 +252,9 @@ def _build_backrad_profile_from_harmonie(data: xr.Dataset) -> xr.Dataset:
 
 
 @logwrap
-def calculate_geostrophic_wind(data, grid: GridDalesOpenBC):
+def calculate_geostrophic_wind(
+    data: xr.Dataset, grid: GridDalesOpenBC
+) -> tuple[xr.DataArray, xr.DataArray]:
     """Geostrophic wind on ``(time, z, y, x)`` from horizontal pressure gradients on height levels."""
     if DATA_LAT_VAR in data.coords:
         lat = data[DATA_LAT_VAR]
@@ -271,7 +276,7 @@ def calculate_geostrophic_wind(data, grid: GridDalesOpenBC):
 
 
 @logwrap
-def calculate_pressure(data):
+def calculate_pressure(data: xr.Dataset) -> xr.DataArray:
     # right now this function uses 90 hybrid model levels.
     # hybrid_coeff = np.loadtxt("<inpath>/H43_65lev.txt")
     hybrid_A = xr.DataArray(
@@ -287,7 +292,7 @@ def calculate_pressure(data):
 
 
 @logwrap
-def merge_steps(data, variables):
+def merge_steps(data: xr.Dataset, variables: list[str]) -> xr.Dataset:
     dic = {
         "ua": "u",
         "va": "v",
@@ -306,7 +311,9 @@ def merge_steps(data, variables):
 
 
 @logwrap
-def get_ref_height_crop(input_json, grid: GridDalesOpenBC, data):
+def get_ref_height_crop(
+    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data: xr.Dataset
+) -> xr.DataArray:
     if input_json.start == input_json.time0:  # Define reference height levels
         z_int = (
             data["z3d"]
@@ -329,14 +336,14 @@ def get_ref_height_crop(input_json, grid: GridDalesOpenBC, data):
 @logwrap
 def calculate_turbulence_vars(
     grid: GridDalesOpenBC,
-    data,
-    turbulence_data_dic,
-    z_int,
-    ps_exnr,
-    exnrs,
-    thls_exnr,
-    thl,
-):
+    data: xr.Dataset,
+    turbulence_data_dic: dict[str, xr.DataArray],
+    z_int: xr.DataArray,
+    ps_exnr: xr.DataArray,
+    exnrs: xr.DataArray,
+    thls_exnr: xr.DataArray,
+    thl: xr.DataArray,
+) -> None:
 
     # Calculate inversion height from maximum curvature and with cloud base as a backup
     zi_min = 200
@@ -377,7 +384,12 @@ def calculate_turbulence_vars(
 
 
 @logwrap
-def calc_base_exner(input_json, grid: GridDalesOpenBC, data, z_int):
+def calc_base_exner(
+    input_json: OpenBoundaryConfig,
+    grid: GridDalesOpenBC,
+    data: xr.Dataset,
+    z_int: xr.DataArray,
+) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray]:
     if input_json.start == input_json.time0:  # Calculate exnr function
         z_min = data.z.argmin(dim="z")
 
@@ -427,7 +439,9 @@ def calc_base_exner(input_json, grid: GridDalesOpenBC, data, z_int):
 
 
 @logwrap
-def vertical_interp_all(ds, z3d, z_new):
+def vertical_interp_all(
+    ds: xr.Dataset, z3d: xr.DataArray, z_new: xr.DataArray
+) -> xr.Dataset:
     """
     Interpolate all variables in ds along a 4D vertical coordinate z3d
     onto target heights z_new.
@@ -479,7 +493,9 @@ def vertical_interp_all(ds, z3d, z_new):
 
 
 @logwrap
-def interpolate_ref_height(input_json, data, z_int):
+def interpolate_ref_height(
+    input_json: OpenBoundaryConfig, data: xr.Dataset, z_int: xr.DataArray
+) -> xr.Dataset:
     # data_intz = []
     # its = 0
     # new_shape = [data.sizes["time"], len(z_int), data.sizes["y"], data.sizes["x"]]
@@ -522,7 +538,7 @@ def interpolate_ref_height(input_json, data, z_int):
 
 
 @logwrap
-def calculate_3d_height_levels(input_json, data):
+def calculate_3d_height_levels(data: xr.Dataset) -> xr.DataArray:
     rho = data["p"] / (
         Rd
         * data["t"]
@@ -564,7 +580,7 @@ def calculate_3d_height_levels(input_json, data):
 
 
 @logwrap
-def update_transform(transform, x_sw, y_sw):
+def update_transform(transform: Transform, x_sw: float, y_sw: float) -> Transform:
     logger.debug("Skipping transform update, we are keeping the original transform.")
     return transform
     transform.parameters["false_easting"] = transform.parameters["false_easting"] - x_sw
@@ -585,10 +601,12 @@ def update_transform(transform, x_sw, y_sw):
 
 
 @logwrap
-def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
+def create_xarray_dataset(
+    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, variables: list[str]
+) -> tuple[xr.Dataset, Transform, float, float]:
     preprocess = True
 
-    data = []
+    data: list[xr.DataArray] = []
     # Get time epochs
 
     # Open data and crop data
@@ -606,7 +624,7 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
             # chunks={"x": "auto", "y": "auto", "time": "auto", "lev": -1},
         )
     )
-    transform, _, _, time = get_transform_time(input_json, var, ds_ml)
+    transform, _, _, time = get_transform_time(var, ds_ml)
 
     ds_sfc = fix_lambert_offsets(
         xr.open_mfdataset(
@@ -683,14 +701,14 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
     # Merge into xarray dataset
     logger.debug("Succesfully read in vars, merging now... also saving to netcdf")
     if preprocess:
-        data = xr.merge(data, compat="override", join="outer")
+        data_merged = xr.merge(data, compat="override", join="outer")
         # data.to_netcdf("/ec/res4/scratch/nld4411/dales_nest_harmonie/netcdfs_newnew4/data.nc",engine="netcdf4")
         ds_ml.close()
         ds_sfc.close()
         # del data
     else:
         logger.debug("Reading in saved dataset")
-        data = xr.open_dataset(
+        data_merged = xr.open_dataset(
             "/ec/res4/scratch/nld4411/dales_nest_harmonie/netcdfs_newnew4/data.nc",
             engine="netcdf4",
             chunks={"time": input_json.tchunk, "lev": -1},
@@ -698,11 +716,13 @@ def create_xarray_dataset(input_json, grid: GridDalesOpenBC, variables):
         ds_ml.close()
         ds_sfc.close()
         logger.debug("Read in saved dataset")
-    return data, transform, x_sw, y_sw
+    return data_merged, transform, x_sw, y_sw
 
 
 @logwrap
-def get_transform_time(input_json, var, ds):
+def get_transform_time(
+    var: str, ds: xr.Dataset
+) -> tuple[Transform, None, None, xr.DataArray]:
     # sometimes dask doesn't recognise that rioxarray has been imported. We import rioxarray to make sure we can acess rio.crs..
 
     # Read transform information and transform lat/lon of southwest corner to harmonie x/y

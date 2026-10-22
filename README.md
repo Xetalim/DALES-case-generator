@@ -39,6 +39,13 @@ Case scripts can be run from any directory. Bundled job and input templates are 
 
 This will create an output directory (based on the case name and machine configuration) containing a DALES namelist, `job.001`, and all required input files.
 
+Modules are constructed as detached configuration objects, without a `sim=` argument.
+Configure them first, then attach and register them with `sim += module`.
+The read-only `module.sim` property returns the bound simulation and raises
+`RuntimeError` while detached. Configuration methods that do not access the
+simulation remain usable before attachment. A module cannot be moved to another
+simulation; adding the same instance again does not repeat its attachment hook.
+
 
 ## Changelog:
  -Allowed RTE-RRTMGP runs to be done. Added machine_conf.yaml to prevent having to edit scripts to customise.

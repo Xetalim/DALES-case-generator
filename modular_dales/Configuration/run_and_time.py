@@ -29,21 +29,9 @@ class RunModule(simulation_module):
     ladaptive: bool | None = nml_field(default=None, section="RUN", key="ladaptive")
     dtmax: float | None = nml_field(default=None, section="RUN", key="dtmax")
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "RunModule"
-
-    def prepare_calculation(self):
-        """Set up run-related namelist parameters."""
-        return
-
-    def check_settings(self):
-        """Check run settings validity."""
-        return
-
-    def write_files(self):
-        """No files to write for run module."""
-        return
+    module_name: str = field(
+        default="RunModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -139,13 +127,9 @@ class TimeModule(simulation_module):
         description="Restart write interval in seconds for RUN:trestart.",
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "TimeModule"
-
-    def do_config(self):
-        """Configure time-related namelist parameters."""
-        return
+    module_name: str = field(
+        default="TimeModule", init=False, metadata={"serialize": False}
+    )
 
     def _apply_datetime_inference(self) -> None:
         """Infer DOMAIN xyear/xday from NAMDATETIME start date when enabled."""
@@ -156,7 +140,7 @@ class TimeModule(simulation_module):
         self.xyear = int(start_dt.year)
         self.xday = int(start_dt.timetuple().tm_yday)
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         """Check time settings validity."""
         self._apply_datetime_inference()
         if self.xyear != self.startyear:
@@ -165,11 +149,3 @@ class TimeModule(simulation_module):
                 self.xyear,
                 self.startyear,
             )
-
-    def prepare_calculation(self):
-        """No calculation work needed."""
-        return
-
-    def write_files(self):
-        """No files to write."""
-        return

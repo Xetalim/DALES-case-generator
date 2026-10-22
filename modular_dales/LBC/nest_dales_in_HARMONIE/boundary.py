@@ -16,8 +16,8 @@ logger.debug("Entered module: %s", __name__)
 
 @logwrap
 def boundary_fields(
-    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data, output_path
-):
+    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data: xr.Dataset
+) -> xr.Dataset:
     # data = data.drop(["lat", "lon"])
     # West boundary
     openboundaries = get_boundaries(input_json, grid, data)
@@ -39,7 +39,9 @@ def boundary_fields(
 
 
 @logwrap
-def set_variable_attributes(input_json: OpenBoundaryConfig, openboundaries):
+def set_variable_attributes(
+    input_json: OpenBoundaryConfig, openboundaries: xr.Dataset
+) -> None:
     openboundaries["time"] = openboundaries["time"].assign_attrs(
         {"longname": "Time", "units": f"seconds since {input_json.time0}"}
     )
@@ -83,7 +85,9 @@ def set_variable_attributes(input_json: OpenBoundaryConfig, openboundaries):
 
 
 @logwrap
-def set_time_attrs(input_json: OpenBoundaryConfig, openboundaries):
+def set_time_attrs(
+    input_json: OpenBoundaryConfig, openboundaries: xr.Dataset
+) -> xr.Dataset:
     ts = openboundaries["time"].values.astype("datetime64[s]")
     dts = (ts - np.datetime64(input_json.time0, "s")) / np.timedelta64(1, "s")
     openboundaries = openboundaries.assign_coords({"time": ("time", dts)})
@@ -92,7 +96,9 @@ def set_time_attrs(input_json: OpenBoundaryConfig, openboundaries):
 
 
 @logwrap
-def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
+def get_boundaries(
+    input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data: xr.Dataset
+) -> xr.Dataset:
     north = data.sel(
         y=slice(grid.yt[-1] - grid.dy * 16, grid.yt[-1] + grid.dy * 16),
         x=slice(grid.xt[0] - grid.dx * 16, grid.xt[-1] + grid.dx * 16),
@@ -123,7 +129,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "yt"})
         .rename("uwest")
-        .drop(["x"])
+        .drop_vars("x")
     )
     vwest = (
         west["v"]
@@ -132,7 +138,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "ym"})
         .rename("vwest")
-        .drop(["x"])
+        .drop_vars("x")
     )
     wwest = (
         west["w"]
@@ -141,7 +147,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zm", "y": "yt"})
         .rename("wwest")
-        .drop(["x"])
+        .drop_vars("x")
     )
     thlwest = (
         west["thl"]
@@ -150,7 +156,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "yt"})
         .rename("thlwest")
-        .drop(["x"])
+        .drop_vars("x")
     )
     qtwest = (
         west["qt"]
@@ -159,7 +165,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "yt"})
         .rename("qtwest")
-        .drop(["x"])
+        .drop_vars("x")
     )
     e12west = (xr.ones_like(thlwest) * input_json.e12).rename("e12west")
     uwest.attrs.clear()
@@ -175,7 +181,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "yt"})
         .rename("ueast")
-        .drop(["x"])
+        .drop_vars("x")
     )
     veast = (
         east["v"]
@@ -184,7 +190,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "ym"})
         .rename("veast")
-        .drop(["x"])
+        .drop_vars("x")
     )
     weast = (
         east["w"]
@@ -193,7 +199,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zm", "y": "yt"})
         .rename("weast")
-        .drop(["x"])
+        .drop_vars("x")
     )
     thleast = (
         east["thl"]
@@ -202,7 +208,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "yt"})
         .rename("thleast")
-        .drop(["x"])
+        .drop_vars("x")
     )
     qteast = (
         east["qt"]
@@ -211,7 +217,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "y": "yt"})
         .rename("qteast")
-        .drop(["x"])
+        .drop_vars("x")
     )
     e12east = (xr.ones_like(thleast) * input_json.e12).rename("e12east")
     ueast.attrs.clear()
@@ -227,7 +233,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xm"})
         .rename("usouth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     vsouth = (
         south["v"]
@@ -236,7 +242,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xt"})
         .rename("vsouth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     wsouth = (
         south["w"]
@@ -245,7 +251,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zm", "x": "xt"})
         .rename("wsouth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     thlsouth = (
         south["thl"]
@@ -254,7 +260,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xt"})
         .rename("thlsouth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     qtsouth = (
         south["qt"]
@@ -263,7 +269,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xt"})
         .rename("qtsouth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     e12south = (xr.ones_like(thlsouth) * input_json.e12).rename("e12south")
     usouth.attrs.clear()
@@ -279,7 +285,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xm"})
         .rename("unorth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     vnorth = (
         north["v"]
@@ -288,7 +294,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xt"})
         .rename("vnorth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     wnorth = (
         north["w"]
@@ -297,7 +303,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zm", "x": "xt"})
         .rename("wnorth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     thlnorth = (
         north["thl"]
@@ -306,7 +312,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xt"})
         .rename("thlnorth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     qtnorth = (
         north["qt"]
@@ -315,7 +321,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"z": "zt", "x": "xt"})
         .rename("qtnorth")
-        .drop(["y"])
+        .drop_vars("y")
     )
     e12north = (xr.ones_like(thlnorth) * input_json.e12).rename("e12north")
     unorth.attrs.clear()
@@ -331,7 +337,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"y": "yt", "x": "xm"})
         .rename("utop")
-        .drop(["z"])
+        .drop_vars("z")
     )
     vtop = (
         top["v"]
@@ -340,7 +346,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"y": "ym", "x": "xt"})
         .rename("vtop")
-        .drop(["z"])
+        .drop_vars("z")
     )
     wtop = (
         top["w"]
@@ -349,7 +355,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"y": "yt", "x": "xt"})
         .rename("wtop")
-        .drop(["z"])
+        .drop_vars("z")
     )
     thltop = (
         top["thl"]
@@ -358,7 +364,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"y": "yt", "x": "xt"})
         .rename("thltop")
-        .drop(["z"])
+        .drop_vars("z")
     )
     qttop = (
         top["qt"]
@@ -367,7 +373,7 @@ def get_boundaries(input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, data):
         .transpose("time", "z", "y", "x", ..., missing_dims="warn")
         .rename({"y": "yt", "x": "xt"})
         .rename("qttop")
-        .drop(["z"])
+        .drop_vars("z")
     )
     e12top = (xr.ones_like(thltop) * input_json.e12).rename("e12top")
     utop.attrs.clear()

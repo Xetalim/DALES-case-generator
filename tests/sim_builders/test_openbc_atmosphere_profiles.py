@@ -12,7 +12,6 @@ from modular_dales import (
     Nest_in_AtmosphereProfiles,
     TimeModule,
     dales_simulation,
-    do_openboundary,
 )
 from modular_dales.Atmosphere import TimedAtmosphereProfile, lin
 from modular_dales.Configuration.output_modules import EasyOutputModule
@@ -164,41 +163,29 @@ def _build_openbc_atmo_sim(
         ),
     ]
 
-    openbc = do_openboundary(
+    boundary_u, boundary_v = (
+        (boundary_u_timedep, boundary_v_timedep)
+        if add_timedep
+        else (boundary_u_const, boundary_v_const)
+    )
+    openbc = Nest_in_AtmosphereProfiles(
         time0="2025-01-01T00:00:00",
         start="2025-01-01T00:00:00",
         end="2025-01-01T00:10:00",
         e12=0.1,
         dxint=round(grid.xsize / grid.itot),
         dyint=round(grid.ysize / grid.jtot),
+        u=boundary_u,
+        v=boundary_v,
+        w=boundary_w,
+        thl=boundary_thl,
+        qt=boundary_qt,
+        e120=boundary_e12,
+        noise_boundaries=["south", "west"],
+        noise_std=0.1,
+        noise_seed=42,
+        noise_variables=["u", "v"],
     )
-
-    if add_timedep:
-        openbc += Nest_in_AtmosphereProfiles(
-            u=boundary_u_timedep,
-            v=boundary_v_timedep,
-            w=boundary_w,
-            thl=boundary_thl,
-            qt=boundary_qt,
-            e120=boundary_e12,
-            noise_boundaries=["south", "west"],
-            noise_std=0.1,
-            noise_seed=42,
-            noise_variables=["u", "v"],
-        )
-    else:
-        openbc += Nest_in_AtmosphereProfiles(
-            u=boundary_u_const,
-            v=boundary_v_const,
-            w=boundary_w,
-            thl=boundary_thl,
-            qt=boundary_qt,
-            e120=boundary_e12,
-            noise_boundaries=["south", "west"],
-            noise_std=0.1,
-            noise_seed=42,
-            noise_variables=["u", "v"],
-        )
     sim += openbc
 
     sim += EasyOutputModule(

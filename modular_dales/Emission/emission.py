@@ -145,9 +145,9 @@ class EmissionModule(simulation_module):
         init=True,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "EmissionModule"
+    module_name: str = field(
+        default="EmissionModule", init=False, metadata={"serialize": False}
+    )
 
     # ------------------------------------------------------------------
     # Public API for adding tracers / point sources
@@ -175,7 +175,7 @@ class EmissionModule(simulation_module):
 
         return self.__add__(item)
 
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         """Set up emission tracers and update namelist.
 
         If no tracers or point sources have been added, emissions are disabled
@@ -214,7 +214,7 @@ class EmissionModule(simulation_module):
 
         self.emissions_instance = emis
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         """Check emission settings validity.
 
         If this module configures emissions, ensure the runtime knows the
@@ -243,7 +243,7 @@ class EmissionModule(simulation_module):
         if "emissions" not in folders:
             folders.append("emissions")
 
-    def write_files(self):
+    def write_files(self) -> None:
         """Write emission files to disk."""
 
         if self.emissions_instance is None:

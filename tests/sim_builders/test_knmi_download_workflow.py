@@ -14,12 +14,11 @@ from modular_dales import (
     GridDales,
     InterpolatedProfile,
     KNMIHarmonieForecastDownloadModule,
+    Nest_in_KNMI,
     TimeModule,
     dales_simulation,
-    do_openboundary,
 )
 from modular_dales.Atmosphere import lin
-from modular_dales.LBC.openbc import Nest_in_KNMI
 from modular_dales.vars import qt, thetal, tke, ua, va, wa
 from tests.generic_testers import run_simulation_and_check_job
 
@@ -129,14 +128,13 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
         delete_grib_files=True,
     )
 
-    openbc = do_openboundary(
+    openbc = Nest_in_KNMI(
         time0=time0_dt.strftime("%Y-%m-%dT%H:%M:%S"),
         start=start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
         end=end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
         e12=0.1,
         tchunk=1,
     )
-    openbc += Nest_in_KNMI()
     sim += openbc
     return sim
 

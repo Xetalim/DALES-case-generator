@@ -23,9 +23,8 @@ logger.debug("Entered module: %s", __name__)
 def boundary_fields_fine(
     input_json: OpenBoundaryConfig,
     grid: GridDalesOpenBC,
-    output_path,
     grid_indices: "NestingIndices",
-    chunks=None,
+    chunks: dict[str, int] | None = None,
 ):
     if not grid_indices:
         raise ValueError("No nesting indices provided!")

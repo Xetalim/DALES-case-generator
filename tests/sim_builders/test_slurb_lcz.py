@@ -16,7 +16,8 @@ from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LSM import FromLCZ, LandUseModification, LSMModule
+from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
+from modular_dales.Surface.LSM.LSM import FromLCZ, LSMModule
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -56,22 +57,30 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
     atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
-    atmo.add(AtmosphericProfile(
-        variable=thetal,
-        shape=linmlsurf(surf_val=293, offset_val=1.25, lapse_rate=1e-3, z_ml=0),
-    ))
-    atmo.add(AtmosphericProfile(
-        variable=qt, shape=exp(surf_val=0.016, lambda_val=1500, z_ml=0)
-    ))
-    atmo.add(AtmosphericProfile(
-        variable=wa,
-        shape=expsinw(surf_val=4.0e-3, amp=0, H=2500, Hp=5300),
-    ))
-    atmo.add(InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
-    ))
+    atmo.add(
+        AtmosphericProfile(
+            variable=thetal,
+            shape=linmlsurf(surf_val=293, offset_val=1.25, lapse_rate=1e-3, z_ml=0),
+        )
+    )
+    atmo.add(
+        AtmosphericProfile(
+            variable=qt, shape=exp(surf_val=0.016, lambda_val=1500, z_ml=0)
+        )
+    )
+    atmo.add(
+        AtmosphericProfile(
+            variable=wa,
+            shape=expsinw(surf_val=4.0e-3, amp=0, H=2500, Hp=5300),
+        )
+    )
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
+    )
 
     sim += atmo
     lsm = LSMModule(

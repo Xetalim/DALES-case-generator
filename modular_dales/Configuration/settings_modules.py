@@ -95,14 +95,11 @@ class SprayingModule(simulation_module):
         description="Spray forcing mode selector.",
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "SprayingModule"
+    module_name: str = field(
+        default="SprayingModule", init=False, metadata={"serialize": False}
+    )
 
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         self.x_idx, self.y_idx, self.z_idx = prepare_point_indices(
             "SprayingModule",
             self.grid,
@@ -114,12 +111,6 @@ class SprayingModule(simulation_module):
             y=self.y,
             z=self.z,
         )
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
 
 
 @register_module
@@ -140,21 +131,9 @@ class LateralSpongeModule(simulation_module):
         description="Depth/width scale of lateral sponge region in m.",
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "LateralSpongeModule"
-
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="LateralSpongeModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -174,18 +153,18 @@ class GeneralPhysicsModule(simulation_module):
         key="chi_half",
         description="Use half-level chi/exner treatment where applicable.",
     )
-    lconstexner: bool | None = nml_field(
-        default=None,
-        section="thermodynamics",
-        key="lconstexner",
-        description="Use initial pressure profile in exner function.",
-    )
-    lbaseexner: bool | None = nml_field(
-        default=None,
-        section="thermodynamics",
-        key="lbaseexner",
-        description="Use base-state pressure profile in exner function.",
-    )
+    # lconstexner: bool | None = nml_field(
+    #     default=None,
+    #     section="thermodynamics",
+    #     key="lconstexner",
+    #     description="Use initial pressure profile in exner function.",
+    # )
+    # lbaseexner: bool | None = nml_field(
+    #     default=None,
+    #     section="thermodynamics",
+    #     key="lbaseexner",
+    #     description="Use base-state pressure profile in exner function.",
+    # )
     lnoclouds: bool | None = nml_field(
         default=None,
         section="thermodynamics",
@@ -278,18 +257,6 @@ class GeneralPhysicsModule(simulation_module):
         description="Enable D80R subgrid option.",
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "GeneralPhysicsModule"
-
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="GeneralPhysicsModule", init=False, metadata={"serialize": False}
+    )

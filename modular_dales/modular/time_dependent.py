@@ -66,19 +66,16 @@ class TimedependentModule(simulation_module):
         metadata={"serialize": False},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
+    module_name: str = field(
+        default="TimedependentModule", init=False, metadata={"serialize": False}
+    )
+
+    def __post_init__(self) -> None:
         if isinstance(self.timesteps, np.ndarray):
             self.timesteps = self.timesteps.tolist()
-        self.module_name = "TimedependentModule"
 
-    def check_settings(self):
-        return None
-
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         self.timedep = xr.Dataset()
-        if self.grid is None:
-            return
 
         vars_by_name = get_var_by_name()
         forcings = self.sim.forcings()
@@ -120,7 +117,7 @@ class TimedependentModule(simulation_module):
             )
         return
 
-    def write_files(self):
+    def write_files(self) -> None:
         if not self.timedep.data_vars:
             return
         self.profile_writer.write_forcings(

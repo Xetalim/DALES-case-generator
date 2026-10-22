@@ -7,7 +7,7 @@ logger.debug("Entered module: %s", __name__)
 
 
 class openbc_counts_idx:
-    def __init__(self, grid: GridDales, fortran_indexing=True):
+    def __init__(self, grid: GridDales, fortran_indexing: bool = True) -> None:
         # i1, j1, k1, i2, j2, imax, jmax, kmax, nxturb=0, nyturb=0, nzturb=0
         nxturb = 0
         nyturb = 0
@@ -174,17 +174,17 @@ class openbc_counts_idx:
         }
 
         if not fortran_indexing:
-            for boundary in var_boundary_idx:
-                for var in var_boundary_idx[boundary]:
+            for boundary, vars in var_boundary_idx.items():
+                for var in vars:
                     var_boundary_idx[boundary][var] = (
-                        var_boundary_idx[boundary][var][0] - 1,
-                        var_boundary_idx[boundary][var][1] - 1,
+                        vars[var][0] - 1,
+                        vars[var][1] - 1,
                     )
-            for var in openbc_initfields_idx:
-                for dim in openbc_initfields_idx[var]:
+            for var, dims in openbc_initfields_idx.items():
+                for dim in dims:
                     openbc_initfields_idx[var][dim] = (
-                        openbc_initfields_idx[var][dim][0] - 1,
-                        openbc_initfields_idx[var][dim][1] - 1,
+                        dims[dim][0] - 1,
+                        dims[dim][1] - 1,
                     )
 
         self.boundaries = boundaries

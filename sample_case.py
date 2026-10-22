@@ -46,11 +46,11 @@ from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.logging_wrapper import setup_logging
 from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.modular.time_dependent import TimedependentModule
+from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
 from modular_dales.Surface.LSM.LSM import (
     FromBofek,
     FromLCZ,
     FromTop10,
-    LandUseModification,
     LSMModule,
 )
 from modular_dales.Surface.LSM.modular_temps_moisture import (

@@ -1,112 +1,106 @@
+from __future__ import annotations
+
 import csv
 import logging
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
 
+from modular_dales.Geometry.GridDales import GridDales
 from modular_dales.Surface.LSM.LCZ.get_from_LCZ import (
     LCZ_URBAN_NATURAL_TO_IFS,
     lcz_dict,
 )
+from modular_dales.Surface.LSM.lsm_data import AGSFields
 from modular_dales.Surface.LSM.translation_tables.vegetation_properties import (
     top10_to_ifs,
 )
 
+if TYPE_CHECKING:
+    from modular_dales.Surface.LSM.LSM_output_dales import LSM_output_dales
+
 logger = logging.getLogger(__name__)
 
 
-AGS_PARAM_NAMES = [
-    "gm25",
-    "Ammax25",
-    "f0",
-    "alpha0",
-    "co2_comp298",
-    "T1gm",
-    "T1Am",
-]
+@dataclass(frozen=True)
+class VegetationAGSParameters:
+    gm25: float
+    Ammax25: float
+    f0: float
+    alpha0: float
+    co2_comp298: float
+    T1gm: float
+    T1Am: float
 
 
-_VEG_LOOKUP = {
-    "fce": {
-        "gm25": 3.0e-3,
-        "Ammax25": 2.2,
-        "f0": 0.89,
-        "a": 0.0,
-        "b": 0.0,
-        "T1gm": 278.0,
-        "T1Am": 281.0,
-        "co2_comp298": 82.2,
-        "alpha0": 0.017,
-    },
-    "fbd": {
-        "gm25": 2.0e-3,
-        "Ammax25": 1.83,
-        "f0": 0.80,
-        "a": 0.0,
-        "b": 0.0,
-        "T1gm": 278.0,
-        "T1Am": 281.0,
-        "co2_comp298": 42.0,
-        "alpha0": 0.0142,
-    },
-    "ara": {
-        "gm25": 1.3e-3,
-        "Ammax25": 2.20,
-        "f0": 0.85,
-        "alpha0": 0.0142,
-        "a": 2.381,
-        "b": 0.6103,
-        "T1gm": 278.0,
-        "T1Am": 281.0,
-        "co2_comp298": 42.0,
-    },
-    "crp": {
-        "gm25": 1.4e-3,
-        "Ammax25": 1.83,
-        "f0": 0.92,
-        "alpha0": 0.0142,
-        "a": 2.381,
-        "b": 0.6103,
-        "T1gm": 278.0,
-        "T1Am": 281.0,
-        "co2_comp298": 42.0,
-    },
-    "sem": {
-        "gm25": 1.0e-3,
-        "Ammax25": 1.83,
-        "f0": 0.80,
-        "alpha0": 0.0142,
-        "a": 2.381,
-        "b": 0.6103,
-        "T1gm": 278.0,
-        "T1Am": 281.0,
-        "co2_comp298": 42.0,
-    },
-    "grs": {
-        "C3": {
-            "gm25": 1.5e-3,
-            "Ammax25": 2.0,
-            "f0": 0.75,
-            "alpha0": 0.0142,
-            "a": 2.381,
-            "b": 0.6103,
-            "T1gm": 278.0,
-            "T1Am": 281.0,
-            "co2_comp298": 42.0,
-        },
-        "C4": {
-            "gm25": 2.3e-3,
-            "Ammax25": 1.83,
-            "f0": 0.70,
-            "alpha0": 0.0117,
-            "a": 5.323,
-            "b": 0.8923,
-            "T1gm": 286.15,
-            "T1Am": 286.15,
-            "co2_comp298": 2.6,
-        },
-    },
+_GRASS_C3 = VegetationAGSParameters(
+    gm25=1.5e-3,
+    Ammax25=2.0,
+    f0=0.75,
+    alpha0=0.0142,
+    co2_comp298=42.0,
+    T1gm=278.0,
+    T1Am=281.0,
+)
+_GRASS_C4 = VegetationAGSParameters(
+    gm25=2.3e-3,
+    Ammax25=1.83,
+    f0=0.70,
+    alpha0=0.0117,
+    co2_comp298=2.6,
+    T1gm=286.15,
+    T1Am=286.15,
+)
+
+_VEG_LOOKUP: dict[str, VegetationAGSParameters] = {
+    "fce": VegetationAGSParameters(
+        gm25=3.0e-3,
+        Ammax25=2.2,
+        f0=0.89,
+        alpha0=0.017,
+        co2_comp298=82.2,
+        T1gm=278.0,
+        T1Am=281.0,
+    ),
+    "fbd": VegetationAGSParameters(
+        gm25=2.0e-3,
+        Ammax25=1.83,
+        f0=0.80,
+        alpha0=0.0142,
+        co2_comp298=42.0,
+        T1gm=278.0,
+        T1Am=281.0,
+    ),
+    "ara": VegetationAGSParameters(
+        gm25=1.3e-3,
+        Ammax25=2.20,
+        f0=0.85,
+        alpha0=0.0142,
+        co2_comp298=42.0,
+        T1gm=278.0,
+        T1Am=281.0,
+    ),
+    "crp": VegetationAGSParameters(
+        gm25=1.4e-3,
+        Ammax25=1.83,
+        f0=0.92,
+        alpha0=0.0142,
+        co2_comp298=42.0,
+        T1gm=278.0,
+        T1Am=281.0,
+    ),
+    "sem": VegetationAGSParameters(
+        gm25=1.0e-3,
+        Ammax25=1.83,
+        f0=0.80,
+        alpha0=0.0142,
+        co2_comp298=42.0,
+        T1gm=278.0,
+        T1Am=281.0,
+    ),
 }
 
 
@@ -121,7 +115,7 @@ def _sorted_on_xy(ds: xr.Dataset, var_name: str) -> xr.DataArray:
     return da
 
 
-def _sample_on_grid(da: xr.DataArray, grid) -> np.ndarray:
+def _sample_on_grid(da: xr.DataArray, grid: GridDales) -> np.ndarray:
     xq = xr.DataArray(grid.xt, dims=("x",), coords={"x": grid.xt})
     yq = xr.DataArray(grid.yt, dims=("y",), coords={"y": grid.yt})
     sampled = da.interp(x=xq, y=yq, method="nearest")
@@ -129,7 +123,7 @@ def _sample_on_grid(da: xr.DataArray, grid) -> np.ndarray:
 
 
 def _apply_lcz_urban_natural_overrides_after_top10(
-    lsm_writer,
+    lsm_writer: LSM_output_dales,
     *,
     urban_natural_lcz_to_10: bool,
     urban_natural_lcz_to_natural_lsm: bool,
@@ -142,7 +136,7 @@ def _apply_lcz_urban_natural_overrides_after_top10(
     if not urban_natural_lcz_to_10 and not urban_natural_lcz_to_natural_lsm:
         return
 
-    lcz_ds = getattr(lsm_writer, "LCZ_ds", None)
+    lcz_ds = lsm_writer.LCZ_ds
     if lcz_ds is None or "lcz" not in lcz_ds:
         logger.warning(
             "Top10 LCZ override requested, but no LCZ dataset is available on lsm_writer"
@@ -161,15 +155,15 @@ def _apply_lcz_urban_natural_overrides_after_top10(
 
     urban_lu_keys = [
         lu_key
-        for lu_key, lu_dic in lsm_writer.lu_types.items()
-        if lu_dic.get("ifs_id") == 20
+        for lu_key, state in lsm_writer.land_use.items()
+        if state.definition.ifs_id == 20
     ]
     if not urban_lu_keys:
         return
 
     urban_cover = np.zeros((lsm_writer.grid.jtot, lsm_writer.grid.itot), dtype=float)
     for lu_key in urban_lu_keys:
-        urban_cover += np.asarray(lsm_writer.lu_types[lu_key]["lu_frac"], dtype=float)
+        urban_cover += lsm_writer.land_use[lu_key].lu_frac
 
     urban_mask = urban_cover > 0
     natural_lcz_mask = (
@@ -181,24 +175,25 @@ def _apply_lcz_urban_natural_overrides_after_top10(
         lcz_ds["lcz"].values[:, :] = lcz_values
 
         # Keep LCZ-derived morphology fields consistent with the new LCZ=10 class.
-        for field_name in (
-            "svf",
-            "aspect_ratio",
-            "building_surface_fraction",
-            "impervious_surface_fraction",
-            "pervious_surface_fraction",
-            "height_roughness_element",
-            "terrain_roughness_class",
-            "roughness_length",
-            "albedo",
-        ):
+        urban_class = lcz_dict[10]
+        for field_name, field_value in {
+            "svf": urban_class.svf,
+            "aspect_ratio": urban_class.aspect_ratio,
+            "building_surface_fraction": urban_class.building_surface_fraction,
+            "impervious_surface_fraction": urban_class.impervious_surface_fraction,
+            "pervious_surface_fraction": urban_class.pervious_surface_fraction,
+            "height_roughness_element": urban_class.height_roughness_element,
+            "terrain_roughness_class": urban_class.terrain_roughness_class,
+            "roughness_length": urban_class.roughness_length,
+            "albedo": urban_class.albedo,
+        }.items():
             if field_name in lcz_ds:
                 field_vals = np.asarray(lcz_ds[field_name].values, dtype=float).copy()
-                field_vals[natural_lcz_mask] = getattr(lcz_dict[10], field_name)
+                field_vals[natural_lcz_mask] = field_value
                 lcz_ds[field_name].values[:, :] = field_vals
 
     if urban_natural_lcz_to_natural_lsm:
-        all_lu_keys = list(lsm_writer.lu_types.keys())
+        all_lu_keys = list(lsm_writer.land_use)
         for lcz_class, ifs_class in LCZ_URBAN_NATURAL_TO_IFS.items():
             class_mask = natural_lcz_mask & (lcz_values == lcz_class)
             if not np.any(class_mask):
@@ -206,8 +201,8 @@ def _apply_lcz_urban_natural_overrides_after_top10(
 
             target_lu_keys = [
                 lu_key
-                for lu_key, lu_dic in lsm_writer.lu_types.items()
-                if lu_dic.get("ifs_id") == ifs_class
+                for lu_key, state in lsm_writer.land_use.items()
+                if state.definition.ifs_id == ifs_class
             ]
             if not target_lu_keys:
                 logger.warning(
@@ -218,19 +213,22 @@ def _apply_lcz_urban_natural_overrides_after_top10(
                 continue
 
             for lu_key in all_lu_keys:
-                frac = lsm_writer.lu_types[lu_key]["lu_frac"]
+                frac = lsm_writer.land_use[lu_key].lu_frac
                 frac[class_mask] = 0.0
 
             frac_per_lu = 1.0 / float(len(target_lu_keys))
             for lu_key in target_lu_keys:
-                frac = lsm_writer.lu_types[lu_key]["lu_frac"]
+                frac = lsm_writer.land_use[lu_key].lu_frac
                 frac[class_mask] = frac_per_lu
 
 
 def apply_top10_to_lsm_writer(
-    lsm_writer,
+    lsm_writer: LSM_output_dales,
     top10_path: Path,
     fill_north_sea: bool = True,
+    *,
+    urban_natural_lcz_to_10: bool = False,
+    urban_natural_lcz_to_natural_lsm: bool = False,
 ) -> None:
     ds_lu = xr.open_dataset(top10_path)
     da_lu = _sorted_on_xy(ds_lu, "land_use")
@@ -238,51 +236,44 @@ def apply_top10_to_lsm_writer(
     top10_codes_int = np.where(np.isfinite(top10_codes), top10_codes, -9999).astype(int)
 
     # Reset fractions before re-assigning from the raster map.
-    for lu in lsm_writer.lu_types:
-        lsm_writer.lu_types[lu]["lu_frac"][:, :] = 0.0
+    for state in lsm_writer.land_use.values():
+        state.lu_frac[:, :] = 0.0
 
-    for lu, lu_info in lsm_writer.lu_types.items():
-        if "lu_ids" in lu_info and lu_info["lu_ids"] is not None:
-            lu_ids = np.asarray(lu_info["lu_ids"], dtype=int)
+    for state in lsm_writer.land_use.values():
+        definition = state.definition
+        if definition.lu_ids:
+            lu_ids = np.asarray(definition.lu_ids, dtype=int)
             mask = np.isin(top10_codes_int, lu_ids)
-        elif "ifs_id" in lu_info:
+        elif definition.ifs_id is not None:
             ifs_map = np.vectorize(lambda x: top10_to_ifs.get(int(x), -999))(
                 top10_codes_int
             )
-            mask = ifs_map == int(lu_info["ifs_id"])
+            mask = ifs_map == definition.ifs_id
         else:
             mask = np.zeros_like(top10_codes, dtype=bool)
 
-        lsm_writer.lu_types[lu]["lu_frac"][mask] = 1.0
-        lsm_writer.value_dic[f"c_{lu}"][:, :] = lsm_writer.lu_types[lu]["lu_frac"]
+        state.lu_frac[mask] = 1.0
 
-    if fill_north_sea and (
-        not hasattr(lsm_writer, "lat") or not hasattr(lsm_writer, "lon")
-    ):
+    lat = getattr(lsm_writer, "lat", None)
+    lon = getattr(lsm_writer, "lon", None)
+    if fill_north_sea and (lat is None or lon is None):
         logger.warning(
             "Top10 north-sea fill requested, but no 2D lat/lon arrays are available; skipping"
         )
         fill_north_sea = False
 
-    if fill_north_sea:
+    if fill_north_sea and lat is not None and lon is not None:
         slope = (50.9 - 51.396) / (1.7 - 3.414)
-        sea_mask = (lsm_writer.lon < 3.414) & (
-            (lsm_writer.lat - 51.396) > slope * (lsm_writer.lon - 3.414)
-        )
-        if "aqu" in lsm_writer.lu_types:
-            for lu in lsm_writer.lu_types:
-                lsm_writer.lu_types[lu]["lu_frac"][sea_mask] = 0.0
-            lsm_writer.lu_types["aqu"]["lu_frac"][sea_mask] = 1.0
-            lsm_writer.value_dic["c_aqu"][:, :] = lsm_writer.lu_types["aqu"]["lu_frac"]
+        sea_mask = (lon < 3.414) & ((lat - 51.396) > slope * (lon - 3.414))
+        if "aqu" in lsm_writer.land_use:
+            for state in lsm_writer.land_use.values():
+                state.lu_frac[sea_mask] = 0.0
+            lsm_writer.land_use["aqu"].lu_frac[sea_mask] = 1.0
 
     _apply_lcz_urban_natural_overrides_after_top10(
         lsm_writer,
-        urban_natural_lcz_to_10=getattr(
-            lsm_writer, "top10_urban_natural_lcz_to_10", False
-        ),
-        urban_natural_lcz_to_natural_lsm=getattr(
-            lsm_writer, "top10_urban_natural_lcz_to_natural_lsm", False
-        ),
+        urban_natural_lcz_to_10=urban_natural_lcz_to_10,
+        urban_natural_lcz_to_natural_lsm=urban_natural_lcz_to_natural_lsm,
     )
 
     lsm_writer.init_lutypes_ifs()
@@ -323,7 +314,7 @@ class BOFEKInfo:
 
 
 def apply_bofek_to_lsm_writer(
-    lsm_writer,
+    lsm_writer: LSM_output_dales,
     bofek_nc_path: Path,
     bofek_csv_path: Path,
 ) -> None:
@@ -332,7 +323,7 @@ def apply_bofek_to_lsm_writer(
     da_soil = _sorted_on_xy(ds_soil, "bofek_code")
     bf_codes = _sample_on_grid(da_soil, lsm_writer.grid).astype(int)
 
-    nz, ny, nx = lsm_writer.value_dic["index_soil"].shape
+    nz, ny, nx = lsm_writer.soil.index_soil.shape
     index_soil = np.full((nz, ny, nx), 2, dtype=int)
 
     for j in range(ny):
@@ -357,39 +348,46 @@ def apply_bofek_to_lsm_writer(
                 index_soil[k, j, i] = int(lu_profile[src_k])
 
     # Python -> Fortran indexing as expected by DALES lsm input
-    lsm_writer.value_dic["index_soil"][:, :, :] = index_soil + 1
+    lsm_writer.soil.index_soil[:, :, :] = index_soil + 1
 
 
-def get_veg_params(lu: str, planttype: int | None = None) -> dict[str, float]:
+def get_veg_params(lu: str, planttype: int | None = None) -> VegetationAGSParameters:
     lu = lu.lower()
+    if lu == "grs":
+        return _GRASS_C4 if planttype == 4 else _GRASS_C3
+
     if lu not in _VEG_LOOKUP:
         logger.warning("Unknown AGS land-use type '%s'; using zero parameters", lu)
-        return {k: 0.0 for k in AGS_PARAM_NAMES}
+        return VegetationAGSParameters(
+            gm25=0.0,
+            Ammax25=0.0,
+            f0=0.0,
+            alpha0=0.0,
+            co2_comp298=0.0,
+            T1gm=0.0,
+            T1Am=0.0,
+        )
 
-    if lu == "grs":
-        key = "C4" if planttype == 4 else "C3"
-        params = _VEG_LOOKUP[lu][key].copy()
-    else:
-        params = _VEG_LOOKUP[lu].copy()
-
-    return {k: float(params.get(k, 0.0)) for k in AGS_PARAM_NAMES}
+    return _VEG_LOOKUP[lu]
 
 
 def apply_ags_parameters_to_lsm_writer(
-    lsm_writer,
+    lsm_writer: LSM_output_dales,
     grass_planttype: int | None = None,
 ) -> None:
     shape = (lsm_writer.grid.jtot, lsm_writer.grid.itot)
 
-    for par in AGS_PARAM_NAMES:
-        for lu, lu_info in lsm_writer.lu_types.items():
-            lu_short = str(lu_info.get("lu_short", lu)).lower()
-            planttype = grass_planttype if lu_short == "grs" else None
-            veg_params = get_veg_params(lu_short, planttype=planttype)
+    for lu, state in lsm_writer.land_use.items():
+        lu_short = state.definition.lu_short.lower()
+        planttype = grass_planttype if lu_short == "grs" else None
+        veg_params = get_veg_params(lu_short, planttype=planttype)
 
-            field_name = f"{par}_{lu}"
-            lsm_writer.value_dic[field_name] = np.full(
-                shape, veg_params[par], dtype=float
-            )
-            if field_name not in lsm_writer.fields:
-                lsm_writer.fields.append(field_name)
+        lsm_writer.land_use_fields[lu].ags = AGSFields(
+            gm25=np.full(shape, veg_params.gm25, dtype=np.float64),
+            Ammax25=np.full(shape, veg_params.Ammax25, dtype=np.float64),
+            f0=np.full(shape, veg_params.f0, dtype=np.float64),
+            alpha0=np.full(shape, veg_params.alpha0, dtype=np.float64),
+            co2_comp298=np.full(shape, veg_params.co2_comp298, dtype=np.float64),
+            T1gm=np.full(shape, veg_params.T1gm, dtype=np.float64),
+            T1Am=np.full(shape, veg_params.T1Am, dtype=np.float64),
+        )

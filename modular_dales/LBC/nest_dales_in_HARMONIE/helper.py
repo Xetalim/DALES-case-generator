@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 import xarray as xr
+from numpy.typing import NDArray
 
 from modular_dales.logging_wrapper import logwrap
 
@@ -11,7 +12,9 @@ logger.debug("Entered module: %s", __name__)
 
 
 @logwrap
-def calcBaseprof(zt, thls, ps, pref0=1e5):
+def calcBaseprof(
+    zt: NDArray[np.float64], thls: float, ps: float, pref0: float = 1e5
+) -> NDArray[np.float64]:
     # constants
     lapserate = np.array([-6.5 / 1000.0, 0.0, 1.0 / 1000, 2.8 / 1000])
     zmat = np.array([11000.0, 20000.0, 32000.0, 47000.0])
@@ -97,7 +100,9 @@ def calcBaseprof(zt, thls, ps, pref0=1e5):
 
 
 @logwrap
-def differentiate(data, coord, order, acc=6):
+def differentiate(
+    data: xr.DataArray, coord: str, order: int, acc: int = 6
+) -> xr.DataArray:
     ncoef = int(2 * np.floor((order + 1) / 2) - 1 + acc)
     out = xr.zeros_like(data)
     out = out.where(out != 0).load()
@@ -140,7 +145,7 @@ def differentiate(data, coord, order, acc=6):
 
 
 @logwrap
-def interp_z(z: xr.DataArray, data: xr.DataArray, z_int: xr.DataArray):
+def interp_z(z: xr.DataArray, data: xr.DataArray, z_int: xr.DataArray) -> xr.DataArray:
     """
     Interpolate `data` onto new vertical levels `z_int`.
 
@@ -174,7 +179,9 @@ def interp_z(z: xr.DataArray, data: xr.DataArray, z_int: xr.DataArray):
         z = z.isel(lev=slice(None, None, -1))
         data = data.isel(lev=slice(None, None, -1))
 
-    def _interp_1d(z_new, z_col, data_col):
+    def _interp_1d(
+        z_new: xr.DataArray, z_col: xr.DataArray, data_col: xr.DataArray
+    ) -> np.ndarray:
         print(z_new.lev)
         print(z_col.lev)
         print(data_col.lev)
@@ -195,5 +202,5 @@ def interp_z(z: xr.DataArray, data: xr.DataArray, z_int: xr.DataArray):
     return data_int
 
 
-def load_data(var, index, drop=False):
-    return var.isel(index, drop=drop).values
+# def load_data(var, index, drop=False):
+#     return var.isel(index, drop=drop).values

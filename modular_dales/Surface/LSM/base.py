@@ -87,9 +87,6 @@ class BaseLSMModule(SurfaceModule):
         repr=False,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-
     def do_config(self):
         for param_name in ("iinterp_t", "iinterp_theta"):
             value = getattr(self, param_name)

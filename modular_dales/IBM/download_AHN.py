@@ -2,13 +2,16 @@ import hashlib
 import logging
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import geopandas as gpd
 import numpy as np
 import rasterio
+import xarray as xr
 from pyproj import Transformer
+from rasterio.enums import Resampling
 from rasterio.merge import merge
-from rasterio.warp import Resampling
+from rasterio.profiles import Profile
 from rasterio.windows import from_bounds
 from shapely.geometry import box
 
@@ -24,7 +27,9 @@ logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
-def get_cached_AHN(cache_dir, grid: GridDales):
+def get_cached_AHN(
+    cache_dir: str | Path, grid: GridDales
+) -> tuple[np.ndarray, rasterio.Affine, str, dict[str, Any] | Profile]:
     """
     Download and cache AHN (Actueel Hoogtebestand Nederland) elevation data for a given grid.
 
@@ -132,14 +137,14 @@ def get_cached_AHN(cache_dir, grid: GridDales):
     return mosaic, out_transform, dst_crs, profile.copy()
 
 
-def get_ahn(grid: GridDales, out_file):
+def get_ahn(grid: GridDales, out_file: str | Path) -> None:
     """
     Retrieve and reproject AHN (Actueel Hoogtebestand Nederland) data for a given grid.
     Fetches cached AHN data for the specified grid and reprojects it to the output file
     using mode resampling without filling nodata values.
     Args:
         grid (GridDales): The grid object defining the spatial extent and properties.
-        out_file: The output file path where the reprojected AHN data will be written.
+        out_file (str or Path): The output file path where the reprojected AHN data will be written.
     Returns:
         None
     """
@@ -160,15 +165,17 @@ def get_ahn(grid: GridDales, out_file):
     )
 
 
-def get_process_ahn(grid, zeroes_buffer=5, subtract_ahn_mode=True):
+def get_process_ahn(
+    grid: GridDales, zeroes_buffer: int = 5, subtract_ahn_mode: bool = True
+) -> xr.DataArray:
     """
     Process AHN (Actueel Hoogtebestand Nederland) data and prepare it for use.
     Downloads AHN data for the specified grid, normalizes the height values,
     optionally subtracts the mode value, applies zero buffers at the edges,
-    and returns a normalized xarray Dataset.
+    and returns a normalized xarray DataArray.
     Parameters
     ----------
-    grid : Grid-like object
+    grid : GridDales
         The geographic grid defining the area for which to download AHN data.
     zeroes_buffer : int, optional
         Number of pixels from each edge to set to zero (default: 5).
@@ -177,7 +184,7 @@ def get_process_ahn(grid, zeroes_buffer=5, subtract_ahn_mode=True):
         and clip negative values to zero (default: True).
     Returns
     -------
-    xarray.Dataset
+    xarray.DataArray
         Processed elevation data with variable 'bc_height', normalized to start at
         zero, with buffer zones set to zero and optionally mode-adjusted.
     Notes

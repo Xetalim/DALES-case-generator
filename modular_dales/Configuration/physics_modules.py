@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
@@ -29,21 +29,11 @@ class BulkMicrophysicsSettingsModule(simulation_module):
         required=True,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "BulkMicrophysicsSettingsModule"
-
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="BulkMicrophysicsSettingsModule",
+        init=False,
+        metadata={"serialize": False},
+    )
 
 
 @register_module
@@ -58,18 +48,6 @@ class TracerSettingsModule(simulation_module):
         required=True,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "TracerSettingsModule"
-
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="TracerSettingsModule", init=False, metadata={"serialize": False}
+    )

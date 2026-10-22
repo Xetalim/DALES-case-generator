@@ -49,9 +49,9 @@ def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
     atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=5e-3)))
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.008, ddz=0.0)))
     atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
-    atmo.add(InterpolatedProfile(
-        variable=tke, z=[0, 1000, 3000], points=[0.2, 0.02, 0.01]
-    ))
+    atmo.add(
+        InterpolatedProfile(variable=tke, z=[0, 1000, 3000], points=[0.2, 0.02, 0.01])
+    )
     sim += atmo
 
     sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=120)
@@ -108,23 +108,6 @@ def radiation_backrad_profile_case(machine_conf: dict) -> dales_simulation:
             temperature_k=[290.0, 281.0, 272.0, 257.0, 235.0, 212.0],
             specific_humidity_kgkg=[1.1e-2, 6.0e-3, 3.0e-3, 9.0e-4, 1.5e-4, 2.0e-5],
         ),
-    )
-    sim += EasyOutputModule(output_interval=30)
-    return sim
-
-
-def radiation_backrad_source_case(machine_conf: dict) -> dales_simulation:
-    sim = _base_runtime_case(machine_conf, "radiation_backrad_source_case")
-    sim += ConstantSurfaceTemperatureModule(
-        thls=293.15,
-        z0mav=1.0e-4,
-        z0hav=1.0e-4,
-        ps=100000.0,
-        albedoav=0.22,
-    )
-    sim += RadiationModule(
-        iradiation=4,
-        backrad_source_file=_reference_backrad_path(),
     )
     sim += EasyOutputModule(output_interval=30)
     return sim

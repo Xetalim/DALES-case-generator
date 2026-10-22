@@ -127,25 +127,18 @@ class RadiationModule(simulation_module):
         },
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "RadiationModule"
+    module_name: str = field(
+        default="RadiationModule", init=False, metadata={"serialize": False}
+    )
 
-    def do_config(self):
-        """Ensure radiation configuration is set."""
-        return
-
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         """No additional preparation needed."""
         if self.module_exists(SurfaceModule):
             self.surface_module = self.retrieve_module(SurfaceModule)
         else:
             raise ValueError("RadiationModule requires a SurfaceModule.")
 
-    def check_settings(self):
-        """Validate constant fluxes settings."""
-
-    def write_files(self):
+    def write_files(self) -> None:
         iradiation = self.iradiation or 0
         if iradiation == 1:
             raise ValueError(

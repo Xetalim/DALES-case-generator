@@ -195,15 +195,11 @@ class ExternalForcingModule(simulation_module):
         metadata={"serialize": False},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = type(self).__name__
+    module_name: str = field(
+        default="ExternalForcingModule", init=False, metadata={"serialize": False}
+    )
 
-    def check_settings(self):
-        if self.grid is None:
-            raise ValueError(
-                f"{self.module_name} requires a GridDales grid (sim.grid) to be set"
-            )
+    def check_settings(self) -> None:
         if self.central_lat is None and getattr(self.grid, "xlat", None) is not None:
             self.central_lat = float(self.grid.xlat)
         if self.central_lon is None and getattr(self.grid, "xlon", None) is not None:
@@ -221,11 +217,7 @@ class ExternalForcingModule(simulation_module):
         See Atmosphere.les_input for field names, dimensions and units.
         """
 
-    def prepare_calculation(self):
-        if self.grid is None:
-            raise ValueError(
-                f"{self.module_name} requires grid to be initialized before prepare_calculation"
-            )
+    def prepare_calculation(self) -> None:
         tracer_sources = []
         if self.do_nudging and self.write_nudging_netcdf:
             for config in self.nudging_tracers:
@@ -252,9 +244,6 @@ class ExternalForcingModule(simulation_module):
     def provide_forcings(self) -> ForcingSet:
         self.ensure_prepared()
         return self.forcings
-
-    def write_files(self):
-        return None
 
     # ------------------------------------------------------------------
     # les_input -> ForcingSet
@@ -363,7 +352,9 @@ class ExternalForcingModule(simulation_module):
                 )
             return source
 
-        def constant(template: xr.DataArray, target: str, timescale) -> xr.DataArray:
+        def constant(
+            template: xr.DataArray, target: str, timescale: float | None
+        ) -> xr.DataArray:
             if timescale is None or float(timescale) <= 0:
                 raise ValueError(
                     f"{self.module_name}: nudging timescale for '{target}' must be > 0"
@@ -559,7 +550,7 @@ def backrad_sounding(les_input: LESInput) -> xr.Dataset | None:
 
     def time_mean(name: str) -> np.ndarray:
         da = les_input[name]
-        time_dims = [d for d in da.dims if d in LES_TIME_DIMS] or [da.dims[0]]
+        time_dims = [d for d in da.dims if d in LES_TIME_DIMS] or [str(da.dims[0])]
         return da.mean(time_dims).values
 
     return xr.Dataset(

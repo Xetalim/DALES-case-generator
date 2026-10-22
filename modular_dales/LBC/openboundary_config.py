@@ -10,7 +10,7 @@ from typing import Any
 class OpenBoundaryConfig:
     """Typed configuration shared by open-boundary preprocessors."""
 
-    e12: float | None = None
+    e12: float
     tracernames: list[str] = field(default_factory=list)
     tchunk: int | None = None
     start: str | None = None
@@ -20,8 +20,6 @@ class OpenBoundaryConfig:
 
     HARMONIE_ml_glob: str | None = None
     HARMONIE_sfc_glob: str | None = None
-    KNMI_ml_glob: str | None = None
-    KNMI_sfc_glob: str | None = None
     use_grib: bool | None = None
 
     w_from_continuity: bool = False

@@ -126,9 +126,11 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
         metadata={"serialize": False},
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "KNMIHarmonieForecastDownloadModule"
+    module_name: str = field(
+        default="KNMIHarmonieForecastDownloadModule",
+        init=False,
+        metadata={"serialize": False},
+    )
 
     def _resolve_forecast_datetime(self) -> str:
         value = self.forecast_datetime
@@ -139,9 +141,9 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
         return str(value)
 
     def _resolve_output_root(self) -> Path:
-        if self.download_root not in (None, ""):
-            return Path(self.download_root)
-        return cache_root("knmi_harmonie", self.sim)
+        if self.download_root is None or self.download_root == "":
+            return cache_root("knmi_harmonie", self.sim)
+        return Path(self.download_root)
 
     def _resolve_check_disk_space(self) -> bool:
         if self.check_disk_space is not None:

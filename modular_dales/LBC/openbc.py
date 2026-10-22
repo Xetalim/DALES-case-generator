@@ -2,16 +2,10 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Self
 
 import dask
 import xarray as xr
 
-from modular_dales.Atmosphere import (
-    AtmosphericProfile,
-    InterpolatedProfile,
-    TimedAtmosphereProfile,
-)
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales import (
     boundary_fields_fine,
@@ -24,8 +18,7 @@ from modular_dales.LBC.nest_dales_in_HARMONIE import (
     initfields,
     prep_harmonie,
 )
-from modular_dales.LBC.openbc_atmosphere_worker import OpenBCAtmosphereWorker
-from modular_dales.LBC.openbc_knmi_worker import OpenBCKNMIWorker
+from modular_dales.LBC.nesting_idx import NestingIndices
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.modular.forcing import (
     EXTERNAL_FORCING_PRIORITY,
@@ -35,7 +28,6 @@ from modular_dales.modular.forcing import (
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
 from modular_dales.MODULE_REGISTRY import register_module
-from modular_dales.vars import ProfileVariable
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -65,8 +57,8 @@ logger.debug("Entered module: %s", __name__)
 # client = Client(cluster)
 
 
-@dataclass
-class Nest_in_Harmonie:
+@dataclass(kw_only=True)
+class _HarmonieOpenBCOptions:
     """Nest a DALES simulation inside a HARMONIE model environment.
 
     This class configures and manages the coupling between a DALES
@@ -90,59 +82,8 @@ class Nest_in_Harmonie:
     )
 
 
-@dataclass
-class Nest_in_KNMI:
-    """Nest DALES inside HARMONIE using KNMI operational GRIB output.
-
-    This adapter reads pre-converted NetCDF files from KNMI's operational
-    HARMONIE archives (N55ML for 3D model-level data, N55/N20 for surface),
-    remaps variables, fills missing fields (w=0, clwc=0, derives 2m q from RH),
-    and feeds the result through the standard ``harmoniePrepper`` pipeline.
-
-    Args:
-        ml_glob : Optional[str]
-            Glob pattern for pre-converted N55ML NetCDF files (3D hybrid-level).
-        sfc_glob : Optional[str]
-            Glob pattern for pre-converted N55 or N20 NetCDF files (surface).
-        w_from_continuity : bool
-            If True, derive vertical velocity from horizontal wind divergence
-            via mass continuity instead of setting w=0. Default False.
-    """
-
-    ml_glob: str | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    sfc_glob: str | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    w_from_continuity: bool = field(
-        default=False, repr=True, metadata={"serialize": True}, init=True
-    )
-    use_grib: bool | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    noise_std: float | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    noise_seed: int | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    noise_boundaries: list[str] | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    noise_variables: list[str] | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    noise_minzt: float | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-    noise_maxzt: float | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
-    )
-
-
-@dataclass
-class Nest_in_Dales:
+@dataclass(kw_only=True)
+class _DalesOpenBCOptions:
     """Nest DALES inside another DALES simulation
 
     Args:
@@ -176,146 +117,15 @@ class Nest_in_Dales:
     )
 
 
-@dataclass
-class Nest_in_AtmosphereProfiles:
-    """Explicit homogeneous boundary and initialization profiles.
-
-    All six fields are required: u (ua), v (va), w (w), thl (thetal),
-    qt (qt), e12 (tke). Each accepts an AtmosphericProfile,
-    InterpolatedProfile, or a list of TimedAtmosphereProfile entries including
-    time zero. Scalar profile parameters may use independent time axes.
-    No simulation providers, nudging targets or default profiles are consulted.
-    """
-
-    u: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    v: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    w: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    thl: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    qt: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    e120: AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    tracers: dict[
-        str, AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-    ] = field(default_factory=dict)
-
-    def __post_init__(self):
-        expected = ["u", "v", "w", "thl", "qt", "e120"]
-        # make sure tracers do not overlap
-        if set(self.tracers) & set(expected):
-            raise ValueError("Tracer names must not replace u, v, w, thl, qt or e120")
-
-        inputs: dict[
-            str, AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-        ] = {name: getattr(self, name) for name in expected}
-        inputs.update(self.tracers)
-
-        for name, source in inputs.items():
-            if not isinstance(source, (AtmosphericProfile, InterpolatedProfile, list)):
-                raise TypeError(
-                    f"Boundary profile '{name}' requires a profile or a list of timed profiles"
-                )
-
-            # get list of TimedAtmosphereProfile here
-            entries = (
-                source if isinstance(source, list) else source.timed_forcing_series()
-            )
-            # list empty or none, error
-            if not entries:
-                raise ValueError(f"Boundary profile '{name}' must not be empty")
-            # double check list if correct
-            if isinstance(source, list) and not all(
-                isinstance(entry, TimedAtmosphereProfile) for entry in entries
-            ):
-                raise TypeError(
-                    f"Boundary profile '{name}' lists require TimedAtmosphereProfile entries"
-                )
-
-            for entry in entries:
-                if not isinstance(
-                    entry.profile, (AtmosphericProfile, InterpolatedProfile)
-                ):
-                    raise TypeError(
-                        f"Boundary profile '{name}' requires AtmosphericProfile or InterpolatedProfile"
-                    )
-                variable = entry.profile.variable
-                required = name
-                actual = (
-                    variable.boundary_name
-                    if isinstance(variable, ProfileVariable) and name in expected
-                    else variable.name
-                )
-                if actual != required:
-                    raise ValueError(
-                        f"Boundary field '{name}' requires variable '{required}', got '{entry.profile.variable.name}'"
-                    )
-
-    def provide_profiles(self) -> list[TimedAtmosphereProfile]:
-        expected = ["u", "v", "w", "thl", "qt", "e120"]
-        inputs: dict[
-            str, AtmosphericProfile | InterpolatedProfile | list[TimedAtmosphereProfile]
-        ] = {name: getattr(self, name) for name in expected}
-        inputs.update(self.tracers)
-
-        profiles: list[TimedAtmosphereProfile] = []
-        for source in inputs.values():
-            entries = (
-                source if isinstance(source, list) else source.timed_forcing_series()
-            )
-            profiles.extend(entries)
-        return profiles
-
-    add_to_top_thl: float | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    noise_std: float | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    noise_seed: int | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    noise_boundaries: list[str] | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    noise_variables: list[str] | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    noise_minzt: float | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    noise_maxzt: float | None = field(
-        default=None,
-        repr=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-
-
 @register_module
 @dataclass
 class do_openboundary(simulation_module):
     forcing_priority = EXTERNAL_FORCING_PRIORITY
-
-    openBCgrid: GridDalesOpenBC = field(
+    e12: float = field(repr=True, metadata={"serialize": True}, init=True)
+    openBCgrid_: GridDalesOpenBC | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    indices: dict | None = field(
+    indices: NestingIndices | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
     harmonieprepper: prep_harmonie.harmoniePrepper | None = field(
@@ -326,22 +136,6 @@ class do_openboundary(simulation_module):
     )
     initfields: xr.Dataset | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
-    )
-    nest_in_harmonie: Nest_in_Harmonie | None = field(
-        default=None, repr=False, metadata={"serialize": True}, init=True
-    )
-    nest_in_dales: Nest_in_Dales | None = field(
-        default=None, repr=False, metadata={"serialize": True}, init=True
-    )
-    nest_in_atmosphere: Nest_in_AtmosphereProfiles | None = field(
-        default=None, repr=False, metadata={"serialize": True}, init=True
-    )
-    nest_in_knmi: Nest_in_KNMI | None = field(
-        default=None, repr=False, metadata={"serialize": True}, init=True
-    )
-
-    e12: float | None = field(
-        default=None, repr=True, metadata={"serialize": True}, init=True
     )
     tracernames: list[str] | None = field(
         default_factory=list, repr=True, metadata={"serialize": True}, init=True
@@ -534,194 +328,49 @@ class do_openboundary(simulation_module):
         metadata={"serialize": True},
         init=True,
     )
-    lconstexner: bool = nml_field(
-        default=True,
-        repr=True,
-        section="thermodynamics",
-        key="lconstexner",
-        raise_conflict=True,
-        metadata={"serialize": True},
-        init=True,
-    )
-    lbaseexner: bool = nml_field(
-        default=True,
-        repr=True,
-        section="thermodynamics",
-        key="lbaseexner",
-        raise_conflict=True,
-        metadata={"serialize": True},
-        init=True,
+    # lconstexner: bool = nml_field(
+    #     default=True,
+    #     repr=True,
+    #     section="thermodynamics",
+    #     key="lconstexner",
+    #     raise_conflict=True,
+    #     metadata={"serialize": True},
+    #     init=True,
+    # )
+    # lbaseexner: bool = nml_field(
+    #     default=True,
+    #     repr=True,
+    #     section="thermodynamics",
+    #     key="lbaseexner",
+    #     raise_conflict=True,
+    #     metadata={"serialize": True},
+    #     init=True,
+    # )
+
+    module_name: str = field(
+        default="do_openboundary", init=False, metadata={"serialize": False}
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "do_openboundary"
+    @property
+    def openBCgrid(self) -> GridDalesOpenBC:
+        if self.openBCgrid_ is None:
+            self.openBCgrid_ = self.grid.as_openbc()
+        return self.openBCgrid_
 
     def provide_forcings(self) -> ForcingSet:
-        """Radiation sounding derived from Harmonie when nesting in Harmonie."""
-        if self.nest_in_harmonie is None:
-            return ForcingSet()
-        self.ensure_prepared()
-        return ForcingSet(
-            initial=sounding_forcings(self.harmonieprepper.backrad_profile)
+        """Return no source-derived forcings for the abstract base module."""
+        return ForcingSet()
+
+    def prepare_calculation(self) -> None:
+        raise NotImplementedError(
+            "Instantiate a source-specific open-boundary module instead"
         )
 
-    def __add__(self, obj) -> "do_openboundary":
-        """Add configurations to open boundary module.
-
-        Args:
-            obj: Nest_in_Harmonie, Nest_in_Dales,
-                Nest_in_AtmosphereProfiles
-
-        Returns:
-            self for chaining
-        """
-        if isinstance(obj, Nest_in_Harmonie):
-            self.nest_in_harmonie = obj
-        elif isinstance(obj, Nest_in_KNMI):
-            self.nest_in_knmi = obj
-        elif isinstance(obj, Nest_in_Dales):
-            self.nest_in_dales = obj
-        elif isinstance(obj, Nest_in_AtmosphereProfiles):
-            self.nest_in_atmosphere = obj
-
-        else:
-            raise TypeError(
-                "Expected "
-                "Nest_in_Harmonie/Nest_in_KNMI/Nest_in_Dales/"
-                "Nest_in_AtmosphereProfiles, "
-                f"got {type(obj)}"
-            )
-        return self
-
-    def __iadd__(self, modification) -> Self:
-        """In-place addition of modification."""
-        return self.__add__(modification)
-
-    def prepare_calculation(self):
-        if not type(self.grid) is GridDalesOpenBC:
-            logger.warning(
-                "Passing wrong grid type to openboundary, converting to GridDalesOpenBC with as_openBC."
-            )
-            self.openBCgrid = self.grid.as_openbc()
-        else:
-            self.openBCgrid = self.grid
-        if self.nest_in_harmonie is not None:
-            self._prepare_from_harmonie()
-        elif self.nest_in_knmi is not None:
-            self._prepare_from_knmi()
-        elif self.nest_in_dales is not None:
-            self._prepare_from_dales()
-        elif self.nest_in_atmosphere is not None:
-            self._prepare_from_atmosphere()
-        else:
-            raise ValueError("Unknown source for open boundary conditions")
-
-    def _prepare_from_harmonie(self) -> None:
-        config = OpenBoundaryConfig(
-            e12=self.e12,
-            tracernames=list(self.tracernames or []),
-            tchunk=self.tchunk,
-            start=self.start,
-            author="author",
-            time0=self.time0,
-            end=self.end,
-            HARMONIE_ml_glob=self.nest_in_harmonie.ml_glob,
-            HARMONIE_sfc_glob=self.nest_in_harmonie.sfc_glob,
-        )
-        self.harmonieprepper = prep_harmonie.harmoniePrepper(config, self.openBCgrid)
-        self.harmonieprepper.load_data()
-        data, transform = self.harmonieprepper.prep_harmonie()
-        # we need to use the right surface pressure as calculated from the input data
-        logger.info("Setting namelist NAMSURFACE:ps to %f", self.harmonieprepper.ps)
-
-        self.set_nml_section(
-            "NAMSURFACE",
-            "ps",
-            self.harmonieprepper.ps,
-        )
-        # we need to use the right skin liq. pot. temperature from the input data
-        logger.info("Setting namelist NAMSURFACE:thls to %f", self.harmonieprepper.thls)
-        self.set_nml_section(
-            "NAMSURFACE",
-            "thls",
-            self.harmonieprepper.thls,
-        )
-        (data,) = dask.optimize(data)
-
-        logger.debug("Setting up boundary fields")
-        self.boundaries = harmonie_boundary.boundary_fields(
-            config,
-            self.openBCgrid,
-            data,
-            output_path=self.output_path,
-        )
-        logger.debug("Setting up initial fields")
-        self.initfields = initfields.initial_fields(
-            config,
-            self.openBCgrid,
-            data,
-            transform,
-            output_path=self.output_path,
-        )
-        logger.debug("Setup all openBC fields, optimizing fields now..")
-        self.boundaries, self.initfields = dask.optimize(
-            self.boundaries, self.initfields
-        )
-        logger.debug("Optimized fields")
-
-    def _prepare_from_knmi(self) -> None:
-        worker = OpenBCKNMIWorker(self)
-        self.boundaries, self.initfields = worker.prepare()
-
-    def _prepare_from_dales(self) -> None:
-        config = OpenBoundaryConfig(
-            e12=self.e12,
-            tracernames=list(self.tracernames or []),
-            tchunk=self.tchunk,
-            lsynturb=self.lsynturb,
-            start=self.start,
-            time0=self.time0,
-            author="author",
-            end=self.end,
-            outpath_coarse=self.nest_in_dales.outpath_coarse,
-            outpath_coarse_old=self.nest_in_dales.outpath_coarse_old,
-            inpath_coarse=self.nest_in_dales.inpath_coarse,
-            inpath=self.nest_in_dales.inpath,
-        )
-        crosssection_chunks = None
-        if self.tchunk is not None:
-            crosssection_chunks = {"time": int(self.tchunk)}
-
-        if self.nest_in_dales.inpath is not None:
-            self.initfields = initial_fields_fine.initial_fields_fine(
-                config,
-                grid=self.openBCgrid,
-                output_path=self.output_path,
-            )
-        else:
-            logger.warning(
-                "Nest_in_Dales configured without 'inpath': initfields.inp.*.nc "
-                "will not be created from interpolated parent initial fields. "
-                "A minimal placeholder initfields dataset will be written instead."
-            )
-
-            self.initfields = None
-            self.linithetero = False
-
-        self.boundaries = boundary_fields_fine.boundary_fields_fine(
-            config,
-            grid=self.openBCgrid,
-            output_path=self.output_path,
-            grid_indices=self.indices,
-            chunks=crosssection_chunks,
-        )
-
-    def _prepare_from_atmosphere(self) -> None:
-        worker = OpenBCAtmosphereWorker(self)
-        self.boundaries, self.initfields = worker.prepare()
-
-    def write_files(self):
+    def write_files(self) -> None:
+        if self.initfields is None:
+            raise RuntimeError("Initial fields not generated yet")
+        if self.boundaries is None:
+            raise RuntimeError("Boundary fields not generated yet")
         # Save data
         logger.debug("Optimizing initial fields")
         if self.initfields:
@@ -757,3 +406,105 @@ class do_openboundary(simulation_module):
         logger.debug("Writing boundaries")
 
         openboundaries_writer.compute()
+
+
+@register_module
+@dataclass
+class Nest_in_Harmonie(do_openboundary, _HarmonieOpenBCOptions):
+    module_name: str = field(default="Nest_in_Harmonie", init=False)
+
+    def prepare_calculation(self) -> None:
+        config = OpenBoundaryConfig(
+            e12=self.e12,
+            tracernames=list(self.tracernames or []),
+            tchunk=self.tchunk,
+            start=self.start,
+            author="author",
+            time0=self.time0,
+            end=self.end,
+            HARMONIE_ml_glob=self.ml_glob,
+            HARMONIE_sfc_glob=self.sfc_glob,
+        )
+        self.harmonieprepper = prep_harmonie.harmoniePrepper(config, self.openBCgrid)
+        self.harmonieprepper.load_data()
+        data, transform = self.harmonieprepper.prep_harmonie()
+        logger.info("Setting namelist NAMSURFACE:ps to %f", self.harmonieprepper.ps)
+        self.set_nml_section("NAMSURFACE", "ps", self.harmonieprepper.ps)
+        logger.info("Setting namelist NAMSURFACE:thls to %f", self.harmonieprepper.thls)
+        self.set_nml_section("NAMSURFACE", "thls", self.harmonieprepper.thls)
+        (data,) = dask.optimize(data)
+
+        self.boundaries = harmonie_boundary.boundary_fields(
+            config, self.openBCgrid, data
+        )
+        self.initfields = initfields.initial_fields(
+            config,
+            self.openBCgrid,
+            data,
+            transform,
+            output_path=self.output_path,
+        )
+        self.boundaries, self.initfields = dask.optimize(
+            self.boundaries, self.initfields
+        )
+
+    def provide_forcings(self) -> ForcingSet:
+        self.ensure_prepared()
+        if self.harmonieprepper is None:
+            raise RuntimeError("HARMONIE open-boundary preparation did not complete")
+        if self.harmonieprepper.backrad_profile is None:
+            raise RuntimeError("HARMONIE backrad profile not generated yet")
+        return ForcingSet(
+            initial=sounding_forcings(self.harmonieprepper.backrad_profile)
+        )
+
+
+@register_module
+@dataclass
+class Nest_in_Dales(do_openboundary, _DalesOpenBCOptions):
+    module_name: str = field(default="Nest_in_Dales", init=False)
+
+    def prepare_calculation(self) -> None:
+        if self.indices is None:
+            raise ValueError(
+                "Nesting indices must be provided for Nest_in_Dales. Use a NestingTopology for this."
+            )
+        config = OpenBoundaryConfig(
+            e12=self.e12,
+            tracernames=list(self.tracernames or []),
+            tchunk=self.tchunk,
+            lsynturb=self.lsynturb,
+            start=self.start,
+            time0=self.time0,
+            author="author",
+            end=self.end,
+            outpath_coarse=self.outpath_coarse,
+            outpath_coarse_old=self.outpath_coarse_old,
+            inpath_coarse=self.inpath_coarse,
+            inpath=self.inpath,
+        )
+        crosssection_chunks = (
+            {"time": int(self.tchunk)} if self.tchunk is not None else None
+        )
+
+        if self.inpath is not None:
+            self.initfields = initial_fields_fine.initial_fields_fine(
+                config,
+                grid=self.openBCgrid,
+                output_path=self.output_path,
+            )
+        else:
+            logger.warning(
+                "Nest_in_Dales configured without 'inpath': initfields.inp.*.nc "
+                "will not be created from interpolated parent initial fields. "
+                "A minimal placeholder initfields dataset will be written instead."
+            )
+            self.initfields = None
+            self.linithetero = False
+
+        self.boundaries = boundary_fields_fine.boundary_fields_fine(
+            config,
+            grid=self.openBCgrid,
+            grid_indices=self.indices,
+            chunks=crosssection_chunks,
+        )

@@ -204,25 +204,9 @@ class EasyOutputModule(simulation_module):
         required=True,
     )
 
-    def do_config(self):
-        """Configure output-related namelist parameters."""
-        return
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "EasyOutputModule"
-
-    def prepare_calculation(self):
-        """No preparation needed."""
-        return
-
-    def check_settings(self):
-        """Check output settings validity."""
-        return
-
-    def write_files(self):
-        """Write output files if needed."""
-        return
+    module_name: str = field(
+        default="EasyOutputModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -243,21 +227,9 @@ class CapeModule(simulation_module):
         required=True,
     )
 
-    def do_config(self):
-        return None
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "CapeModule"
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="CapeModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -278,21 +250,9 @@ class LSMCrossModule(simulation_module):
         required=True,
     )
 
-    def do_config(self):
-        return None
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "LSMCrossModule"
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="LSMCrossModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -313,21 +273,9 @@ class TimestatModule(simulation_module):
         required=True,
     )
 
-    def do_config(self):
-        return None
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "TimestatModule"
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="TimestatModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -360,21 +308,9 @@ class StatsModule(simulation_module):
         required=True,
     )
 
-    def do_config(self):
-        return None
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "StatsModule"
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="StatsModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -400,22 +336,9 @@ class RadfieldModule(simulation_module):
         key="timeav",
         required=True,
     )
-
-    def do_config(self):
-        return None
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "RadfieldModule"
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="RadfieldModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -479,13 +402,9 @@ class CrossSectionOutputModule(simulation_module):
         required=True,
     )
 
-    def do_config(self):
-        """Configure output-related namelist parameters."""
-        return
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "CrossSectionOutputModule"
+    module_name: str = field(
+        default="CrossSectionOutputModule", init=False, metadata={"serialize": False}
+    )
 
     @staticmethod
     def _nearest_index(values: list[float], target: float) -> int:
@@ -526,11 +445,7 @@ class CrossSectionOutputModule(simulation_module):
     def _merge_unique(existing: list[int], incoming: list[int]) -> list[int]:
         return list(dict.fromkeys(list(existing) + list(incoming)))
 
-    def prepare_calculation(self):
-        if self.grid is None:
-            raise ValueError(
-                "CrossSectionOutputModule requires a GridDales grid to resolve cross-section coordinates"
-            )
+    def prepare_calculation(self) -> None:
 
         self.xy = self._resolve_index_or_coords(
             indices=self.xy,
@@ -562,7 +477,7 @@ class CrossSectionOutputModule(simulation_module):
         self.check_for_new_cross()
         """No preparation needed."""
 
-    def check_for_new_cross(self):
+    def check_for_new_cross(self) -> None:
         existing_cross = self.nml.get("namcrosssection", {}) if self.nml else {}
         self.xy = self._merge_unique(
             [int(v) for v in existing_cross.get("crossheight", [])], self.xy
@@ -587,11 +502,7 @@ class CrossSectionOutputModule(simulation_module):
         else:
             self.yz_enabled = False
 
-    def check_settings(self):
-        """Check output settings validity."""
-        return
-
-    def write_files(self):
+    def write_files(self) -> None:
         self.check_for_new_cross()
         self.apply_namelist_from_fields()
         """Write output files if needed."""
@@ -643,25 +554,9 @@ class CheckSimulationModule(simulation_module):
         init=True,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "CheckSimulationModule"
-
-    def do_config(self):
-        """No configuration needed."""
-        return
-
-    def prepare_calculation(self):
-        """Check simulation settings and configuration."""
-        return
-
-    def check_settings(self):
-        """No additional checks needed."""
-        return
-
-    def write_files(self):
-        """No files to write."""
-        return
+    module_name: str = field(
+        default="CheckSimulationModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -727,25 +622,9 @@ class SamplingModule(simulation_module):
         required=True,
     )
 
-    def do_config(self):
-        """Configure output-related namelist parameters."""
-        return
-
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "SamplingModule"
-
-    def prepare_calculation(self):
-        """No preparation needed."""
-        return
-
-    def check_settings(self):
-        """Check output settings validity."""
-        return
-
-    def write_files(self):
-        """Write output files if needed."""
-        return
+    module_name: str = field(
+        default="SamplingModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -941,25 +820,15 @@ class FielddumpModule(simulation_module):
         description="Dump scalar tracer fields.",
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "FielddumpModule"
+    module_name: str = field(
+        default="FielddumpModule", init=False, metadata={"serialize": False}
+    )
 
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        if self.khigh and self.klow:
-            if self.khigh != 0 and self.khigh < self.klow:
-                raise ValueError(
-                    "FielddumpModule: khigh must be >= klow, or 0 for DALES default"
-                )
-
-    def write_files(self):
-        return None
+    def check_settings(self) -> None:
+        if self.khigh and self.klow and self.khigh != 0 and self.khigh < self.klow:
+            raise ValueError(
+                "FielddumpModule: khigh must be >= klow, or 0 for DALES default"
+            )
 
 
 @register_module
@@ -974,21 +843,9 @@ class NetCDFStatisticsSyncModule(simulation_module):
         required=True,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "NetCDFStatisticsSyncModule"
-
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="NetCDFStatisticsSyncModule", init=False, metadata={"serialize": False}
+    )
 
 
 @register_module
@@ -1015,21 +872,11 @@ class BulkMicrophysicsStatisticsOutputModule(simulation_module):
         required=True,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "BulkMicrophysicsStatisticsOutputModule"
-
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
-        return None
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
+    module_name: str = field(
+        default="BulkMicrophysicsStatisticsOutputModule",
+        init=False,
+        metadata={"serialize": False},
+    )
 
 
 @register_module
@@ -1072,14 +919,13 @@ class VirtualMeasurementOutputModule(simulation_module):
     x: float | list[float] | None = field(default=None)
     y: float | list[float] | None = field(default=None)
 
-    def do_config(self):
-        return None
+    module_name: str = field(
+        default="VirtualMeasurementOutputModule",
+        init=False,
+        metadata={"serialize": False},
+    )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "VirtualMeasurementOutputModule"
-
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         self.x_idx, self.y_idx, _ = prepare_point_indices(
             "VirtualMeasurementOutputModule",
             self.grid,
@@ -1090,12 +936,6 @@ class VirtualMeasurementOutputModule(simulation_module):
             y=self.y,
         )
         self.npoints = len(self.x_idx)
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None
 
 
 @register_module
@@ -1132,14 +972,13 @@ class ColumnStatisticsOutputModule(simulation_module):
     x: float | list[float] | None = field(default=None)
     y: float | list[float] | None = field(default=None)
 
-    def do_config(self):
-        return None
+    module_name: str = field(
+        default="ColumnStatisticsOutputModule",
+        init=False,
+        metadata={"serialize": False},
+    )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "ColumnStatisticsOutputModule"
-
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         self.x_idx, self.y_idx, _ = prepare_point_indices(
             "ColumnStatisticsOutputModule",
             self.grid,
@@ -1150,9 +989,3 @@ class ColumnStatisticsOutputModule(simulation_module):
             y=self.y,
         )
         self.npoints = len(self.x_idx)
-
-    def check_settings(self):
-        return None
-
-    def write_files(self):
-        return None

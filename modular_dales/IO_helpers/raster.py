@@ -1,13 +1,15 @@
 import logging
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 import rasterio
 import rasterio.fill
 import xarray as xr
 from pyproj import CRS
+from rasterio.enums import Resampling
 from rasterio.transform import from_origin
-from rasterio.warp import Resampling, reproject
+from rasterio.warp import reproject
 
 if TYPE_CHECKING:
     from modular_dales.Geometry import GridDales
@@ -16,13 +18,13 @@ logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
-def raster_to_xarray(tif_path, name):
+def raster_to_xarray(tif_path: str | Path, name: str) -> xr.DataArray:
     """
     Load a raster file and convert it to an xarray DataArray.
 
     Parameters
     ----------
-    tif_path : str
+    tif_path : str or Path
         Path to the input GeoTIFF raster file.
     name : str
         Name to assign to the resulting DataArray.
@@ -39,7 +41,15 @@ def raster_to_xarray(tif_path, name):
     ).rename(name)
 
 
-def ensure_sorted(ds):
+@overload
+def ensure_sorted(ds: xr.Dataset) -> xr.Dataset: ...
+
+
+@overload
+def ensure_sorted(ds: xr.DataArray) -> xr.DataArray: ...
+
+
+def ensure_sorted(ds: xr.Dataset | xr.DataArray) -> xr.Dataset | xr.DataArray:
     """
     Ensure that the x and y coordinates of a dataset are sorted in ascending order.
 
@@ -47,7 +57,7 @@ def ensure_sorted(ds):
     that dimension to ensure consistent ordering.
 
     Args:
-        ds: An xarray Dataset with x and y dimensions.
+        ds: An xarray Dataset or DataArray with x and y dimensions.
 
     Returns:
         The dataset with x and y coordinates sorted in ascending order.
@@ -63,14 +73,14 @@ def ensure_sorted(ds):
 
 def get_reproject(
     grid: "GridDales",
-    out_file,
-    subset,
-    src_transform,
-    src_crs,
-    profile,
-    resampling=Resampling.mode,
-    fillnodata=True,
-):
+    out_file: str | Path,
+    data_to_reproject: np.ndarray,
+    src_transform: rasterio.transform.Affine,
+    src_crs: rasterio.crs.CRS,
+    profile: dict[str, Any],
+    resampling: Resampling = Resampling.mode,
+    fillnodata: bool = True,
+) -> None:
     """
     Reproject a raster subset to a target grid and save to file.
 
@@ -83,7 +93,7 @@ def get_reproject(
             x-coordinates (xt), and y-coordinates (yt).
         out_file (str or Path): Output file path where the reprojected raster
             will be written.
-        subset (np.ndarray): Source raster data to be reprojected.
+        data_to_reproject (np.ndarray): Source raster data to be reprojected.
         src_transform (rasterio.transform.Affine): Affine transformation matrix
             of the source raster.
         src_crs (rasterio.crs.CRS): Coordinate reference system of the source
@@ -105,10 +115,10 @@ def get_reproject(
     dst_height = len(grid.yt)
     dst_width = len(grid.xt)
 
-    dst = np.empty((1, dst_height, dst_width), dtype=subset.dtype)
+    dst = np.empty((1, dst_height, dst_width), dtype=data_to_reproject.dtype)
 
     reproject(
-        source=subset,
+        source=data_to_reproject,
         destination=dst,
         src_transform=src_transform,
         src_crs=src_crs,

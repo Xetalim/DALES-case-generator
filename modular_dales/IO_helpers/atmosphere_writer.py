@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +12,7 @@ FILE_Z_DIM = "zh"
 """Name of the vertical dimension in DALES input files."""
 
 
-def _to_netcdf(ds: xr.Dataset, path) -> None:
+def _to_netcdf(ds: xr.Dataset, path: str | Path) -> None:
     ds = ds.rename({Z_DIM: FILE_Z_DIM}) if Z_DIM in ds.dims else ds
     encoding = {name: {"_FillValue": None, "dtype": "f8"} for name in ds.variables}
     ds.to_netcdf(path, encoding=encoding)
@@ -25,7 +26,7 @@ class AtmosphereProfileWriter:
         time_values: np.ndarray,
         series: np.ndarray,
         label: str,
-        out_path,
+        out_path: str | Path,
         exp_id: int,
     ) -> None:
         plt.ioff()
@@ -44,7 +45,7 @@ class AtmosphereProfileWriter:
         z_values: np.ndarray,
         data_2d: np.ndarray,
         label: str,
-        out_path,
+        out_path: str | Path,
         exp_id: int,
     ) -> None:
         plt.ioff()
@@ -73,8 +74,8 @@ class AtmosphereProfileWriter:
 
     def _plot_forcing_file_variables(
         self,
-        file_path,
-        profiles_path,
+        file_path: str | Path,
+        profiles_path: Path,
         exp_id: int,
         prefix: str,
     ) -> None:
@@ -103,7 +104,7 @@ class AtmosphereProfileWriter:
                         exp_id,
                     )
 
-    def write_init(self, ds: xr.Dataset, output_path, exp_id: int) -> None:
+    def write_init(self, ds: xr.Dataset, output_path: Path, exp_id: int) -> None:
         """Write ``init.<exp_id>.nc``: profiles on ``zt`` and optional ``(time, zt)`` fields."""
         ds = ds.transpose(TIME_DIM, Z_DIM, missing_dims="ignore")
         ds[Z_DIM].attrs.update(long_name="Height of vertical levels", units="m")
@@ -111,7 +112,7 @@ class AtmosphereProfileWriter:
             ds[TIME_DIM].attrs.update(long_name="time", units="s")
         _to_netcdf(ds, output_path / f"init.{exp_id:03d}.nc")
 
-    def write_forcings(self, ds: xr.Dataset, output_path, exp_id: int) -> None:
+    def write_forcings(self, ds: xr.Dataset, output_path: Path, exp_id: int) -> None:
         """Write ``forcings.<exp_id>.nc`` from series on a common axis starting at t=0.
 
         The t=0 entry is dropped: DALES takes it from the initial profiles.
@@ -125,7 +126,9 @@ class AtmosphereProfileWriter:
         )
         _to_netcdf(ds, output_path / f"forcings.{exp_id:03d}.nc")
 
-    def plot_profiles(self, profiles: xr.Dataset, output_path, exp_id: int) -> None:
+    def plot_profiles(
+        self, profiles: xr.Dataset, output_path: Path, exp_id: int
+    ) -> None:
         """Plot initial profiles and the written init/forcings fields for quick inspection."""
         profiles_path = output_path / ".." / "profiles"
         os.makedirs(profiles_path, exist_ok=True)

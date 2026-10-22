@@ -7,6 +7,7 @@ import xarray as xr
 
 from modular_dales.Atmosphere.shapes import ShapeFunction, ShapeSpec
 from modular_dales.IO_helpers import AtmosphereProfileWriter
+from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.forcing import (
     ForcingSet,
     collect_forcings,
@@ -35,13 +36,13 @@ logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
-def _value_at(value, time_value: float):
+def _value_at(value: float | TimeDependentScalar, time_value: float) -> float:
     if isinstance(value, TimeDependentScalar):
         return value.at(time_value)
     return value
 
 
-def _union_of_times(values: Iterable) -> list[float]:
+def _union_of_times(values: Iterable[float | TimeDependentScalar]) -> list[float]:
     return sorted(
         {
             float(t)
@@ -56,10 +57,10 @@ def _union_of_times(values: Iterable) -> list[float]:
 class Profile:
     """Base class for atmospheric profiles."""
 
-    variable: VariableDefinition
+    variable: ProfileVariable
     """Variable definition (see modular_dales.Atmosphere.vars)."""
 
-    def evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
+    def evaluate(self, z: np.ndarray | list[float]) -> xr.DataArray:
         raise NotImplementedError("Subclasses must implement the evaluate method.")
 
     def profile_at(self, time_value: float = 0.0) -> "TimedAtmosphereProfile":
@@ -90,7 +91,9 @@ class AtmosphericProfile(Profile):
     shape: ShapeSpec
     """Shape type (lin, exp, linmlsurf, expsinw, etc.)"""
 
-    def _evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
+    def _evaluate(
+        self, z: np.ndarray | list[float], time_value: float = 0.0
+    ) -> xr.DataArray:
         if not isinstance(self.shape, ShapeFunction):
             raise TypeError(
                 f"Shape must be an instance of ShapeFunction for variable '{self.variable.name}'"
@@ -105,7 +108,7 @@ class AtmosphericProfile(Profile):
             attrs=var_attrs(self.variable),
         )
 
-    def evaluate(self, z):
+    def evaluate(self, z: np.ndarray | list[float]) -> xr.DataArray:
         z_arr = np.asarray(z, dtype=float)
         return profile(
             self.shape.evaluate(z=z_arr, **self.shape.params),
@@ -138,7 +141,9 @@ class InterpolatedProfile(Profile):
     fill_value: float | str = "extrapolate"
     """Value to use for beyond the provided z range, or 'extrapolate' to extrapolate."""
 
-    def _evaluate(self, z, time_value: float = 0.0) -> xr.DataArray:
+    def _evaluate(
+        self, z: np.ndarray | list[float], time_value: float = 0.0
+    ) -> xr.DataArray:
         points = xr.DataArray(
             [_value_at(point, time_value) for point in self.points],
             dims=(Z_DIM,),
@@ -151,7 +156,7 @@ class InterpolatedProfile(Profile):
             kwargs={"fill_value": self.fill_value},
         )
 
-    def evaluate(self, z):
+    def evaluate(self, z: np.ndarray | list[float]) -> xr.DataArray:
         points = xr.DataArray(
             self.points,
             dims=(Z_DIM,),
@@ -186,7 +191,7 @@ class TimedAtmosphereProfile:
     time: float
     profile: AtmosphericProfile | InterpolatedProfile
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.profile, InterpolatedProfile):
             for point in self.profile.points:
                 if isinstance(point, TimeDependentScalar):
@@ -247,7 +252,7 @@ def _require_time_dependent(var_definition: VariableDefinition) -> None:
 
 def _validate_profile_variable(
     configured: AtmosphericProfile | InterpolatedProfile,
-):
+) -> None:
     variable = configured.variable
     if variable not in get_all_vars() or not variable.is_profile:
         raise ValueError(f"Unknown atmospheric variable '{variable.name}'")
@@ -294,39 +299,27 @@ class AtmosphereModule(simulation_module):
     )
     """Merged forcings of this module and all other providers (set in prepare_calculation)."""
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "AtmosphereModule"
+    module_name: str = field(
+        default="AtmosphereModule", init=False, metadata={"serialize": False}
+    )
 
-    def _initialize_from_sim(self, sim):
+    def _initialize_from_sim(self, sim: "dales_simulation") -> None:
         sim.has_atmosphere_module = True
-        return super()._initialize_from_sim(sim)
 
     def add(
         self,
         other: AtmosphericProfile
         | InterpolatedProfile
         | TimedAtmosphereProfile
-        | list
-        | tuple,
-        *,
+        | list[AtmosphericProfile | InterpolatedProfile | TimedAtmosphereProfile],
         nudging: bool = False,
-    ):
+    ) -> None:
         """Add profiles, optionally to nudging instead of the regular destination."""
         destination = self.nudging_profiles if nudging else self.profiles
         if isinstance(other, (AtmosphericProfile, InterpolatedProfile)):
             destination.extend(other.timed_forcing_series())
         elif isinstance(other, TimedAtmosphereProfile):
             destination.append(other)
-        elif (
-            isinstance(other, tuple)
-            and len(other) == 2
-            and isinstance(other[0], (int, float))
-            and isinstance(other[1], (AtmosphericProfile, InterpolatedProfile))
-        ):
-            destination.append(
-                TimedAtmosphereProfile(time=float(other[0]), profile=other[1])
-            )
         elif isinstance(other, (list, tuple)):
             for item in other:
                 self.add(item, nudging=nudging)
@@ -334,13 +327,10 @@ class AtmosphereModule(simulation_module):
             raise TypeError(
                 f"Cannot add object of type {type(other)} to AtmosphereModule"
             )
-        return self
 
     def provide_forcings(self) -> ForcingSet:
         """Evaluate the user-configured profiles on the grid."""
 
-        if self.grid is None:
-            raise ValueError("AtmosphereModule requires a simulation grid")
         nudging_profiles = []
         for entry in self.nudging_profiles:
             entries = (
@@ -362,10 +352,8 @@ class AtmosphereModule(simulation_module):
             np.asarray(self.grid.zt, dtype=float), self.profiles + nudging_profiles
         )
 
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         """Merge own profiles with those of other providers (e.g. LS2D)."""
-        if self.grid is None:
-            raise ValueError("AtmosphereModule requires a simulation grid")
 
         if any(module is self for module in self.sim.modules):
             self.forcings = self.sim.forcings()
@@ -377,10 +365,6 @@ class AtmosphereModule(simulation_module):
                 + [self]
             )
         logger.info("AtmosphereModule: Profiles prepared")
-
-    def check_settings(self):
-        """Check atmosphere settings validity."""
-        return
 
     def initial_profiles(self) -> xr.Dataset:
         """Initial profiles written to ``init.<exp_id>.nc`` (on ``zt``)."""
@@ -426,10 +410,8 @@ class AtmosphereModule(simulation_module):
             )
         return dataset
 
-    def write_files(self):
+    def write_files(self) -> None:
         """Write ``init.<exp_id>.nc`` (incl. nudging) and generate plots."""
-        if self.grid is None:
-            return
 
         output_input_path = self.output_path / "input"
         self.profile_writer.write_init(

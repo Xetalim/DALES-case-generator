@@ -4,13 +4,13 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
-from rasterio.warp import Resampling
+import xarray as xr
+from rasterio.enums import Resampling
 
 from modular_dales.Geometry import GridDales
 from modular_dales.IO_helpers import ensure_sorted, get_reproject, raster_to_xarray
 
 logger = logging.getLogger(__name__)
-
 
 _RESAMPLING_MAP = {
     "nearest": Resampling.nearest,
@@ -37,7 +37,7 @@ def get_process_global_dem(
     zeroes_buffer: int = 5,
     subtract_dem_mode: bool = True,
     resampling_name: str = "bilinear",
-):
+) -> xr.DataArray:
     """Reproject a user DEM onto the DALES grid and normalize it for IBM.
 
     The source raster is assumed to contain elevation above mean sea level in

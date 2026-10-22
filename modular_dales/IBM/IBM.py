@@ -47,6 +47,9 @@ class FromGlobalDEM:
     resampling: str = field(default="bilinear", metadata={"serialize": True})
 
 
+type IBMSourceLayer = FromGlobalDEM | FromAHN
+
+
 @dataclass(frozen=True)
 class _TerrainLayer:
     """Resolved terrain field plus metadata used during IBM preparation."""
@@ -66,7 +69,7 @@ class IBMModification(GeometricModification):
     """How the modification affects terrain: replace, add, or subtract."""
 
 
-class IBMCreatorClass(ModifierClass):
+class IBMCreatorClass(ModifierClass[IBMModification]):
     """
     A class for creating and managing IBM (Immersed Boundary Method) modifications to DALES grid geometry.
 
@@ -83,7 +86,9 @@ class IBMCreatorClass(ModifierClass):
         super().__init__(grid)
         self.bc_height = np.zeros_like(self.meshx)
 
-    def do_modification(self, geometry, modification):
+    def do_modification(
+        self, geometry: np.ndarray, modification: IBMModification
+    ) -> None:
         height = float(modification.height)
         mode = str(modification.mode).strip().lower()
 
@@ -106,7 +111,7 @@ class IBMCreatorClass(ModifierClass):
             f"Unsupported IBM modification mode '{mode}'. Expected one of: replace, add, subtract"
         )
 
-    def output_nc(self, filename):
+    def output_nc(self, filename: str | Path) -> None:
         with netCDF4.Dataset(filename, "w") as nc:
             nc.createDimension("x", len(self.x))
             nc.createDimension("y", len(self.y))
@@ -120,7 +125,7 @@ class IBMCreatorClass(ModifierClass):
             dims = ["y", "x"]
             bc_height_var = nc.createVariable("bc_height", float, dims)
             bc_height_var[:, :] = self.bc_height[:, :]
-            self.grid.set_cf_grid_mapping(nc, "crs", ["bc_height"])
+            self.grid.set_cf_grid_mapping_netcdf(nc, "crs", ["bc_height"])
 
 
 @register_module
@@ -295,15 +300,15 @@ class IBMModule(simulation_module):
         repr=False,
     )
 
-    def __post_init__(self):
-        super().__init__(self.sim)
-        self.module_name = "IBMModule"
+    module_name: str = field(
+        default="IBMModule", init=False, metadata={"serialize": False}
+    )
 
-    def __add__(self, obj) -> Self:
+    def __add__(self, obj: IBMSourceLayer | IBMModification) -> Self:
         """Add IBM modification to module.
 
         Args:
-            modification: IBMModification to add
+            obj: IBMSourceLayer or IBMModification to add
 
         Returns:
             self for chaining
@@ -320,7 +325,7 @@ class IBMModule(simulation_module):
             )
         return self
 
-    def __iadd__(self, obj) -> Self:
+    def __iadd__(self, obj: IBMSourceLayer | IBMModification) -> Self:
         """In-place addition."""
         return self.__add__(obj)
 
@@ -400,7 +405,7 @@ class IBMModule(simulation_module):
             ", ".join(layer.name for layer in terrain_layers),
         )
 
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         """Set up IBM geometry and update namelist."""
 
         self.ibm_generator = IBMCreatorClass(self.grid)
@@ -412,11 +417,8 @@ class IBMModule(simulation_module):
 
         logger.info("IBMModule: IBM configured and namelist updated")
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         """Check IBM settings validity."""
-
-        if self.grid is None:
-            raise ValueError("IBMModule requires a GridDales grid to be configured")
 
         if self.from_global_dem is not None:
             dem_path = Path(self.from_global_dem.dem_path).expanduser()
@@ -447,7 +449,7 @@ class IBMModule(simulation_module):
         if self.iadv_mom != 2:
             raise ValueError("IBMModule.iadv_mom is fixed and must be 2")
 
-    def write_files(self):
+    def write_files(self) -> None:
         """Write IBM files."""
         if self.ibm_generator is not None:
             self.ibm_generator.output_nc(
