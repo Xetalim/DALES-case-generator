@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from modular_dales.Geometry.GridDales import GridDales
-from modular_dales.Surface.LSM.LSM_output_dales import LSM_output_dales
+from modular_dales.Geometry.grids import GridDales
+from modular_dales.Surface.LSM.lsm_output import LSM_output_dales
 from modular_dales.Surface.LSM.lsm_slurb import (
     apply_from_netcdf,
     apply_slurb_parameters_lcz,

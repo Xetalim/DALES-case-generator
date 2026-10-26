@@ -44,6 +44,8 @@ def test_triple_nested_simulation_setup(machine_conf):
             x0=0,
             y0=0,
             kmax_soil=4,
+            xlat=52.0,  # Example latitude value
+            xlon=5.0,  # Example longitude value
         ),
         GridDales(
             itot=32,
@@ -56,6 +58,8 @@ def test_triple_nested_simulation_setup(machine_conf):
             dz0=20.0,
             alpha=1.0,
             kmax_soil=4,
+            xlat=52.0,  # Example latitude value
+            xlon=5.0,  # Example longitude value
         ),
         GridDales(
             itot=16,
@@ -68,6 +72,8 @@ def test_triple_nested_simulation_setup(machine_conf):
             dz0=20.0,
             alpha=1.0,
             kmax_soil=4,
+            xlat=52.0,  # Example latitude value
+            xlon=5.0,  # Example longitude value
         ),
     ]
 

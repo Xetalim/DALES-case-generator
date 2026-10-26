@@ -10,7 +10,7 @@ from modular_dales.Atmosphere import (
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.modular.time_dependent import (
     TimedependentModule,
 )
@@ -45,25 +45,31 @@ def timedep_atmosphere_with_params_case_long(machine_conf: dict) -> dales_simula
     atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
     atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0)))
-    atmo.add(InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
-    ))
-    atmo.add(AtmosphericProfile(
-        variable=wa,
-        shape=lin(
-            surf_val=TimeDependentScalar(times=[0.0, 60.0], values=[0.0, 0.02]),
-            ddz=0.0,
-        ),
-    ))
-    atmo.add(AtmosphericProfile(
-        variable=ug,
-        shape=lin(
-            surf_val=TimeDependentScalar(times=[0.0, 60.0], values=[5.0, 8.0]),
-            ddz=TimeDependentScalar(times=[0.0, 60.0], values=[1e-3, 2e-3]),
-        ),
-    ))
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
+    )
+    atmo.add(
+        AtmosphericProfile(
+            variable=wa,
+            shape=lin(
+                surf_val=TimeDependentScalar(times=[0.0, 60.0], values=[0.0, 0.02]),
+                ddz=0.0,
+            ),
+        )
+    )
+    atmo.add(
+        AtmosphericProfile(
+            variable=ug,
+            shape=lin(
+                surf_val=TimeDependentScalar(times=[0.0, 60.0], values=[5.0, 8.0]),
+                ddz=TimeDependentScalar(times=[0.0, 60.0], values=[1e-3, 2e-3]),
+            ),
+        )
+    )
 
     sim += TimedependentModule(timesteps=[0.0, 60.0])
     sim += ConstantSurfaceTemperatureModule(

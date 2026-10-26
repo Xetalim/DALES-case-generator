@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Literal, Self
 
 from modular_dales.Geometry.geometry_modification import GeometricModification
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 from modular_dales.Surface.LSM.lsm_data import LandUseName
 
 

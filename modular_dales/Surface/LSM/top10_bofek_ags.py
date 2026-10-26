@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import xarray as xr
 
-from modular_dales.Geometry.GridDales import GridDales
-from modular_dales.Surface.LSM.LCZ.get_from_LCZ import (
+from modular_dales.Geometry.grids import GridDales
+from modular_dales.Surface.LSM.LCZ.get_from_lcz import (
     LCZ_URBAN_NATURAL_TO_IFS,
     lcz_dict,
 )
@@ -20,7 +20,7 @@ from modular_dales.Surface.LSM.translation_tables.vegetation_properties import (
 )
 
 if TYPE_CHECKING:
-    from modular_dales.Surface.LSM.LSM_output_dales import LSM_output_dales
+    from modular_dales.Surface.LSM.lsm_output import LSM_output_dales
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,11 @@ import rasterio
 import rasterio.fill
 import xarray as xr
 from pyproj import CRS
+
+if TYPE_CHECKING:
+    from rasterio._typing import CRSInput  # noqa: TC004
 from rasterio.enums import Resampling
+from rasterio.profiles import Profile
 from rasterio.transform import from_origin
 from rasterio.warp import reproject
 
@@ -76,8 +80,8 @@ def get_reproject(
     out_file: str | Path,
     data_to_reproject: np.ndarray,
     src_transform: rasterio.transform.Affine,
-    src_crs: rasterio.crs.CRS,
-    profile: dict[str, Any],
+    src_crs: CRSInput,
+    profile: Profile | dict[str, Any],
     resampling: Resampling = Resampling.mode,
     fillnodata: bool = True,
 ) -> None:
@@ -96,7 +100,7 @@ def get_reproject(
         data_to_reproject (np.ndarray): Source raster data to be reprojected.
         src_transform (rasterio.transform.Affine): Affine transformation matrix
             of the source raster.
-        src_crs (rasterio.crs.CRS): Coordinate reference system of the source
+        src_crs (CRSInput): Coordinate reference system of the source
             raster.
         profile (dict): Rasterio profile dictionary containing metadata for the
             source raster (e.g., nodata value, dtype).

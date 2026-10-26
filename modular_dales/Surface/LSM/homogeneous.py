@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 
 from modular_dales.modular.namelist import nml_field
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 from .base import BaseLSMModule
 
@@ -312,7 +312,7 @@ class LSMHomogeneousModule(BaseLSMModule):
         metadata={"serialize": False},
     )
 
-    def do_config(self):
+    def do_config(self) -> None:
         # Homogeneous LSM always uses the six fixed land-use tiles.
         self.nlu = 6
 
@@ -331,7 +331,7 @@ class LSMHomogeneousModule(BaseLSMModule):
 
         super().do_config()
 
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         for name in ("t_soil_p", "theta_soil_p", "soil_index_p"):
             values = getattr(self, name)
             if values is not None and len(values) != int(self.kmax_soil):

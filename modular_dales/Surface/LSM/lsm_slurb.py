@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.Surface.LSM.LCZ import get_from_LCZ
+from modular_dales.Surface.LSM.LCZ import get_from_lcz
 from modular_dales.Surface.LSM.lsm_data import FloatArray
 from modular_dales.Surface.LSM.SLuRB.slurb import (
     SLURBModification,
@@ -45,7 +45,7 @@ def apply_slurb_parameters_lcz(
     dataset: xr.Dataset, generator: slbCreatorClass, urban_cover: FloatArray | None
 ) -> None:
     """Apply LCZ morphology, scaling building fraction by urban tile cover."""
-    for source, target in get_from_LCZ.LCZ_field_to_slurb.items():
+    for source, target in get_from_lcz.LCZ_field_to_slurb.items():
         values = np.asarray(dataset[source].values, dtype=np.float64)
         if target == "f_bld":
             if urban_cover is None:

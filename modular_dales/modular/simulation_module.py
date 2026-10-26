@@ -9,7 +9,11 @@ from modular_dales.modular.forcing import (
     ForcingSet,
     var_attrs,
 )
-from modular_dales.modular.namelist import get_namelist_spec
+from modular_dales.modular.namelist import (
+    Namelist,
+    NamelistDoc,
+    get_namelist_spec,
+)
 from modular_dales.modular.time_dependent_scalars import (
     Z_DIM,
     TimeDependentScalar,
@@ -19,10 +23,8 @@ from modular_dales.vars import get_var_by_name
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
-    from modular_dales.Geometry.GridDales import GridDales
+    from modular_dales.Geometry.grids import GridDales
     from modular_dales.modular.dales_simulation import (
-        Namelist,
-        NamelistDoc,
         dales_simulation,
     )
 
@@ -187,7 +189,7 @@ class simulation_module(ABC):
         set_nml_section(
             self.nml,
             self.nml_docs,
-            self.module_name,
+            self.module_name or type(self).__name__,
             section,
             key,
             value,
@@ -219,7 +221,10 @@ class simulation_module(ABC):
     @property
     def exp_id(self) -> int:
         """Access experiment ID from parent simulation."""
-        return self.sim.exp_id
+        exp_id = self.sim.exp_id
+        if exp_id is None:
+            raise RuntimeError("Experiment ID is not initialized")
+        return exp_id
 
     @property
     def required_folder_list(self) -> list[str]:
@@ -293,9 +298,10 @@ class simulation_module(ABC):
 
     @staticmethod
     def _forcing_var_name(dataclass_field: Field[Any]) -> str | None:
-        meta = dataclass_field.metadata or {}
+        meta: Any = dataclass_field.metadata or {}
         if "forcing_var" in meta:
-            return meta["forcing_var"]
+            forcing_var = meta["forcing_var"]
+            return forcing_var if isinstance(forcing_var, str) else None
         if dataclass_field.name in get_var_by_name():
             return dataclass_field.name
         return None
@@ -304,6 +310,8 @@ class simulation_module(ABC):
         """``provide_forcings()``, evaluated only once."""
         if getattr(self, "_provided_forcings", None) is None:
             self._provided_forcings = self.provide_forcings()
+        if self._provided_forcings is None:
+            raise RuntimeError("Forcing provider returned no ForcingSet")
         return self._provided_forcings
 
     def provide_forcings(self) -> ForcingSet:

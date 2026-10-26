@@ -204,9 +204,9 @@ top10_to_ifs = {
     }
 # fmt: on
 
-if __name__ == "__main__":
-    # Check/print lookup tables
-    for i in range(1, 31):
-        ii = top10_to_ifs[i]
-        ifs_name = ifs_vegetation.name[ii] if ii > 0 else "None"
-        print(f"{top10_names[i]:30s} ({i:2d}) = {ifs_name}")
+# if __name__ == "__main__":
+#     # Check/print lookup tables
+#     for i in range(1, 31):
+#         ii = top10_to_ifs[i]
+#         ifs_name = ifs_vegetation.name[ii] if ii > 0 else "None"
+#         print(f"{top10_names[i]:30s} ({i:2d}) = {ifs_name}")

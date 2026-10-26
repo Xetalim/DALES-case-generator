@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import xarray as xr
 
-from modular_dales.MODULE_REGISTRY import MODULE_REGISTRY, register_special_serializing
+from modular_dales.module_registry import register_module
 
 TIME_DIM = "time"
 """Time dimension of all forcing series, in seconds since the start of the run."""
@@ -15,9 +15,14 @@ SOIL_DIM = "zs"
 
 
 def profile(
-    values, z, name: str | None = None, attrs: dict | None = None
+    values: np.ndarray | list[float] | float,
+    z: np.ndarray | list[float],
+    name: str | None = None,
+    attrs: dict[str, str] | None = None,
 ) -> xr.DataArray:
     """Profile on the ``zt`` dimension."""
+    if isinstance(values, float):
+        values = np.ones_like(z, dtype=float) * values
     z_arr = np.asarray(z, dtype=float)
     data = np.broadcast_to(np.asarray(values, dtype=float), z_arr.shape)
     return xr.DataArray(
@@ -86,7 +91,7 @@ def resolve_time_axis(
     return np.asarray(sorted(times), dtype=float)
 
 
-@register_special_serializing
+@register_module
 @dataclass
 class TimeDependentScalar:
     """Time-dependent scalar value defined on explicit timesteps.
@@ -102,7 +107,7 @@ class TimeDependentScalar:
         default_factory=list, metadata={"serialize": True}, init=True
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.times, np.ndarray):
             self.times = self.times.tolist()
         if isinstance(self.values, np.ndarray):
@@ -132,7 +137,3 @@ class TimeDependentScalar:
 
     def value_at_start(self) -> float:
         return self.at(0.0)
-
-
-# Register TimeDependentScalar for YAML deserialization without making it a simulation module
-MODULE_REGISTRY["TimeDependentScalar"] = TimeDependentScalar

@@ -66,10 +66,11 @@ The resulting NetCDF files must preserve:
 import glob
 import logging
 import os
+from collections.abc import Hashable
 from pathlib import Path
 from typing import Any
 
-import dask
+import dask.base
 import numpy as np
 import rioxarray  # noqa: F401 — activates .rio accessor on xr objects
 import xarray as xr
@@ -77,7 +78,7 @@ from pyproj import CRS, Transformer
 from rasterio.enums import Resampling
 from rasterio.transform import Affine
 
-from modular_dales.Geometry.GridDales import GridDalesOpenBC
+from modular_dales.Geometry.grids import GridDalesOpenBC
 from modular_dales.IO_helpers.raster import fix_lambert_offsets
 from modular_dales.LBC.nest_dales_in_HARMONIE import hybrid_levels, prep_harmonie
 from modular_dales.LBC.nest_dales_in_HARMONIE.Transform import Transform
@@ -289,7 +290,7 @@ def _rotate_winds_to_crs(
     """Rotate (u, v) from source-grid axes to destination-grid axes."""
     fwd = Transformer.from_crs(src_crs, dst_crs, always_xy=True)
     xx, yy = np.meshgrid(u["x"].values, u["y"].values)
-    eps = 1e-4 * float(np.abs(u["x"].diff("x")).median())
+    eps = 1e-4 * float(np.median(np.abs(np.asarray(u["x"].diff("x").values))))
     x0, y0 = fwd.transform(xx, yy)
     x1, y1 = fwd.transform(xx + eps, yy)
     x2, y2 = fwd.transform(xx, yy + eps)
@@ -395,7 +396,7 @@ def _reproject_dataset(
         ny_dst,
     )
 
-    out_vars = {}
+    out_vars: dict[Hashable, xr.DataArray] = {}
     for name, da in ds.data_vars.items():
         if "x" not in da.dims or "y" not in da.dims:
             out_vars[name] = da
@@ -404,43 +405,47 @@ def _reproject_dataset(
         # rioxarray supports at most 3-D (band, y, x).
         # Reshape all non-spatial dims into a single "band" dim so we need
         # only ONE warp call per variable (avoids per-timestep overhead).
-        non_spatial = [d for d in da.dims if d not in ("x", "y")]
+        dimensions: list[str] = [str(dim) for dim in da.dims]
+        non_spatial: list[str] = [dim for dim in dimensions if dim not in ("x", "y")]
         if non_spatial:
             # Remember original shape/coords for the non-spatial dims
-            ns_sizes = [da.sizes[d] for d in non_spatial]
-            ns_coords = {d: da[d] for d in non_spatial if d in da.coords}
+            ns_sizes = [da.sizes[dim] for dim in non_spatial]
+            ns_coords: dict[str, xr.DataArray] = {
+                dim: da[dim] for dim in non_spatial if dim in da.coords
+            }
             n_bands = int(np.prod(ns_sizes))
 
             # Flatten to (band, y, x) — materialises the array once
-            flat = da.values.reshape(n_bands, da.sizes["y"], da.sizes["x"])
+            flat_values = da.values.reshape(n_bands, da.sizes["y"], da.sizes["x"])
             da_flat = xr.DataArray(
-                flat,
+                flat_values,
                 dims=("band", "y", "x"),
                 coords={"y": da["y"], "x": da["x"]},
             )
             da_flat = da_flat.rio.write_crs(src_crs).rio.set_spatial_dims(
                 x_dim="x", y_dim="y"
             )
-            da_reproj = da_flat.rio.reproject(
+            da_reproj_flat = da_flat.rio.reproject(
                 dst_crs,
                 shape=(ny_dst, nx_dst),
                 transform=dst_transform,
                 resampling=Resampling.bilinear,
                 nodata=np.nan,
             )
-            da_reproj = da_reproj.assign_coords(x=x_target, y=y_target)
-            if "spatial_ref" in da_reproj.coords:
-                da_reproj = da_reproj.drop_vars("spatial_ref")
+            da_reproj_flat = da_reproj_flat.assign_coords(x=x_target, y=y_target)
+            if "spatial_ref" in da_reproj_flat.coords:
+                da_reproj_flat = da_reproj_flat.drop_vars("spatial_ref")
 
             # Reshape back to original non-spatial dims + new (y, x)
-            new_shape = tuple(ns_sizes) + (ny_dst, nx_dst)
-            data_reshaped = da_reproj.values.reshape(new_shape)
+            new_shape = (*ns_sizes, ny_dst, nx_dst)
+            reshaped_values = np.asarray(da_reproj_flat.values).reshape(new_shape)
             new_coords = {**ns_coords, "y": y_target, "x": x_target}
-            da_reproj = xr.DataArray(
-                data_reshaped,
-                dims=non_spatial + ["y", "x"],
+            reprojected = xr.DataArray(
+                reshaped_values,
+                dims=(*non_spatial, "y", "x"),
                 coords=new_coords,
             )
+            da_reproj: xr.DataArray = reprojected
         else:
             da_crs = da.rio.write_crs(src_crs).rio.set_spatial_dims(
                 x_dim="x", y_dim="y"
@@ -458,7 +463,7 @@ def _reproject_dataset(
 
         out_vars[name] = da_reproj
 
-    coords = {
+    coords: dict[Hashable, Any] = {
         c: ds.coords[c]
         for c in ds.coords
         if "x" not in ds.coords[c].dims and "y" not in ds.coords[c].dims
@@ -536,7 +541,7 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
         # ── Open model-level (N55ML) data ──────────────────────────────
         # Only chunk in time; keep lev, y, x as single chunks so spatial
         # operations (interpolation, reprojection) work on contiguous arrays.
-        tchunk = input_json.tchunk
+        tchunk = input_json.tchunk if input_json.tchunk is not None else -1
         if not input_json.HARMONIE_ml_glob:
             raise ValueError("No model-level data glob pattern provided.")
         is_ml_grib = _is_grib_source(input_json.HARMONIE_ml_glob, input_json.use_grib)
@@ -827,7 +832,7 @@ class KNMIPrepper(prep_harmonie.harmoniePrepper):
         # Ensure lev is a single chunk — prep_harmonie's apply_ufunc requires it.
         if "lev" in self.data.dims:
             self.data = self.data.chunk({"lev": -1})
-        (self.data,) = dask.optimize(self.data)
+        (self.data,) = dask.base.optimize(self.data)
         self.transform = prep_harmonie.update_transform(self.transform, x_sw, y_sw)
 
 
@@ -906,9 +911,9 @@ def _open_knmi_grib_dataset(
     if len(fl) == 0:
         raise FileNotFoundError(f"No GRIB fields found matching {glob_pattern}")
 
-    parameter_fields = {}
+    parameter_fields: dict[str, list[Any]] = {}
     parameter_level_types = {}
-    assignments = {}
+    assignments: dict[tuple[str, str, int], str] = {}
     used_names = set()
 
     for field in fl:
@@ -943,7 +948,7 @@ def _open_knmi_grib_dataset(
         parameter_fields.setdefault(new_parameter, []).append(field)
         parameter_level_types[new_parameter] = level_type
 
-    parameter_datasets = []
+    parameter_datasets: list[xr.Dataset] = []
     for parameter, fields in parameter_fields.items():
         parameter_dataset = ekd.FieldList.from_fields(fields).to_xarray(
             allow_holes=False,
@@ -969,8 +974,9 @@ def _open_knmi_grib_dataset(
         {"step": "time"}
     )
     dataset = dataset.drop_vars("step", errors="ignore")
-    dataset = dataset.drop_vars("forecast_reference_time", errors="ignore")
-    dataset = dataset.squeeze("forecast_reference_time")
+    if "forecast_reference_time" in dataset.dims:
+        # dataset = dataset.drop_vars("forecast_reference_time", errors="ignore")
+        dataset = dataset.squeeze("forecast_reference_time")
     # elif "step" in dataset.dims and "time" not in dataset.dims:
     #     dataset = dataset.rename({"step": "time"})
 
@@ -1022,33 +1028,28 @@ def _open_knmi_grib_dataset(
                         "north_pole_grid_longitude": 0.0,
                     }
                 )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.debug("Failed to extract rotated grid metadata from GRIB: %s", exc)
 
     if src_crs is None:
         src_crs = CRS("EPSG:4326")
 
     if "latitude" in dataset.coords and "longitude" in dataset.coords:
-        try:
-            fwd = Transformer.from_crs(CRS("EPSG:4326"), src_crs, always_xy=True)
-            rot_x_2d, rot_y_2d = fwd.transform(
-                dataset["longitude"].values, dataset["latitude"].values
+        fwd = Transformer.from_crs(CRS("EPSG:4326"), src_crs, always_xy=True)
+        rot_x_2d, rot_y_2d = fwd.transform(
+            dataset["longitude"].values, dataset["latitude"].values
+        )
+        rot_x = np.mean(rot_x_2d, axis=0)
+        rot_y = np.mean(rot_y_2d, axis=1)
+        # A wrong source CRS makes the 2D coordinates non-rectilinear; collapsing them silently distorts distances.
+        spread = max(np.ptp(rot_x_2d, axis=0).max(), np.ptp(rot_y_2d, axis=1).max())
+        spacing = min(np.abs(np.diff(rot_x)).min(), np.abs(np.diff(rot_y)).min())
+        if spread > 0.01 * spacing:
+            raise ValueError(
+                f"GRIB lat/lon do not map to a rectilinear grid in {src_crs.to_proj4()} "
+                f"(spread {spread:.3g} vs spacing {spacing:.3g}); check the rotated-pole metadata."
             )
-            rot_x = np.mean(rot_x_2d, axis=0)
-            rot_y = np.mean(rot_y_2d, axis=1)
-            # A wrong source CRS makes the 2D coordinates non-rectilinear; collapsing them silently distorts distances.
-            spread = max(np.ptp(rot_x_2d, axis=0).max(), np.ptp(rot_y_2d, axis=1).max())
-            spacing = min(np.abs(np.diff(rot_x)).min(), np.abs(np.diff(rot_y)).min())
-            if spread > 0.01 * spacing:
-                raise ValueError(
-                    f"GRIB lat/lon do not map to a rectilinear grid in {src_crs.to_proj4()} "
-                    f"(spread {spread:.3g} vs spacing {spacing:.3g}); check the rotated-pole metadata."
-                )
-            dataset = dataset.assign_coords(x=("x", rot_x), y=("y", rot_y))
-        except ValueError:
-            raise
-        except Exception as exc:
-            logger.warning("Could not transform lat/lon to 1D x/y: %s", exc)
+        dataset = dataset.assign_coords(x=("x", rot_x), y=("y", rot_y))
 
     # Ensure coordinates are sorted
     if "x" in dataset.dims and len(dataset["x"]) > 1:
@@ -1081,7 +1082,7 @@ def _open_knmi_grib_dataset(
 
 
 @logwrap
-def _open_knmi_dataset(glob_pattern, chunks):
+def _open_knmi_dataset(glob_pattern: str, chunks: dict[str, int] | None) -> xr.Dataset:
     """Open a pre-converted KNMI NetCDF dataset, normalising dimensions.
 
     Handles dimension naming differences between conversion tools:
@@ -1104,7 +1105,7 @@ def _open_knmi_dataset(glob_pattern, chunks):
     # Normalise dimension names
     rename_map = {}
     for dim in ds.dims:
-        dl = dim.lower()
+        dl = str(dim).lower()
         if dl in ("level", "hybrid"):
             rename_map[dim] = "lev"
         elif dl in ("rlat", "latitude", "lat") and "y" not in ds.dims:

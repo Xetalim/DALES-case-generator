@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import xarray as xr
 
@@ -8,7 +10,9 @@ from modular_dales.logging_wrapper import logwrap
 def _project_zero_into_interval(
     lower: xr.DataArray, upper: xr.DataArray
 ) -> xr.DataArray:
-    return xr.where(lower > 0.0, lower, xr.where(upper < 0.0, upper, 0.0))
+    return cast(
+        xr.DataArray, xr.where(lower > 0.0, lower, xr.where(upper < 0.0, upper, 0.0))
+    )
 
 
 def _clip_covariance(

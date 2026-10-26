@@ -2,20 +2,23 @@ import hashlib
 import logging
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import geopandas as gpd
 import numpy as np
 import rasterio
 import xarray as xr
 from pyproj import Transformer
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rasterio._typing import CRSInput
 from rasterio.enums import Resampling
 from rasterio.merge import merge
 from rasterio.profiles import Profile
 from rasterio.windows import from_bounds
 from shapely.geometry import box
 
-from modular_dales.Geometry import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.IO_helpers import (
     cache_root,
     ensure_sorted,
@@ -29,7 +32,7 @@ logger.debug("Entered module: %s", __name__)
 
 def get_cached_AHN(
     cache_dir: str | Path, grid: GridDales
-) -> tuple[np.ndarray, rasterio.Affine, str, dict[str, Any] | Profile]:
+) -> tuple[np.ndarray, rasterio.Affine, CRSInput, Profile]:
     """
     Download and cache AHN (Actueel Hoogtebestand Nederland) elevation data for a given grid.
 
@@ -121,16 +124,18 @@ def get_cached_AHN(
     mosaic[mosaic == datasets[0].nodata] = 0  # Convert nodata to NaN
     # Convert masked nodata to NaN
 
-    profile = {
-        "driver": "GTiff",
-        "height": mosaic.shape[1],
-        "width": mosaic.shape[2],
-        "count": mosaic.shape[0],  # number of bands
-        "dtype": mosaic.dtype,
-        "crs": dst_crs,
-        "transform": out_transform,
-        "compress": "deflate",  # optional compression
-    }
+    profile = Profile(
+        data={
+            "driver": "GTiff",
+            "height": mosaic.shape[1],
+            "width": mosaic.shape[2],
+            "count": mosaic.shape[0],  # number of bands
+            "dtype": mosaic.dtype,
+            "crs": dst_crs,
+            "transform": out_transform,
+            "compress": "deflate",  # optional compression
+        }
+    )
     with rasterio.open(cache_path, "w", **profile) as dst:
         dst.write(mosaic)
 

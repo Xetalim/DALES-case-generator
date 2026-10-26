@@ -21,7 +21,7 @@ from modular_dales.Emission.create_emis import (
 )
 from modular_dales.modular import simulation_module
 from modular_dales.modular.namelist import nml_field
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 

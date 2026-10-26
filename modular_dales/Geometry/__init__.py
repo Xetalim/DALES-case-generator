@@ -13,7 +13,7 @@ from .geometry_modification import (
     RectangleIdxGeometry,
     RectangleRealGeometry,
 )
-from .GridDales import GridDales, GridDalesOpenBC
+from .grids import GridDales, GridDalesOpenBC
 
 __all__ = [
     "AllGeometry",

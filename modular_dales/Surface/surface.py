@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Union
 from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 if TYPE_CHECKING:
     from modular_dales.modular.time_dependent_scalars import TimeDependentScalar

@@ -1,6 +1,6 @@
 import logging
 
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

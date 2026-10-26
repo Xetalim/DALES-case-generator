@@ -10,7 +10,7 @@ from modular_dales.Emission.emission import (
     EmissionPointSource,
     EmissionTracer,
 )
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
 from modular_dales.vars import *
 

@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
-from typing import Self
+from typing import Any, Self, cast
 
 import numpy as np
 import numpy.typing as npt
 
 from modular_dales.modular.time_dependent_scalars import TimeDependentScalar
-from modular_dales.MODULE_REGISTRY import register_module, register_special_serializing
+from modular_dales.module_registry import register_module
 
 
 @dataclass
@@ -33,10 +33,10 @@ class ShapeFunction:
 
     def at_time(self, time_value: float = 0.0) -> Self:
         params = self.params_at(time_value)
-        return type(self)(**params)
+        constructor = cast(Any, type(self))
+        return cast(Self, constructor(**params))
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class lin(ShapeFunction):
@@ -64,12 +64,11 @@ class lin(ShapeFunction):
 
     @staticmethod
     def evaluate(
-        z: npt.NDArray[np.float64] | float, surf_val: float, ddz: float
-    ) -> npt.NDArray[np.float64] | float:
+        z: npt.NDArray[np.float64], surf_val: float, ddz: float
+    ) -> npt.NDArray[np.float64]:
         return surf_val + ddz * z
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class expsinw(ShapeFunction):
@@ -109,19 +108,18 @@ class expsinw(ShapeFunction):
 
     @staticmethod
     def evaluate(
-        z: npt.NDArray[np.float64] | float,
+        z: npt.NDArray[np.float64],
         surf_val: float,
         H: float,
         amp: float,
         Hp: float,
-    ) -> npt.NDArray[np.float64] | float:
+    ) -> npt.NDArray[np.float64]:
         wbase = -surf_val * (1 - np.exp(-z / H))
         wonion = amp * np.sin(2.0 * np.pi / Hp * z)
         wonion[z > Hp] = 0.0
         return wbase + wonion
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class linmlsurf(ShapeFunction):
@@ -173,7 +171,6 @@ class linmlsurf(ShapeFunction):
         return u
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class exp(ShapeFunction):

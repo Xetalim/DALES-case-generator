@@ -22,7 +22,7 @@ from modular_dales.modular.time_dependent_scalars import (
     resample_time,
     resolve_time_axis,
 )
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 from modular_dales.vars import ProfileVariable
 
 logger = logging.getLogger(__name__)

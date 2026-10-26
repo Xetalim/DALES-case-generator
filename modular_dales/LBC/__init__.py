@@ -4,7 +4,7 @@ from .nest_dales_in_HARMONIE.knmi_harmonie_download import (
     KNMIHarmonieForecastDownloadModule,
 )
 from .nesting_idx import NestingIndices
-from .Nesting_Topology import NestingTopology
+from .nesting_topology import NestingTopology
 from .openbc import (
     Nest_in_Dales,
     Nest_in_Harmonie,

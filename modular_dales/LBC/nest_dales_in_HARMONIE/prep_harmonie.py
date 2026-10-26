@@ -3,9 +3,10 @@
 # Transforms HARMONIE prognostic variables to DALES prognostic variables
 import logging
 
-import dask
+import dask.base
 import numpy as np
 import xarray as xr
+from dask.delayed import delayed
 
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.IO_helpers.raster import fix_lambert_offsets
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
 
-xr.set_options(use_new_combine_kwarg_defaults=True)
+xr.set_options(use_new_combine_kwarg_defaults=True)  # type: ignore[no-untyped-call]
 DATA_LAT_VAR = "latitude"
 DATA_LON_VAR = "longitude"
 # Constants
@@ -74,17 +75,17 @@ class harmoniePrepper:
     ):
         self.input_json = input_json
         self.grid = grid
-        self.ps = None
-        self.thls = None
-        self.data = None
+        self.ps: float | None = None
+        self.thls: float | None = None
+        self.data: xr.Dataset | None = None
         self.transform: Transform | None = None
-        self.p = None
-        self.z = None
-        self.z_int = None
-        self.exnrs = None
-        self.exnr: xr.DataArray | None = None
+        self.p: xr.DataArray | None = None
+        self.z: xr.DataArray | None = None
+        self.z_int: xr.DataArray | None = None
+        self.exnrs: float | None = None
+        self.exnr: np.ndarray | xr.DataArray | None = None
         self.thl: xr.DataArray | None = None
-        self.backrad_profile = None
+        self.backrad_profile: xr.Dataset | None = None
         self.ug: xr.DataArray | None = None
         self.vg: xr.DataArray | None = None
 
@@ -96,7 +97,7 @@ class harmoniePrepper:
             self.input_json, self.grid, variables
         )
 
-        (self.data,) = dask.optimize(self.data)
+        (self.data,) = dask.base.optimize(self.data)
         # Change transform parameters to new DALES origin and update transform
         self.transform = update_transform(self.transform, x_sw, y_sw)
 
@@ -106,6 +107,8 @@ class harmoniePrepper:
             raise ValueError(
                 "Data not loaded. Call load_data() before prep_harmonie()."
             )
+        if self.transform is None:
+            raise ValueError("Coordinate transform was not initialized")
         # Calculate pressure levels
         self.p = calculate_pressure(self.data)
 
@@ -166,12 +169,15 @@ class harmoniePrepper:
         self.ps = float(self.ps)  # save the ps value used for the profile
         self.thls = float(self.thls)  # and thls
         logger.debug("Creating exnr dataarray")
+        ps, exnrs, thls, exnr = self.ps, self.exnrs, self.thls, self.exnr
+        if ps is None or exnrs is None or thls is None or exnr is None:
+            raise RuntimeError("Base Exner profile was not calculated")
         self.exnr = xr.DataArray(
-            np.concatenate([[self.exnrs], self.exnr]),
+            np.concatenate([[exnrs], np.asarray(exnr)]),
             dims=["z"],
             coords={"z": self.z_int},
             name="exnr",
-            attrs={"thls": float(self.thls), "ps": float(self.ps)},
+            attrs={"thls": thls, "ps": ps},
         )
         logger.debug("Assigning exnr dataarray")
         self.data = self.data.assign({"exnr": self.exnr})
@@ -192,9 +198,9 @@ class harmoniePrepper:
                 self.data,
                 turbulence_data_dic,
                 self.z_int,
-                self.ps,
-                self.exnrs,
-                self.thls,
+                ps,
+                exnrs,
+                thls,
                 self.thl,
             )
         logger.debug(
@@ -213,7 +219,7 @@ class harmoniePrepper:
             )
         )
         logger.debug("Optimizing data")
-        (self.data,) = dask.optimize(self.data)
+        (self.data,) = dask.base.optimize(self.data)
 
         return self.data, self.transform
 
@@ -257,14 +263,14 @@ def calculate_geostrophic_wind(
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Geostrophic wind on ``(time, z, y, x)`` from horizontal pressure gradients on height levels."""
     if DATA_LAT_VAR in data.coords:
-        lat = data[DATA_LAT_VAR]
+        lat_values: xr.DataArray | float = data[DATA_LAT_VAR]
     elif getattr(grid, "xlat", None) is not None:
-        lat = float(grid.xlat)
+        lat_values = float(grid.xlat)
     else:
         raise ValueError(
             "Cannot compute geostrophic wind: no latitude in HARMONIE data and grid.xlat is not set"
         )
-    fc = 2.0 * omega * np.sin(np.deg2rad(lat))
+    fc = 2.0 * omega * np.sin(np.deg2rad(lat_values))
     rho = data["p"] / (
         Rd
         * data["t"]
@@ -288,7 +294,7 @@ def calculate_pressure(data: xr.Dataset) -> xr.DataArray:
     ph = (hybrid_A + hybrid_B * data["ps"]).transpose(*data["u"].dims)
     # calculate on pressure levels
     p = 0.5 * (ph.assign_coords({"lev": ph["lev"] - 1}) + ph)
-    return p.sel(lev=data["lev"]).chunk(data["u"].chunks)
+    return p.sel(lev=data["lev"]).chunk({"time": 1, "lev": -1})
 
 
 @logwrap
@@ -322,6 +328,8 @@ def get_ref_height_crop(
             .mean(dim=["x", "y"])
         )
     else:  # Take reference height levels from exnr.inp.xxx
+        if input_json.exnr_file is None:
+            raise ValueError("exnr_file is required when start differs from time0")
         try:
             exnr = np.loadtxt(input_json.exnr_file, skiprows=1)
         except FileNotFoundError:
@@ -329,7 +337,7 @@ def get_ref_height_crop(
                 "No reference height levels found in exnr_file in configuration. This is required as the simulation start is not the same as the HARMONIE start."
             )
             raise
-        z_int = exnr[:, 0]
+        z_int = xr.DataArray(exnr[:, 0], dims=("lev",))
     return z_int
 
 
@@ -339,9 +347,9 @@ def calculate_turbulence_vars(
     data: xr.Dataset,
     turbulence_data_dic: dict[str, xr.DataArray],
     z_int: xr.DataArray,
-    ps_exnr: xr.DataArray,
-    exnrs: xr.DataArray,
-    thls_exnr: xr.DataArray,
+    ps_exnr: float,
+    exnrs: float,
+    thls_exnr: float,
     thl: xr.DataArray,
 ) -> None:
 
@@ -352,29 +360,34 @@ def calculate_turbulence_vars(
         x=slice(grid.xt[0], grid.xt[-1]), y=slice(grid.yt[0], grid.yt[-1])
     ).mean(dim=["x", "y"])
     cbmean = (
-        xr.where(turbulence_data_dic["cb"] > 0.0, turbulence_data_dic["cb"], np.NaN)
+        xr.where(turbulence_data_dic["cb"] > 0.0, turbulence_data_dic["cb"], np.nan)
         .sel(x=slice(grid.xt[0], grid.xt[-1]), y=slice(grid.yt[0], grid.yt[-1]))
         .mean(dim=["x", "y"])
     )
     its = 0
     d2thl = []
     d1thl = []
-    rhobf = calcBaseprof(z_int, thls_exnr, ps_exnr, pref0=p0)
-    for tchunk in thlmean.chunks[0]:
+    rhobf = calcBaseprof(
+        np.asarray(z_int.values, dtype=np.float64), thls_exnr, ps_exnr, pref0=p0
+    )
+    chunks = thlmean.chunks
+    if chunks is None:
+        raise ValueError("Synthetic turbulence requires chunked profile data")
+    for tchunk in chunks[0]:
         ite = its + tchunk
         d1thl.append(
-            dask.delayed(differentiate)(
+            delayed(differentiate)(
                 thlmean.isel({"time": np.arange(its, ite)}), "z", 1, acc=6
             )
         )
         d2thl.append(
-            dask.delayed(differentiate)(
+            delayed(differentiate)(
                 thlmean.isel({"time": np.arange(its, ite)}), "z", 2, acc=6
             )
         )
         its = ite
-    d1thl = dask.delayed(xr.concat)(d2thl, dim="time").compute()
-    d2thl = dask.delayed(xr.concat)(d1thl, dim="time").compute()
+    d1thl = delayed(xr.concat)(d2thl, dim="time").compute()
+    d2thl = delayed(xr.concat)(d1thl, dim="time").compute()
     zi = d2thl.where(d1thl > 0).sel(z=slice(zi_min, zi_max)).idxmax("z").fillna(cbmean)
     rhobs = rhobf[0] - z_int[0] * (rhobf[1] - rhobf[0]) / (z_int[1] - z_int[0])
     ustar = np.sqrt(np.maximum(turbulence_data_dic["tauu"], 0) / rhobs).rename("ustar")
@@ -389,7 +402,7 @@ def calc_base_exner(
     grid: GridDalesOpenBC,
     data: xr.Dataset,
     z_int: xr.DataArray,
-) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray]:
+) -> tuple[float, float, float, np.ndarray]:
     if input_json.start == input_json.time0:  # Calculate exnr function
         z_min = data.z.argmin(dim="z")
 
@@ -413,15 +426,25 @@ def calc_base_exner(
         thls_exnr = tas_exnr / exnrs
         # somehow this function doesn't like being dasked. max size of array going in is (lev,) or (1,) so shouldn't be too big of a problem?
         # if ever you have performance issues, look at among others this function..
-        rhobf = calcBaseprof(z_int, thls_exnr, ps_exnr, pref0=p0)
+        rhobf = calcBaseprof(
+            np.asarray(z_int.values, dtype=np.float64),
+            float(thls_exnr),
+            float(ps_exnr),
+            pref0=p0,
+        )
         p_exnr = (
             rhobf[1:]
             * Rd
             * air_values["t"]
             * (1 + (Rv / Rd - 1) * air_values["qt"] - Rv / Rd * air_values["clwc"])
         )  # Ideal gas law
-        exnr = (p_exnr / p0) ** (Rd / cp)
+        exnr = np.asarray((p_exnr / p0) ** (Rd / cp), dtype=np.float64)
+        ps_value = float(ps_exnr)
+        exnrs_value = float(exnrs)
+        thls_value = float(thls_exnr)
     else:  # Read exnr.inp.xxx
+        if input_json.exnr_file is None:
+            raise ValueError("exnr_file is required when start differs from time0")
         try:
             with open(input_json.exnr_file, "r") as file:
                 line0 = file.readline()
@@ -430,12 +453,12 @@ def calc_base_exner(
                 "No reference height levels found in exnr_file in configuration. This is required as the simulation start is not the same as the HARMONIE start."
             )
             raise
-        thls_exnr = float(line0.split(",")[1].split("thls = ")[-1])
-        ps_exnr = float(line0.split(",")[2].split("ps = ")[-1])
-        exnr = np.loadtxt(input_json.exnr_file, skiprows=1)
-        exnrs = exnr[0, 1]
-        exnr = exnr[1:, 1]
-    return ps_exnr, exnrs, thls_exnr, exnr
+        thls_value = float(line0.split(",")[1].split("thls = ")[-1])
+        ps_value = float(line0.split(",")[2].split("ps = ")[-1])
+        exnr_values = np.loadtxt(input_json.exnr_file, skiprows=1)
+        exnrs_value = float(exnr_values[0, 1])
+        exnr = np.asarray(exnr_values[1:, 1], dtype=np.float64)
+    return ps_value, exnrs_value, thls_value, exnr
 
 
 @logwrap
@@ -462,9 +485,13 @@ def vertical_interp_all(
     """
     z_target = z_new
 
-    def _interp_func(var_col, z_col, z_target=z_target):
+    def _interp_func(
+        var_col: np.ndarray,
+        z_col: np.ndarray,
+        z_target: xr.DataArray = z_target,
+    ) -> np.ndarray:
         # var_col, z_col: 1D arrays of shape (lev,)
-        return np.interp(z_target, z_col, var_col)
+        return np.asarray(np.interp(z_target, z_col, var_col))
 
     interp_vars = {}
     for var in ds.data_vars:
@@ -558,7 +585,7 @@ def calculate_3d_height_levels(data: xr.Dataset) -> xr.DataArray:
             .sortby("lev", ascending=True)
         )
         .transpose(*data["u"].dims)
-        .chunk(data["u"].chunks)
+        .chunk({"time": 1, "lev": -1})
     )
     return z
 
@@ -604,6 +631,9 @@ def update_transform(transform: Transform, x_sw: float, y_sw: float) -> Transfor
 def create_xarray_dataset(
     input_json: OpenBoundaryConfig, grid: GridDalesOpenBC, variables: list[str]
 ) -> tuple[xr.Dataset, Transform, float, float]:
+    if input_json.HARMONIE_ml_glob is None or input_json.HARMONIE_sfc_glob is None:
+        raise ValueError("Both HARMONIE model-level and surface paths are required")
+    time_chunk = input_json.tchunk if input_json.tchunk is not None else -1
     preprocess = True
 
     data: list[xr.DataArray] = []
@@ -620,7 +650,7 @@ def create_xarray_dataset(
             decode_coords="all",
             engine="netcdf4",
             # parallel=False,
-            chunks={"time": input_json.tchunk, "lev": -1},
+            chunks={"time": time_chunk, "lev": -1},
             # chunks={"x": "auto", "y": "auto", "time": "auto", "lev": -1},
         )
     )
@@ -632,7 +662,7 @@ def create_xarray_dataset(
             decode_coords="all",
             # parallel=False,
             engine="netcdf4",
-            chunks={"time": input_json.tchunk},
+            chunks={"time": time_chunk},
         )
     )
 

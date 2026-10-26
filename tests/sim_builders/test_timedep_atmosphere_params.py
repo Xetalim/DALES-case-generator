@@ -13,7 +13,7 @@ from modular_dales.Atmosphere import (
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.modular.time_dependent import (
     TimedependentModule,
 )
@@ -50,11 +50,13 @@ def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
     atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0, ddz=0)))
     atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=5e-4)))
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0, ddz=0)))
-    atmo.add(InterpolatedProfile(
-        variable=tke,
-        z=[0, 4000, 5000],
-        points=[1, 1e-8, 1e-8],
-    ))
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
+    )
 
     sim += ConstantSurfaceTemperatureModule(
         thls=TimeDependentScalar(

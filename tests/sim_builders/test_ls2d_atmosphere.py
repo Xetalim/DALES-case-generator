@@ -14,11 +14,12 @@ from modular_dales.Configuration.output_modules import (
     EasyOutputModule,
 )
 from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.modular.time_dependent import TimedependentModule
 from modular_dales.Radiation.radiation import RadiationModule
 from modular_dales.Surface.LSM import (
+    LandUseSet,
     LSMModule,
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -84,9 +85,10 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
     sim += RadiationModule(iradiation=4)
 
     # Add an LSM module that explicitly opts into LS2D-driven soil and
-    # roughness using FromLS2D. We provide simple uniform initial
-    # profiles that will be overridden by LS2D when available.
+    # roughness using FromLS2D. Explicit uniform thermal sources take
+    # priority over the LS2D soil temperature and moisture.
     lsm = LSMModule(
+        land_use_set=LandUseSet.DEPAC,
         ps=100000.0,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -95,10 +97,13 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
         iinterp_theta=1,
         dz_soil=[0.07, 0.21, 0.72, 2.17],
     )
-    lsm += FromLS2D()
-    lsm += UniformSkinTemperature(skin_temperature=285.0)
-    lsm += UniformSoilTemperature(soil_temperature=[283.0, 283.0, 283.0, 283.0])
-    lsm += UniformSoilMoisture(soil_moisture=[0.3, 0.3, 0.3, 0.3])
+    lsm.add(FromLS2D(), priority=500)
+    lsm.add(UniformSkinTemperature(skin_temperature=285.0), priority=600)
+    lsm.add(
+        UniformSoilTemperature(soil_temperature=[283.0, 283.0, 283.0, 283.0]),
+        priority=600,
+    )
+    lsm.add(UniformSoilMoisture(soil_moisture=[0.3, 0.3, 0.3, 0.3]), priority=600)
     sim += lsm
 
     sim += TimeModule(xtime=6, xday=15, xyear=2016, runtime=24 * 3600.0)
@@ -203,8 +208,8 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
         lev = np.asarray(ds_back["lev"].values, dtype=float)
         assert lev.ndim == 1 and lev.size > 0
 
-    # Inspect LSM soil fields and roughness; they should have been
-    # overridden by LS2D when FromLS2D is present.
+    # Inspect explicit thermal fields; soil indices and roughness still
+    # come from LS2D when FromLS2D is present.
     with xr.open_dataset(lsm_path) as ds_lsm:
         assert "t_soil" in ds_lsm.variables
         assert "theta_soil" in ds_lsm.variables
@@ -214,7 +219,7 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
         theta_soil = np.asarray(ds_lsm["theta_soil"].values, dtype=float)
         index_soil = np.asarray(ds_lsm["index_soil"].values, dtype=float)
 
-        # Expect shape (z, y, x) with non-uniform vertical structure
+        # Expect shape (z, y, x) with the configured soil level count
         assert t_soil.shape[0] == domain_info.kmax_soil
         assert theta_soil.shape[0] == domain_info.kmax_soil
         # All soil indices should be identical scalars from LS2D

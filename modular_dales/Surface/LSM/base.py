@@ -64,15 +64,15 @@ class BaseLSMModule(SurfaceModule):
         required=True,
         metadata={"serialize": True},
     )
-    kmax_soil: int | None = nml_field(
+    kmax_soil: int = nml_field(
         default=4,
         section="DOMAIN",
         key="kmax_soil",
         required=True,
         metadata={"serialize": True},
     )
-    dz_soil: list[float] | None = nml_field(
-        default=None,
+    dz_soil: list[float] = nml_field(
+        default_factory=lambda: [1.89, 0.72, 0.21, 0.07],
         section="NAMLSM",
         key="dz_soil",
         required=True,
@@ -87,7 +87,7 @@ class BaseLSMModule(SurfaceModule):
         repr=False,
     )
 
-    def do_config(self):
+    def do_config(self) -> None:
         for param_name in ("iinterp_t", "iinterp_theta"):
             value = getattr(self, param_name)
             if value is None:
@@ -110,14 +110,8 @@ class BaseLSMModule(SurfaceModule):
 
         logger.info("%s: configured base NAMSURFACE/NAMLSM options", self.module_name)
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         van_genuchten = resolve_van_genuchten_path(self.sim)
         self.sim.required_files["van_genuchten_parameters.nc"] = (
             van_genuchten.as_posix()
         )
-
-    def prepare_calculation(self):
-        return None
-
-    def write_files(self):
-        return None

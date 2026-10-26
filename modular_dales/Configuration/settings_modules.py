@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from modular_dales.Configuration.output_modules import prepare_point_indices
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 
 @register_module

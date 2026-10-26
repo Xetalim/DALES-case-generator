@@ -8,7 +8,7 @@ from modular_dales.Atmosphere import (
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.modular import dales_simulation
 from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
 from modular_dales.vars import *

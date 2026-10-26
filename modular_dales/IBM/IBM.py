@@ -15,15 +15,14 @@ from modular_dales.Geometry import (
 from modular_dales.Geometry.geometry_modification import GeometricModification
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module, register_singleton
+from modular_dales.module_registry import register_module
 
-from .download_AHN import get_process_ahn
+from .download_ahn import get_process_ahn
 from .global_dem import get_process_global_dem
 
 logger = logging.getLogger(__name__)
 
 
-@register_singleton
 @register_module
 @dataclass
 class FromAHN:

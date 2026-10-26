@@ -11,22 +11,20 @@ from typing import Any, Self, cast
 import f90nml
 import yaml
 
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.helpers import package_resource_path
 from modular_dales.modular.forcing import ForcingSet, collect_forcings
 from modular_dales.modular.simulation_module import set_nml_section, simulation_module
-from modular_dales.MODULE_REGISTRY import MODULE_REGISTRY
+from modular_dales.module_registry import module_registry
 
+from .namelist import Namelist, NamelistDoc
 from .serialize_deserialize import _deserialize_dataclass, asdict_user_set
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
 
-type Namelist = dict[str, dict[str, Any]]
-type NamelistDoc = dict[str, dict[str, str]]
 
-
-def yaml_equivalent_of_path(dumper, data):
+def yaml_equivalent_of_path(dumper: yaml.Dumper, data: Path) -> yaml.Node:
     return dumper.represent_str(str(data))
 
 
@@ -72,7 +70,7 @@ def check_core_amounts(machine_conf: Any, nml: Namelist) -> tuple[int, int, int]
     nprocx = run_group.get("nprocx", None)
     nprocy = run_group.get("nprocy", None)
 
-    def valid_decomposition(nprocx, nprocy):
+    def valid_decomposition(nprocx: int, nprocy: int) -> bool:
         return (itot / nprocx) >= 4 and (jtot / nprocy) >= 4
 
     if (nprocx == 0) and (nprocy == 0):
@@ -408,7 +406,7 @@ class dales_simulation:
             )
 
         # Write the namelist to the case directory
-        self.nml.write(
+        cast(Any, self.nml).write(
             self.output_path / f"input/namoptions.{self.exp_id:03d}", force=True
         )
         with open(
@@ -430,7 +428,7 @@ class dales_simulation:
                 encoding="utf-8",
             ) as f:
                 f.write(yaml_str)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.critical("Failed to save simulation configuration to YAML: %s", exc)
 
     def apply_job_configuration(self) -> None:
@@ -624,7 +622,7 @@ class dales_simulation:
             else:
                 raise ValueError(f"Unrecognized module specification: {item!r}")
 
-            cls = MODULE_REGISTRY.get(mod_type)
+            cls = module_registry.get(mod_type)
             if cls is None:
                 raise ValueError(f"Unknown module type: {mod_type}")
 

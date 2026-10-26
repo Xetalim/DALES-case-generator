@@ -10,14 +10,15 @@ from modular_dales.LBC.nest_dales_in_HARMONIE.knmi_api import (
     ForecastDownloadResult,
     download_harmonie_forecast_pair,
 )
+from modular_dales.modular import dales_simulation
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
 
 def resolve_knmi_harmonie_download_module(
-    sim,
+    sim: dales_simulation,
 ) -> Optional["KNMIHarmonieForecastDownloadModule"]:
     if sim is None:
         return None
@@ -150,10 +151,10 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
             return bool(self.check_disk_space)
         return True
 
-    def check_settings(self):
+    def check_settings(self) -> None:
         self._resolve_forecast_datetime()
 
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         forecast_datetime = self._resolve_forecast_datetime()
         output_root = self._resolve_output_root()
         check_disk_space = self._resolve_check_disk_space()
@@ -185,6 +186,3 @@ class KNMIHarmonieForecastDownloadModule(simulation_module):
             forecast_datetime,
             output_root,
         )
-
-    def write_files(self):
-        return None

@@ -1,5 +1,6 @@
 import logging
 import math
+from typing import cast
 
 import numpy as np
 import xarray as xr
@@ -40,7 +41,7 @@ def calcBaseprof(
         / (lapserate[0] * rd)
     )
     tmat[0] = tsurf + lapserate[0] * (zmat[0] - zsurf)
-    for j in np.arange(1, 4):
+    for j in range(1, 4):
         if abs(lapserate[j]) < 1e-10:
             pmat[j] = np.exp(
                 (
@@ -182,10 +183,7 @@ def interp_z(z: xr.DataArray, data: xr.DataArray, z_int: xr.DataArray) -> xr.Dat
     def _interp_1d(
         z_new: xr.DataArray, z_col: xr.DataArray, data_col: xr.DataArray
     ) -> np.ndarray:
-        print(z_new.lev)
-        print(z_col.lev)
-        print(data_col.lev)
-        return np.interp(z_new, z_col, data_col)
+        return np.atleast_1d(np.interp(z_new, z_col, data_col))
 
     data_int = xr.apply_ufunc(
         _interp_1d,
@@ -199,7 +197,7 @@ def interp_z(z: xr.DataArray, data: xr.DataArray, z_int: xr.DataArray) -> xr.Dat
         output_dtypes=[data.dtype],
     )
 
-    return data_int
+    return cast(xr.DataArray, data_int)
 
 
 # def load_data(var, index, drop=False):

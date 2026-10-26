@@ -9,7 +9,7 @@ from typing import Any
 import netCDF4 as nc
 import numpy as np
 
-from modular_dales.Geometry import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
+import xarray as xr
 
 from modular_dales.Geometry import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
@@ -25,7 +26,7 @@ def boundary_fields_fine(
     grid: GridDalesOpenBC,
     grid_indices: "NestingIndices",
     chunks: dict[str, int] | None = None,
-):
+) -> xr.Dataset:
     if not grid_indices:
         raise ValueError("No nesting indices provided!")
 
@@ -50,7 +51,9 @@ def boundary_fields_fine(
 
 
 @logwrap
-def set_openboundary_attrs(input_json: OpenBoundaryConfig, openboundaries):
+def set_openboundary_attrs(
+    input_json: OpenBoundaryConfig, openboundaries: xr.Dataset
+) -> xr.Dataset:
     dts = (
         openboundaries.time.values.astype("datetime64[s]")
         - np.datetime64(input_json.time0, "s")

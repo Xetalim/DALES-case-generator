@@ -4,6 +4,9 @@ from collections.abc import Mapping
 from dataclasses import MISSING, Field, dataclass, field
 from typing import Any
 
+type Namelist = dict[str, dict[str, Any]]
+type NamelistDoc = dict[str, dict[str, str]]
+
 
 @dataclass(frozen=True)
 class NamelistSpec:

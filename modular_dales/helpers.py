@@ -20,7 +20,11 @@ def package_resource_path(*parts: str) -> Iterator[Path]:
         yield path
 
 
-def _machine_conf_value(sim: dales_simulation, *keys: str, default: Any = None) -> Any:
+def _machine_conf_value(
+    sim: dales_simulation | None, *keys: str, default: Any = None
+) -> Any:
+    if sim is None:
+        return default
     machine_conf = getattr(sim, "machine_conf", None) or {}
     for key in keys:
         if key in machine_conf:

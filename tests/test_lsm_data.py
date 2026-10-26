@@ -4,15 +4,35 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.Surface.LSM import lsm_netcdf, lsm_slurb, lsm_sources
-from modular_dales.Surface.LSM.LSM import FromLCZ, FromNetCDF, LSMModule
 from modular_dales.Surface.LSM.lsm_data import (
     LAND_USE_PARAMETERS,
     LandUseFields,
     SoilFields,
 )
-from modular_dales.Surface.LSM.LSM_output_dales import LSM_output_dales
+from modular_dales.Surface.LSM.lsm_module import LSMModule
+from modular_dales.Surface.LSM.lsm_output import LSM_output_dales
+from modular_dales.Surface.LSM.lsm_sources import (
+    FromBofek,
+    FromLCZ,
+    FromNetCDF,
+    FromTop10,
+)
+from modular_dales.Surface.LSM.lu_modifications import (
+    LandUseModification,
+    LandUseModifications,
+)
+from modular_dales.Surface.LSM.modular_temps_moisture import (
+    SoilTemperatureMoistureFromHarmonie,
+    UniformSkinTemperature,
+    UniformSoilMoisture,
+    UniformSoilTemperature,
+    VaryingSkinTemperature,
+    VaryingSoilMoisture,
+    VaryingSoilTemperature,
+)
 from modular_dales.Surface.LSM.translation_tables.landuse_types import (
     LandUseSet,
     get_land_use_definitions,
@@ -111,6 +131,174 @@ def test_unknown_land_use_set_has_clear_error():
         get_land_use_definitions("unknown")
 
 
+def test_lsm_requires_explicit_land_use_set():
+    with pytest.raises(TypeError, match="land_use_set"):
+        LSMModule()
+
+
+def test_lsm_rejects_unsupported_land_use_source_before_loading(grid):
+    module = LSMModule(land_use_set=LandUseSet.BASIC)
+    module.add(FromLCZ(), priority=100)
+    with pytest.raises(
+        ValueError, match="FromLCZ does not support land-use set 'basic'"
+    ):
+        module._apply_sources(LSM_output_dales(grid, LandUseSet.BASIC))
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        FromLCZ(),
+        FromNetCDF(path="surface.nc"),
+        FromTop10(),
+        FromBofek(),
+        FromLS2D(),
+        UniformSkinTemperature(290.0),
+        VaryingSkinTemperature(np.full((2, 2), 290.0)),
+        UniformSoilTemperature([289.0] * 4),
+        VaryingSoilTemperature(np.full((4, 2, 2), 289.0)),
+        UniformSoilMoisture([0.2] * 4),
+        VaryingSoilMoisture(np.full((4, 2, 2), 0.2)),
+        SoilTemperatureMoistureFromHarmonie(
+            "soil.nc", [0.1, 0.2, 0.3, 0.4], "2023-01-01T12:00:00"
+        ),
+        LandUseModification(type="grs"),
+        LandUseModifications([LandUseModification(type="grs")]),
+    ],
+)
+@pytest.mark.parametrize("as_list", [False, True])
+def test_lsm_sources_require_explicit_priority(source, as_list):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    with pytest.raises(TypeError, match="required keyword-only argument: 'priority'"):
+        module.add([source] if as_list else source)
+    assert module.sources == []
+    module.add([source] if as_list else source, priority=100)
+    assert len(module.sources) == 1
+    assert module.sources[0].source is source
+    assert module.sources[0].priority == 100
+
+
+def test_lsm_rejects_raw_source_in_constructor_before_application(grid):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC, sources=[FromLCZ()])
+    with pytest.raises(TypeError, match=r"Use LSMModule\.add"):
+        module._apply_sources(LSM_output_dales(grid))
+
+
+@pytest.mark.parametrize("source", [object(), 290.0, (UniformSkinTemperature(290.0),)])
+@pytest.mark.parametrize("as_list", [False, True])
+def test_lsm_add_rejects_unsupported_sources(source, as_list):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    with pytest.raises(TypeError, match="Unsupported LSM source type"):
+        module.add([source] if as_list else source, priority=100)
+    assert module.sources == []
+
+
+@pytest.mark.parametrize("priority", [None, 1.5, "100"])
+@pytest.mark.parametrize("as_list", [False, True])
+def test_lsm_add_rejects_non_integer_priority_without_mutation(priority, as_list):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(FromLCZ(), priority=100)
+    original_entries = module.sources.copy()
+    source = UniformSkinTemperature(290.0)
+    with pytest.raises(TypeError, match="priority must be an integer"):
+        module.add([source, FromLCZ()] if as_list else source, priority=priority)
+    assert module.sources == original_entries
+    assert module.sources[0] is original_entries[0]
+
+
+@pytest.mark.parametrize("priority", [-100, 0, 100])
+def test_lsm_add_accepts_integer_priorities(priority):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    source = UniformSkinTemperature(290.0)
+
+    module.add(source, priority=priority)
+
+    assert module.sources[0].source is source
+    assert module.sources[0].priority == priority
+
+
+def test_lsm_add_requires_keyword_only_priority():
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    with pytest.raises(TypeError):
+        module.add(FromLCZ(), 100)
+    assert module.sources == []
+
+
+@pytest.mark.parametrize("invalid_index", [0, 1, 2])
+@pytest.mark.parametrize("invalid_source", [object(), [UniformSkinTemperature(290.0)]])
+def test_lsm_add_validates_batches_atomically(invalid_index, invalid_source):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(FromLCZ(), priority=100)
+    original_entries = module.sources.copy()
+    sources = [UniformSkinTemperature(290.0), FromLCZ()]
+    sources.insert(invalid_index, invalid_source)
+
+    with pytest.raises(TypeError, match="Unsupported LSM source type"):
+        module.add(sources, priority=200)
+
+    assert module.sources == original_entries
+    assert module.sources[0] is original_entries[0]
+
+
+def test_lsm_configuration_uses_add_interface():
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    modification = LandUseModification(type="grs")
+    source = FromLCZ()
+
+    module.add(modification, priority=200)
+    module.add(source, priority=100)
+
+    assert not hasattr(module, "__add__")
+    assert not hasattr(module, "__iadd__")
+    assert not hasattr(module, "land_use_modifications")
+    assert not hasattr(module, "profiles")
+    assert [entry.source for entry in module.sources] == [modification, source]
+    assert [entry.priority for entry in module.sources] == [200, 100]
+
+
+def test_lsm_sources_apply_in_priority_order():
+    module = LSMModule(land_use_set=LandUseSet.IFS)
+    module.add(FromBofek(), priority=40)
+    module.add(FromTop10(), priority=30)
+    module.add(FromNetCDF(path="surface.nc"), priority=20)
+    module.add(FromLCZ(), priority=10)
+    applied = []
+    module._apply_lcz_source = Mock(side_effect=lambda *_: applied.append("lcz"))
+    module._apply_netcdf_source = Mock(side_effect=lambda *_: applied.append("netcdf"))
+    module._apply_top10_overlay = Mock(side_effect=lambda *_: applied.append("top10"))
+    module._apply_bofek_overlay = Mock(side_effect=lambda *_: applied.append("bofek"))
+
+    module._apply_sources(Mock())
+
+    assert applied == ["lcz", "netcdf", "top10", "bofek"]
+
+
+def test_lsm_adds_thermal_sources_without_reordering():
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    skin = UniformSkinTemperature(290.0)
+    temperature = UniformSoilTemperature([289.0, 288.0])
+    moisture = UniformSoilMoisture([0.2, 0.3])
+    replacement = UniformSoilTemperature([280.0, 279.0])
+
+    module.add(skin, priority=40)
+    module.add([temperature, moisture], priority=10)
+    module.add(replacement, priority=20)
+
+    assert [entry.source for entry in module.sources] == [
+        skin,
+        temperature,
+        moisture,
+        replacement,
+    ]
+    assert all(
+        entry.source is source
+        for entry, source in zip(
+            module.sources, [skin, temperature, moisture, replacement]
+        )
+    )
+    assert [entry.priority for entry in module.sources] == [40, 10, 10, 20]
+
+
 @pytest.fixture
 def grid():
     from modular_dales.modular.dales_simulation import dales_simulation
@@ -133,6 +321,208 @@ def grid():
     grid._attach_to_sim(sim)
     sim.grid = grid
     return grid
+
+
+@pytest.fixture
+def lcz_loader(grid, monkeypatch):
+    monkeypatch.setattr(grid, "crs", "EPSG:28992")
+    dataset = xr.Dataset(
+        {
+            "ifs_land_cover": (("y", "x"), np.full((2, 2), 20)),
+            "index_soil": (("y", "x"), np.full((2, 2), 3, dtype=np.int32)),
+        }
+    )
+    loader = Mock(return_value=dataset)
+    monkeypatch.setattr(
+        "modular_dales.Surface.LSM.LCZ.get_from_lcz.do_everything", loader
+    )
+    return loader
+
+
+@pytest.mark.parametrize("skin_priority, before_lcz", [(200, 273.15), (0, 295.0)])
+def test_skin_temperature_priority_relative_to_lcz(
+    grid, lcz_loader, skin_priority, before_lcz
+):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(UniformSkinTemperature(295.0), priority=skin_priority)
+    module.add(FromLCZ(), priority=100)
+    module._attach_to_sim(grid.sim)
+    dataset = lcz_loader.return_value
+
+    def inspect_before_lcz(*args, **kwargs):
+        writer = module.lsm_writer
+        assert isinstance(writer, LSM_output_dales)
+        for tile in writer.land_use_fields.values():
+            np.testing.assert_allclose(tile.tskin, before_lcz)
+        return dataset
+
+    lcz_loader.side_effect = inspect_before_lcz
+
+    module.prepare_calculation()
+
+    lcz_loader.assert_called_once()
+    writer = module.lsm_writer
+    assert isinstance(writer, LSM_output_dales)
+    assert set(writer.land_use_fields) == {"urb"}
+    np.testing.assert_allclose(writer.land_use_fields["urb"].tskin, 295.0)
+    np.testing.assert_allclose(writer.cover_tot, 1.0)
+
+
+@pytest.mark.parametrize("priority", [0, 200])
+@pytest.mark.parametrize("collection", [False, True])
+def test_land_use_modifications_run_on_both_sides_of_lcz(
+    grid, lcz_loader, priority, collection
+):
+    modification = LandUseModification(type="grs")
+    source = LandUseModifications([modification]) if collection else modification
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(source, priority=priority)
+    module.add(FromLCZ(), priority=100)
+    module._attach_to_sim(grid.sim)
+    writer = LSM_output_dales(grid)
+    writer.standard_fill_geometry_modification()
+    dataset = lcz_loader.return_value
+
+    def inspect_before_lcz(*args, **kwargs):
+        np.testing.assert_allclose(
+            writer.land_use_fields["grs"].cover, 1.0 if priority < 100 else 0.0
+        )
+        return dataset
+
+    lcz_loader.side_effect = inspect_before_lcz
+
+    module._apply_sources(writer)
+
+    lcz_loader.assert_called_once()
+    np.testing.assert_allclose(
+        writer.land_use_fields["grs"].cover, 1.0 if priority > 100 else 0.0
+    )
+    np.testing.assert_allclose(
+        writer.land_use_fields["urb"].cover, 0.0 if priority > 100 else 1.0
+    )
+    np.testing.assert_allclose(writer.cover_tot, 1.0)
+
+
+@pytest.mark.parametrize("varying", [False, True])
+def test_soil_sources_apply_independently_by_priority(grid, varying):
+    temperature = np.arange(16, dtype=float).reshape(4, 2, 2) + 280.0
+    moisture = np.arange(16, dtype=float).reshape(4, 2, 2) / 100.0 + 0.1
+    if varying:
+        temperature_source = VaryingSoilTemperature(temperature)
+        moisture_source = VaryingSoilMoisture(moisture)
+    else:
+        temperature_source = UniformSoilTemperature([281.0, 282.0, 283.0, 284.0])
+        moisture_source = UniformSoilMoisture([0.1, 0.2, 0.3, 0.4])
+        temperature = np.broadcast_to(
+            np.array(temperature_source.soil_temperature)[:, None, None], (4, 2, 2)
+        )
+        moisture = np.broadcast_to(
+            np.array(moisture_source.soil_moisture)[:, None, None], (4, 2, 2)
+        )
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(temperature_source, priority=40)
+    module.add(moisture_source, priority=30)
+    module.add(UniformSoilTemperature([270.0] * 4), priority=10)
+    module.add(UniformSoilMoisture([0.01] * 4), priority=20)
+    writer = LSM_output_dales(grid)
+    writer.standard_fill_geometry_modification()
+
+    module._apply_sources(writer)
+
+    np.testing.assert_allclose(writer.soil.t_soil, temperature)
+    np.testing.assert_allclose(writer.soil.theta_soil, moisture)
+    for tile in writer.land_use_fields.values():
+        np.testing.assert_allclose(tile.tskin, 273.15)
+
+
+def test_varying_skin_temperature_with_aquatic_override(grid, lcz_loader):
+    temperature = np.array([[290.0, 291.0], [292.0, 293.0]])
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(
+        VaryingSkinTemperature(temperature, aquatic_skin_temperature=285.0),
+        priority=200,
+    )
+    module.add(FromLCZ(), priority=100)
+    module._attach_to_sim(grid.sim)
+    writer = LSM_output_dales(grid)
+    writer.standard_fill_geometry_modification()
+
+    module._apply_sources(writer)
+
+    lcz_loader.assert_called_once()
+    for name, tile in writer.land_use_fields.items():
+        expected = 285.0 if writer.land_use[name].definition.laqu else temperature
+        np.testing.assert_allclose(tile.tskin, expected)
+    temperature.fill(0.0)
+    np.testing.assert_allclose(
+        writer.land_use_fields["urb"].tskin, [[290.0, 291.0], [292.0, 293.0]]
+    )
+
+
+@pytest.mark.parametrize("temperatures", [(290.0, 295.0), (295.0, 290.0)])
+@pytest.mark.parametrize("as_list", [False, True])
+def test_equal_priority_sources_preserve_insertion_order(grid, temperatures, as_list):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    sources = [UniformSkinTemperature(temperature) for temperature in temperatures]
+    if as_list:
+        module.add(sources, priority=100)
+    else:
+        for source in sources:
+            module.add(source, priority=100)
+    writer = LSM_output_dales(grid)
+
+    module._apply_sources(writer)
+
+    for tile in writer.land_use_fields.values():
+        np.testing.assert_allclose(tile.tskin, temperatures[-1])
+
+
+@pytest.mark.parametrize("use_as_tskin", [False, True])
+def test_harmonie_source_dispatches_soil_and_optional_skin(
+    grid, monkeypatch, use_as_tskin
+):
+    source = SoilTemperatureMoistureFromHarmonie(
+        "soil.nc",
+        [0.1, 0.2, 0.3, 0.4],
+        "2023-01-01T12:00:00",
+        use_as_tskin=use_as_tskin,
+        aquatic_skin_temperature=285.0,
+    )
+    loader = Mock()
+    temperature = np.arange(16, dtype=float).reshape(4, 2, 2) + 280.0
+    moisture = np.arange(16, dtype=float).reshape(4, 2, 2) / 100.0
+    skin = np.array([[290.0, 291.0], [292.0, 293.0]])
+    temperature_getter = Mock(return_value=temperature)
+    moisture_getter = Mock(return_value=moisture)
+    skin_getter = Mock(return_value=skin)
+    monkeypatch.setattr(source, "get_soil_temp_moisture_arrays", loader)
+    monkeypatch.setattr(source, "get_soil_temperature_array", temperature_getter)
+    monkeypatch.setattr(source, "get_soil_moisture_array", moisture_getter)
+    monkeypatch.setattr(source, "get_tskin_array", skin_getter)
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(source, priority=100)
+    module._attach_to_sim(grid.sim)
+    writer = LSM_output_dales(grid)
+    writer.standard_fill_geometry_modification()
+
+    module._apply_sources(writer)
+
+    loader.assert_called_once_with(grid, module.dz_soil)
+    temperature_getter.assert_called_once_with(grid, module.dz_soil)
+    moisture_getter.assert_called_once_with(grid, module.dz_soil)
+    np.testing.assert_allclose(writer.soil.t_soil, temperature)
+    np.testing.assert_allclose(writer.soil.theta_soil, moisture)
+    if use_as_tskin:
+        skin_getter.assert_called_once_with()
+    else:
+        skin_getter.assert_not_called()
+    for name, tile in writer.land_use_fields.items():
+        expected = (
+            (285.0 if writer.land_use[name].definition.laqu else skin)
+            if use_as_tskin
+            else 273.15
+        )
+        np.testing.assert_allclose(tile.tskin, expected)
 
 
 def test_depac_slurb_has_only_one_urban_tile(grid):
@@ -166,11 +556,11 @@ def test_from_lcz_supports_depac_with_slurb(grid, monkeypatch, include_slurb):
     )
     loader = Mock(return_value=dataset)
     monkeypatch.setattr(
-        "modular_dales.Surface.LSM.LSM.get_from_LCZ.do_everything",
+        "modular_dales.Surface.LSM.LCZ.get_from_lcz.do_everything",
         loader,
     )
     writer = LSM_output_dales(grid, LandUseSet.DEPAC, include_slurb=include_slurb)
-    module = LSMModule()
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(grid.sim)
     generator = Mock() if include_slurb else None
     module._init_slurb_generator = Mock(return_value=generator)
@@ -184,7 +574,6 @@ def test_from_lcz_supports_depac_with_slurb(grid, monkeypatch, include_slurb):
     urban = "urb"
     np.testing.assert_allclose(writer.land_use_fields[urban].cover, [[1, 0], [0, 0]])
     if include_slurb:
-        assert "urb" not in writer.land_use
         assert apply_slurb.call_args.args[0] is dataset
         assert apply_slurb.call_args.args[1] is generator
         assert apply_slurb.call_args.args[2] is writer.land_use_fields[urban].cover
@@ -202,9 +591,9 @@ def test_lcz_source_requires_projection_before_loading(grid, monkeypatch):
     monkeypatch.setattr(grid, "crs", None)
     loader = Mock()
     monkeypatch.setattr(
-        "modular_dales.Surface.LSM.LSM.get_from_LCZ.do_everything", loader
+        "modular_dales.Surface.LSM.LCZ.get_from_lcz.do_everything", loader
     )
-    module = LSMModule()
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(grid.sim)
     with pytest.raises(ValueError, match="valid projection"):
         module._apply_lcz_source(LSM_output_dales(grid), FromLCZ())
@@ -231,7 +620,7 @@ def test_netcdf_source_finalizes_depac_and_optional_slurb(
     )
     apply_slurb = Mock()
     monkeypatch.setattr(lsm_slurb, "apply_from_netcdf", apply_slurb)
-    module = LSMModule()
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(grid.sim)
     generator = Mock() if include_slurb else None
     module._init_slurb_generator = Mock(return_value=generator)
@@ -272,33 +661,22 @@ def test_debug_initializes_arrays_without_serialization(grid, monkeypatch):
 def test_preparation_preserves_stage_order():
     from modular_dales.modular.dales_simulation import dales_simulation
 
-    module = LSMModule()
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(dales_simulation("test", {}))
     stages = Mock()
     writer = Mock(nlu=3)
-    module.exists_soil_temp_moisture_skin_temp = Mock()
     module.module_exists = Mock(return_value=False)
     module._create_lsm_writer = Mock(return_value=writer)
     stages.attach_mock(writer.standard_fill_geometry_modification, "initialize")
-    for name in (
-        "_apply_land_use_source",
-        "_apply_top10_overlay",
-        "_apply_bofek_overlay",
-        "_apply_thermal_moisture",
-        "_apply_ls2d_override",
-    ):
+    for name in ("_apply_sources",):
         helper = Mock()
         setattr(module, name, helper)
         stages.attach_mock(helper, name)
     stages.attach_mock(writer.trim_landuse, "trim")
-    module.prepare_calculations()
+    module.prepare_calculation()
     assert stages.mock_calls == [
         call.initialize(),
-        call._apply_land_use_source(writer),
-        call._apply_top10_overlay(writer),
-        call._apply_bofek_overlay(writer),
-        call._apply_thermal_moisture(writer),
-        call._apply_ls2d_override(writer),
+        call._apply_sources(writer),
         call.trim(),
     ]
     assert module.nlu == 4
@@ -314,8 +692,8 @@ def test_netcdf_output_uses_typed_fields(grid, tmp_path):
     lsm_netcdf.save_netcdf(writer, tmp_path, 1)
     with xr.open_dataset(tmp_path / "lsm.inp_001.nc") as dataset:
         assert dataset.sizes["nlu"] == 2
-        assert "cover_urb" not in dataset
-        np.testing.assert_allclose(dataset["cover_slb"], 0.3)
+        assert "cover_slb" not in dataset
+        np.testing.assert_allclose(dataset["cover_urb"], 0.3)
         np.testing.assert_allclose(dataset["cover_tot"], 1.0)
         assert dataset["t_soil"].dims == ("z", "y", "x")
         np.testing.assert_array_equal(

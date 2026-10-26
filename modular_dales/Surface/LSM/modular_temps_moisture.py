@@ -6,10 +6,9 @@ from numpy.typing import NDArray
 
 from modular_dales.Geometry import GridDales
 from modular_dales.IO_helpers.raster import fix_lambert_offsets
-from modular_dales.MODULE_REGISTRY import register_module, register_special_serializing
+from modular_dales.module_registry import register_module
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class VaryingSkinTemperature:
@@ -21,7 +20,6 @@ class VaryingSkinTemperature:
     """
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class VaryingSoilTemperature:
@@ -32,7 +30,6 @@ class VaryingSoilTemperature:
     """
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class VaryingSoilMoisture:
@@ -43,7 +40,6 @@ class VaryingSoilMoisture:
     """
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class UniformSkinTemperature:
@@ -52,7 +48,6 @@ class UniformSkinTemperature:
     """Uniform skin temperature (K) across the horizontal domain."""
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class UniformSoilTemperature:
@@ -63,7 +58,6 @@ class UniformSoilTemperature:
     """
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class UniformSoilMoisture:
@@ -74,7 +68,6 @@ class UniformSoilMoisture:
     """
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class SoilTemperatureMoistureFromHarmonie:
@@ -94,6 +87,16 @@ class SoilTemperatureMoistureFromHarmonie:
     data: xr.Dataset | None = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
+    tskin: xr.DataArray | None = field(
+        default=None, init=False, repr=False, metadata={"serialize": False}
+    )
+    theta_soil: xr.DataArray | None = field(
+        default=None, init=False, repr=False, metadata={"serialize": False}
+    )
+    t_soil: xr.DataArray | None = field(
+        default=None, init=False, repr=False, metadata={"serialize": False}
+    )
+
     grid: GridDales | None = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
@@ -162,33 +165,36 @@ class SoilTemperatureMoistureFromHarmonie:
         )
         if self.use_as_tskin:
             self.data["tskin"] = tskin
+        self.theta_soil = self.data.theta_soil
+        self.t_soil = self.data.t_soil
+        self.tskin = self.data.tskin if self.use_as_tskin else None
 
     def get_soil_moisture_array(
         self, grid: GridDales, dz_soil: np.ndarray | list[float]
     ) -> NDArray[np.float64]:
         if self.data is None:
             self.get_soil_temp_moisture_arrays(grid, dz_soil)
-        if self.data is None:
-            raise ValueError("Failed loading data somehow")
-        return self.data.theta_soil.values
+        if self.theta_soil is None:
+            raise ValueError("Failed adding theta_soil somehow")
+        return self.theta_soil.values
 
     def get_tskin_array(self) -> NDArray[np.float64]:
         if self.data is None:
             raise ValueError(
                 "Data not loaded. Call get_soil_temp_moisture_arrays first to load the data from the HARMONIE soil file."
             )
-        if self.data is None:
-            raise ValueError("Failed loading data somehow")
-        return self.data.tskin.values
+        if self.tskin is None:
+            raise ValueError("Failed adding tskin somehow")
+        return self.tskin.values
 
     def get_soil_temperature_array(
         self, grid: GridDales, dz_soil: np.ndarray | list[float]
     ) -> NDArray[np.float64]:
         if self.data is None:
             self.get_soil_temp_moisture_arrays(grid, dz_soil)
-        if self.data is None:
-            raise ValueError("Failed loading data somehow")
-        return self.data.t_soil.values
+        if self.t_soil is None:
+            raise ValueError("Failed adding t_soil somehow")
+        return self.t_soil.values
 
 
 SkinTempSpec = (
@@ -206,3 +212,5 @@ SoilTempSpec = (
 SoilMoistureSpec = (
     UniformSoilMoisture | VaryingSoilMoisture | SoilTemperatureMoistureFromHarmonie
 )
+
+LSMProfileSpec = SkinTempSpec | SoilTempSpec | SoilMoistureSpec

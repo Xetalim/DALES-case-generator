@@ -13,8 +13,7 @@ from numpy.typing import NDArray
 from modular_dales.Geometry.geometry_modification import (
     ModifierClass,
 )
-from modular_dales.Geometry.GridDales import GridDales
-from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.Surface.LSM.lsm_data import (
     LAND_USE_PARAMETERS,
     CoverParameter,
@@ -25,6 +24,7 @@ from modular_dales.Surface.LSM.lsm_data import (
     LandUseState,
     SoilFields,
 )
+from modular_dales.Surface.LSM.lu_modifications import LandUseModification
 from modular_dales.Surface.LSM.translation_tables.landuse_types import (
     LandUseSet,
     get_land_use_definitions,
@@ -169,7 +169,7 @@ class LSM_output_dales:
             tile.cover[:] = state.lu_frac
             tile.c_veg[:] = state.lu_frac
             tile.lutype.fill(ifs_id)
-            tile.tskin.fill(0.0)
+            tile.tskin[tile.tskin <= 0.0] = -1
             for parameter in LAND_USE_PARAMETERS:
                 if parameter in ("cover", "c_veg", "lutype", "tskin"):
                     continue

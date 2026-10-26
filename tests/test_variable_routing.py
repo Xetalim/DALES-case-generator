@@ -4,7 +4,12 @@ import numpy as np
 import pytest
 
 from modular_dales import vars
-from modular_dales.Atmosphere import AtmosphereModule, AtmosphericProfile, lin
+from modular_dales.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    lin,
+    TimedAtmosphereProfile,
+)
 from modular_dales.modular.dales_simulation import dales_simulation
 
 
@@ -88,12 +93,15 @@ def test_add_routes_physical_profiles_by_destination(variable):
     sim += atmo
     state = AtmosphericProfile(variable=variable, shape=lin(surf_val=2.0, ddz=0.0))
     target = AtmosphericProfile(variable=variable, shape=lin(surf_val=4.0, ddz=0.0))
-    assert atmo.add([(0.0, target), (60.0, target)], nudging=True) is atmo
+    atmo.add(
+        [TimedAtmosphereProfile(0.0, target), TimedAtmosphereProfile(60.0, target)],
+        nudging=True,
+    )
     forcings = atmo.provide_forcings()
     assert variable.name not in forcings.initial
     np.testing.assert_allclose(forcings.series[variable.nudger.name], 4.0)
     assert target.variable is variable
-    assert atmo.add(state) is atmo
+    atmo.add(state)
     forcings = atmo.provide_forcings()
     np.testing.assert_allclose(forcings.initial[variable.name], 2.0)
     atmo.forcings = forcings

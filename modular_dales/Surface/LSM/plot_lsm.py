@@ -6,6 +6,8 @@ import pathlib
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
+from matplotlib.axes import Axes
+from matplotlib.cm import ScalarMappable
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 logger = logging.getLogger(__name__)
@@ -22,13 +24,13 @@ def _decode_text(val: bytes | str) -> str:
 
 
 def _plot_2d_field(
-    ax: plt.Axes,
+    ax: Axes,
     x: np.ndarray,
     y: np.ndarray,
     data_2d: np.ndarray,
     title: str,
     cmap: str = "viridis",
-) -> plt.collections.QuadMesh:
+) -> ScalarMappable:
     mesh = ax.pcolormesh(
         x - np.min(x),
         y - np.min(y),
@@ -215,6 +217,7 @@ def _plot_lcz_variables(
             is_lcz_class_map = str(var_name).lower() == "lcz"
 
             if is_lcz_class_map:
+                mesh: ScalarMappable
                 lcz_cmap, lcz_norm, lcz_ticks, lcz_ticklabels = _get_lcz_plot_style()
                 if x is not None and y is not None and values.shape == (y.size, x.size):
                     mesh = ax.pcolormesh(
@@ -266,6 +269,7 @@ def _plot_lcz_variables(
                     diag_cmap.set_bad(color="#efefef")
 
                     fig_diag, ax_diag = plt.subplots(figsize=(8, 6))
+                    mesh_diag: ScalarMappable
                     if (
                         x is not None
                         and y is not None
@@ -499,9 +503,9 @@ def plot_lsm_cover(lsm_netcdf_path: pathlib.Path, plot_base_path: pathlib.Path) 
 
         # Use a qualitative matplotlib colormap and sample it
         base_cmap = plt.get_cmap("tab20")  # good for categorical data
-        colors = base_cmap(np.linspace(0, 1, ncat))
+        sampled_colors = base_cmap(np.linspace(0, 1, ncat))
 
-        cmap = ListedColormap(colors)
+        cmap = ListedColormap(sampled_colors)
         bounds = np.arange(-0.5, ncat + 0.5)
         norm = BoundaryNorm(bounds, cmap.N)
 

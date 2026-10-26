@@ -6,7 +6,7 @@ from typing import Optional
 
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 from modular_dales.Radiation.backrad_profile import (
     BackradInterpolatedProfile,
     BackradPressureProfile,
@@ -18,6 +18,8 @@ from modular_dales.Surface.surface import SurfaceModule
 @dataclass
 class _RadiationTypedBase(simulation_module):
     """Shared behavior for typed radiation modules."""
+
+    iradiation: int
 
     timerad: int = nml_field(
         default=60,
@@ -55,19 +57,13 @@ class _RadiationTypedBase(simulation_module):
         },
     )
 
-    def do_config(self):
-        return None
-
-    def prepare_calculation(self):
+    def prepare_calculation(self) -> None:
         if self.module_exists(SurfaceModule):
             self.surface_module = self.retrieve_module(SurfaceModule)
         else:
             raise ValueError(f"{self.module_name} requires a SurfaceModule.")
 
-    def check_settings(self):
-        return None
-
-    def write_files(self):
+    def write_files(self) -> None:
         if (
             self.iradiation != 0
             and getattr(self.surface_module, "albedoav", None) is None

@@ -33,7 +33,7 @@ USER_FORCING_PRIORITY = 100
 EXTERNAL_FORCING_PRIORITY = 50
 
 
-def var_attrs(var_definition: VariableDefinition, suffix: str = "") -> dict:
+def var_attrs(var_definition: VariableDefinition, suffix: str = "") -> dict[str, str]:
     return {
         "long_name": var_definition.long_name + suffix,
         "units": var_definition.unit,
@@ -77,7 +77,7 @@ class ForcingSet:
         return to_dataset(selected)
 
     def series_dataset(
-        self, times, names: Iterable[str] | None = None
+        self, times: Iterable[float], names: Iterable[str] | None = None
     ) -> xr.Dataset:
         """Selected series, linearly interpolated onto the common axis ``times``."""
         selected = self.series if names is None else {n: self.series[n] for n in names}

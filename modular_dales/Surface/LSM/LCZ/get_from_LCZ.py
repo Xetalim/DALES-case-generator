@@ -2,6 +2,7 @@ import logging
 import pathlib
 import tempfile
 from dataclasses import dataclass
+from os import PathLike
 from typing import Any
 
 import numpy as np
@@ -290,20 +291,20 @@ def map_soil_type(esa_da: xr.DataArray) -> xr.DataArray:
 
 
 def build_land_surface_dataset(
-    esa_tif: str,
-    lcz_tif: str,
+    esa_tif: str | PathLike[str],
+    lcz_tif: str | PathLike[str],
     lcz_dict: dict[int, LCZ],
     urban_natural_lcz_to_10: bool = False,
     urban_natural_lcz_to_natural_lsm: bool = False,
 ) -> xr.Dataset:
     # --- ESA WorldCover ---
-    esa = raster_to_xarray(esa_tif, "esa_worldcover")
+    esa = raster_to_xarray(str(esa_tif), "esa_worldcover")
 
     # --- IFS land cover ---
     ifs = map_esa_to_ifs(esa)
 
     # --- LCZ (only meaningful for built-up) ---
-    lcz = raster_to_xarray(lcz_tif, "lcz")
+    lcz = raster_to_xarray(str(lcz_tif), "lcz")
 
     lcz, ifs = apply_urban_natural_lcz_overrides(
         lcz,

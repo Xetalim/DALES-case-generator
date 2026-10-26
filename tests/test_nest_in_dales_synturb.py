@@ -32,7 +32,7 @@ def test_load_synturb_profiles_repairs_covariances(tmp_path: Path) -> None:
     _write_profiles_dataset(tmp_path / "profiles.001.nc")
 
     synturb = _load_synturb_profiles(
-        OpenBoundaryConfig(outpath_coarse=tmp_path.as_posix()),
+        OpenBoundaryConfig(outpath_coarse=tmp_path.as_posix(), e12=0.1),
         xr.DataArray([5.0], dims=["time"]),
         xr.DataArray([100.0], dims=["zt"]),
     )

@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass, field
 
-import dask
+import dask.base
 import numpy as np
 import xarray as xr
 
@@ -16,7 +16,7 @@ from modular_dales.LBC.nest_dales_in_HARMONIE.nest_dales_in_KNMI import (
     KNMIPrepper,
 )
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ class HarmonieAtmosphereModule(ExternalForcingModule):
             raise ValueError(
                 "HarmonieAtmosphereModule: missing geostrophic wind components in prepper"
             )
-        ug_mean, vg_mean = dask.compute(
+        ug_mean, vg_mean = dask.base.compute(
             prepper.ug.mean(["x", "y"]), prepper.vg.mean(["x", "y"])
         )
         ug, vg = (

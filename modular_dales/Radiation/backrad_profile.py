@@ -5,6 +5,7 @@ from __future__ import annotations
 import pathlib
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal, Protocol
 
 import numpy as np
 import xarray as xr
@@ -12,6 +13,26 @@ from scipy.interpolate import interp1d
 
 from modular_dales.IO_helpers.dales_external_data import resolve_rrtmg_data_paths
 from modular_dales.IO_helpers.external_data_cache import cache_root
+
+if TYPE_CHECKING:
+    from modular_dales.modular.dales_simulation import dales_simulation
+
+
+class _RadiationModuleLike(Protocol):
+    @property
+    def sim(self) -> dales_simulation: ...
+
+    @property
+    def module_name(self) -> str | None: ...
+
+    @property
+    def backrad_profile(self) -> BackradPressureProfile | None: ...
+
+    @property
+    def backrad_source_file(self) -> pathlib.Path | None: ...
+
+    @property
+    def backrad_interpolated_profile(self) -> BackradInterpolatedProfile | None: ...
 
 
 @dataclass
@@ -154,7 +175,7 @@ class BackradPressureProfile:
             o3.append(float(cols[3]) if len(cols) > 3 else 0.0)
             ql.append(float(cols[4]) if len(cols) > 4 else 0.0)
 
-        return cls(
+        return BackradPressureProfile(
             pressure_pa=p,
             temperature_k=t,
             specific_humidity_kgkg=q,
@@ -178,7 +199,7 @@ class BackradInterpolatedProfile:
     ozone_points: list[float] | None = None
     liquid_water_points: list[float] | None = None
     target_pressure_pa: list[float] | None = None
-    fill_value: float | str = "extrapolate"
+    fill_value: float | Literal["extrapolate"] = "extrapolate"
 
     def _interpolate(
         self, x: np.ndarray, y: np.ndarray, x_target: np.ndarray
@@ -285,7 +306,7 @@ def profile_from_forcings(
     return BackradPressureProfile.from_dataset(xr.Dataset(sounding))
 
 
-def select_backrad_profile(module) -> BackradPressureProfile:
+def select_backrad_profile(module: _RadiationModuleLike) -> BackradPressureProfile:
     """Backrad sounding for a radiation module.
 
     Precedence: the module's own ``backrad_*`` setting, then a sounding
@@ -316,7 +337,7 @@ def select_backrad_profile(module) -> BackradPressureProfile:
     return provided if provided is not None else default_profile()
 
 
-def register_radiation_files(module, iradiation: int) -> None:
+def register_radiation_files(module: _RadiationModuleLike, iradiation: int) -> None:
     """Write the backrad sounding and register the RRTMG(P) input files for ``iradiation`` 4/5."""
     if iradiation not in (4, 5):
         return

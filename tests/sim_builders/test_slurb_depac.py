@@ -20,14 +20,14 @@ from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
 from modular_dales.Surface.LSM import (
     LandUseSet,
     LSMModule,
 )
-from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
-from modular_dales.Surface.LSM.LSM import FromLCZ
+from modular_dales.Surface.LSM.lsm_sources import FromLCZ
+from modular_dales.Surface.LSM.lu_modifications import LandUseModification
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -104,19 +104,23 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
         iinterp_theta=1,
         dz_soil=[1.89, 0.72, 0.21, 0.07],
         albedoav=0.22,
+        land_use_set=LandUseSet.DEPAC,
     )
-    lsm += UniformSkinTemperature(291)
-    lsm += UniformSoilTemperature([288, 288, 288, 288])
-    lsm += UniformSoilMoisture(
-        [
-            0.36867549,
-            0.25300502,
-            0.14997292,
-            0.16459982,
-        ]
+    lsm.add(UniformSkinTemperature(291), priority=600)
+    lsm.add(UniformSoilTemperature([288, 288, 288, 288]), priority=600)
+    lsm.add(
+        UniformSoilMoisture(
+            [
+                0.36867549,
+                0.25300502,
+                0.14997292,
+                0.16459982,
+            ]
+        ),
+        priority=600,
     )
-    lsm += LandUseModification(geometry=AllGeometry(), type="grs")
-    lsm += FromLCZ()
+    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    lsm.add(FromLCZ(), priority=100)
     sim += lsm
 
     slurb = SLURBModule(deep_soil_temperature=293)
@@ -140,8 +144,6 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
 def SLURB_DEPAC_case(machine_conf: dict) -> dales_simulation:
     """Derive DEPAC tile fractions and SLuRB morphology from LCZ data."""
     sim = SLURB_LCZ_case(machine_conf)
-    lsm = cast(LSMModule, sim.retrieve_module(LSMModule))
-    lsm.land_use_set = LandUseSet.DEPAC
     return sim
 
 
@@ -150,7 +152,7 @@ def assert_slurb_depac_files_written(machine_conf: Callable[[str], dict]) -> Non
     sim = SLURB_DEPAC_case(machine_conf("slurb_DEPAC"))
     sim.sim_preprocessing_pipeline()
     lsm = cast(LSMModule, sim.retrieve_module(LSMModule))
-    assert lsm.from_lcz is not None
+    assert any(isinstance(source.source, FromLCZ) for source in lsm.sources)
     writer = lsm.lsm_writer
     assert writer is not None
     assert writer.land_use_set is LandUseSet.DEPAC

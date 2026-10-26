@@ -46,13 +46,16 @@ from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.logging_wrapper import setup_logging
 from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.modular.time_dependent import TimedependentModule
-from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
-from modular_dales.Surface.LSM.LSM import (
+from modular_dales.Surface.LSM import LandUseSet
+from modular_dales.Surface.LSM.lsm_module import (
+    LSMModule,
+)
+from modular_dales.Surface.LSM.lsm_sources import (
     FromBofek,
     FromLCZ,
     FromTop10,
-    LSMModule,
 )
+from modular_dales.Surface.LSM.lu_modifications import LandUseModification
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -359,6 +362,7 @@ if __name__ == "__main__":
     )
 
     lsm = LSMModule(
+        land_use_set=LandUseSet.IFS,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -369,29 +373,37 @@ if __name__ == "__main__":
         tskin_laqu=273.15 + 15,
     )
     if not is_nested:
-        lsm += UniformSkinTemperature(294)
-        lsm += UniformSoilTemperature([294, 294, 294, 294])
-        lsm += UniformSoilMoisture(
+        lsm.add(
             [
-                0.36867549,
-                0.25300502,
-                0.14997292,
-                0.16459982,
-            ]
+                UniformSkinTemperature(294),
+                UniformSoilTemperature([294, 294, 294, 294]),
+                UniformSoilMoisture(
+                    [
+                        0.36867549,
+                        0.25300502,
+                        0.14997292,
+                        0.16459982,
+                    ]
+                ),
+            ],
+            priority=600,
         )
-    lsm += LandUseModification(geometry=AllGeometry(), type="grs")
-    lsm += FromLCZ(urban_natural_lcz_to_natural_lsm=True)
+    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    lsm.add(FromLCZ(urban_natural_lcz_to_natural_lsm=True), priority=100)
     if use_ls2d:
-        lsm += FromLS2D()
-    lsm += FromBofek(spatial_data_path=spatial_data_path)
-    lsm += FromTop10(
-        urban_natural_lcz_to_natural_lsm=True,
-        spatial_data_path=spatial_data_path,
+        lsm.add(FromLS2D(), priority=500)
+    lsm.add(FromBofek(spatial_data_path=spatial_data_path), priority=400)
+    lsm.add(
+        FromTop10(
+            urban_natural_lcz_to_natural_lsm=True,
+            spatial_data_path=spatial_data_path,
+        ),
+        priority=300,
     )
     sim += lsm
-
     slurb = SLURBModule(
-        deep_soil_temperature=273.15 + 15, building_indoor_temperature=273.15 + 21
+        deep_soil_temperature=273.15 + 15,
+        building_indoor_temperature=273.15 + 21,
     )
     sim += slurb
 

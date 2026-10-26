@@ -19,8 +19,9 @@ from modular_dales.Configuration.output_modules import EasyOutputModule
 from modular_dales.Emission.emission import EmissionModule, EmissionTracer
 from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
-from modular_dales.Surface.LSM.LSM import LSMModule
+from modular_dales.Surface.LSM import LandUseSet
+from modular_dales.Surface.LSM.lsm_module import LSMModule
+from modular_dales.Surface.LSM.lu_modifications import LandUseModification
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -73,6 +74,7 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
 
     sim += atmo
     lsm = LSMModule(
+        land_use_set=LandUseSet.DEPAC,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -81,10 +83,10 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
         dz_soil=[1.89, 0.72, 0.21, 0.07],
         albedoav=0.22,
     )
-    lsm += UniformSkinTemperature(293)
-    lsm += UniformSoilTemperature([293, 293, 293, 293])
-    lsm += UniformSoilMoisture([0.3, 0.3, 0.3, 0.3])
-    lsm += LandUseModification(geometry=AllGeometry(), type="grs")
+    lsm.add(UniformSkinTemperature(293), priority=600)
+    lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
+    lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
+    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
     sim += lsm
 
     sim += RadiationModule(
@@ -156,6 +158,7 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
     sim += atmo
 
     lsm = LSMModule(
+        land_use_set=LandUseSet.DEPAC,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -164,10 +167,10 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
         dz_soil=[1.89, 0.72, 0.21, 0.07],
         albedoav=0.22,
     )
-    lsm += UniformSkinTemperature(293)
-    lsm += UniformSoilTemperature([293, 293, 293, 293])
-    lsm += UniformSoilMoisture([0.3, 0.3, 0.3, 0.3])
-    lsm += LandUseModification(geometry=AllGeometry(), type="grs")
+    lsm.add(UniformSkinTemperature(293), priority=600)
+    lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
+    lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
+    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
     sim += lsm
 
     # AGS switch requested by user.

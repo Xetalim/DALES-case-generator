@@ -12,7 +12,7 @@ import numpy as np
 from modular_dales.Surface.LSM.lsm_data import LAND_USE_PARAMETERS, LSMArray
 
 if TYPE_CHECKING:
-    from modular_dales.Surface.LSM.LSM_output_dales import LSM_output_dales
+    from modular_dales.Surface.LSM.lsm_output import LSM_output_dales
 
 
 def iter_output_fields(writer: LSM_output_dales) -> Iterator[tuple[str, LSMArray]]:

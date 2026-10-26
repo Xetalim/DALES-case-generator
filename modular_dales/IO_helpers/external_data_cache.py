@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 CASE_ATTRIBUTION_DIRNAME = "external_data_attribution"
 
 
-def cache_root(cache_name: str, sim: dales_simulation) -> pathlib.Path:
+def cache_root(cache_name: str, sim: dales_simulation | None = None) -> pathlib.Path:
     """Return the cache directory for a named helper cache."""
     machine_root = _machine_conf_value(
         sim,

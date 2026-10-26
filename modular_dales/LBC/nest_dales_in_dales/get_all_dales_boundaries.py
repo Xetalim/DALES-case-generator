@@ -208,6 +208,8 @@ def get_all_dales_boundaries(
         input_json, grid, indices, chunks=chunks
     )
     # Get later time steps from corresponding coarse simulation output
+    if input_json.outpath_coarse is None:
+        raise ValueError("Coarse DALES output path is required for boundary fields")
     boundary_dict = get_boundary_dict(input_json.outpath_coarse, grid, indices)
     all_ls = []
     crosssection_chunks = chunks

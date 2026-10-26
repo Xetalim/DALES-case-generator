@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
+import numpy.typing as npt
 
 from modular_dales.Geometry import GridDales
 
@@ -34,7 +35,9 @@ class NestingIndices:
                         f"Nesting {label} grid.{name} must contain {expected} finite, increasing levels; got shape {values.shape}"
                     )
 
-        def aligned(values, target: float, label: str) -> int:
+        def aligned(
+            values: npt.NDArray[np.floating[Any]], target: float, label: str
+        ) -> int:
             matches = np.flatnonzero(np.isclose(values, target, rtol=0.0, atol=1e-8))
             if matches.size != 1:
                 raise ValueError(

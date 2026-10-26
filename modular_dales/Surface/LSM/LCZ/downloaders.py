@@ -2,13 +2,16 @@ import hashlib
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
 import geopandas as gpd
 import numpy as np
 import rasterio
 from pyproj import Transformer
+
+if TYPE_CHECKING:
+    from rasterio._typing import CRSInput  # noqa: TC004
 from rasterio.enums import Resampling
 from rasterio.merge import merge
 from rasterio.profiles import Profile
@@ -16,7 +19,7 @@ from rasterio.vrt import WarpedVRT
 from rasterio.windows import Window, from_bounds
 from shapely.geometry import box
 
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.IO_helpers import get_reproject
 from modular_dales.IO_helpers.external_data_cache import cache_root
 
@@ -29,7 +32,7 @@ def cached_cog_subset_from_url(
     grid: GridDales,
     cache_dir: Path,
     pad: int = 10,
-) -> tuple[np.ndarray, rasterio.Affine, str, dict[str, Any] | Profile]:
+) -> tuple[np.ndarray, rasterio.Affine, CRSInput, dict[str, Any] | Profile]:
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -118,7 +121,7 @@ def get_cog(grid: GridDales, out_file: Path) -> None:
 
 def get_cached_esa(
     cache_dir: Path, grid: GridDales
-) -> tuple[np.ndarray, rasterio.Affine, str, dict[str, Any] | Profile]:
+) -> tuple[np.ndarray, rasterio.Affine, CRSInput, dict[str, Any] | Profile]:
     os.environ["AWS_NO_SIGN_REQUEST"] = "YES"
     # -------------------------------
     # Parameters

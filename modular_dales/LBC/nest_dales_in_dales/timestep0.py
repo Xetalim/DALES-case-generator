@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import xarray as xr
 
-from modular_dales.Geometry.GridDales import GridDalesOpenBC
+from modular_dales.Geometry.grids import GridDalesOpenBC
 from modular_dales.LBC.nest_dales_in_dales.load_any_boundary_var import (
     get_boundary_dict,
     load_any_boundary_var,
@@ -220,6 +220,8 @@ def boundaries_timestep0(
             _select_boundary_files,
         )
 
+        if input_json.outpath_coarse_old is None:
+            raise ValueError("Previous coarse DALES output path is required")
         boundary_dict = get_boundary_dict(input_json.outpath_coarse_old, grid, indices)
 
         all_ls = []

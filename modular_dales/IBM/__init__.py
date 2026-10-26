@@ -1,6 +1,6 @@
 """Public API for immersed boundary (IBM) modules."""
 
-from .IBM import (
+from .ibm import (
     FromAHN,
     FromGlobalDEM,
     IBMModification,

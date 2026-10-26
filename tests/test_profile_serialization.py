@@ -50,8 +50,9 @@ def test_shaped_profile_roundtrip_preserves_concrete_shape(shape):
         time=0.0, profile=AtmosphericProfile(variable=ua, shape=shape)
     )
     serialized = asdict_user_set(original)
-    assert list(serialized["profile"]["shape"]) == [type(shape).__name__]
-    assert "name" not in serialized["profile"]["shape"][type(shape).__name__]
+    profile_data = serialized["profile"]["AtmosphericProfile"]
+    assert list(profile_data["shape"]) == [type(shape).__name__]
+    assert "name" not in profile_data["shape"][type(shape).__name__]
     restored = _deserialize_dataclass(TimedAtmosphereProfile, serialized)
     assert type(restored.profile.shape) is type(shape)
     np.testing.assert_allclose(

@@ -24,7 +24,7 @@ from modular_dales.modular.time_dependent_scalars import (
     resolve_time_axis,
     stack_in_time,
 )
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 from modular_dales.vars import (
     ProfileVariable,
     VariableDefinition,
@@ -59,6 +59,12 @@ class Profile:
 
     variable: ProfileVariable
     """Variable definition (see modular_dales.Atmosphere.vars)."""
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.variable, ProfileVariable):
+            raise TypeError(
+                f"variable must be an instance of ProfileVariable, got {type(self.variable).__name__}"
+            )
 
     def evaluate(self, z: np.ndarray | list[float]) -> xr.DataArray:
         raise NotImplementedError("Subclasses must implement the evaluate method.")
@@ -320,9 +326,17 @@ class AtmosphereModule(simulation_module):
             destination.extend(other.timed_forcing_series())
         elif isinstance(other, TimedAtmosphereProfile):
             destination.append(other)
-        elif isinstance(other, (list, tuple)):
+        elif isinstance(other, (list)):
             for item in other:
-                self.add(item, nudging=nudging)
+                if isinstance(
+                    item,
+                    (AtmosphericProfile, InterpolatedProfile, TimedAtmosphereProfile),
+                ):
+                    self.add(item, nudging=nudging)
+                else:
+                    raise TypeError(
+                        f"Cannot add object of type {type(item)} to AtmosphereModule"
+                    )
         else:
             raise TypeError(
                 f"Cannot add object of type {type(other)} to AtmosphereModule"

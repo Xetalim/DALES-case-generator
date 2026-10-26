@@ -1,6 +1,6 @@
 """Named land-use catalogues with immutable metadata definitions."""
 
-from dataclasses import replace
+import dataclasses
 from enum import StrEnum
 
 from ..lsm_data import LandUseDefinition, LandUseName
@@ -60,7 +60,7 @@ lu_types_basic: dict[LandUseName, LandUseDefinition] = {
 
 lu_types_build: dict[LandUseName, LandUseDefinition] = {
     **lu_types_basic,
-    "ap": replace(lu_types_basic["ap"], lu_ids=(20, 22, 23, 24, 25)),
+    "ap": dataclasses.replace(lu_types_basic["ap"], lu_ids=(20, 22, 23, 24, 25)),
     "bu": LandUseDefinition(
         lu_long="buildings",
         lu_short="bu",

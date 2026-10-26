@@ -3,18 +3,19 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import cast
 
 import ls2d
 
 from modular_dales.Atmosphere.external_forcing import ExternalForcingModule
 from modular_dales.Atmosphere.les_input import LESInput
-from modular_dales.MODULE_REGISTRY import register_module, register_singleton
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
 
 def retry_exponential(
-    func: Callable,
+    func: Callable[[], bool],
     *,
     max_attempts: int = 5,
     max_total_time: float = 60.0,
@@ -66,17 +67,19 @@ def retry_exponential(
             time.sleep(delay)
 
 
-@register_singleton
 @register_module
 @dataclass
 class FromLS2D:
     """Marker class to enable LS2D-driven soil/roughness in LSM.
 
-    When added to :class:`LSMModule` (``lsm += FromLS2D()``) and an
-    :class:`LS2DAtmosphereModule` is present, soil temperature/moisture,
-    soil type index and the bulk roughness lengths ``z0mav``/``z0hav`` are
-    taken from LS2D.
+    Add it inside ``LSMSource`` with an explicit priority. It supports every
+    land-use set because it only provides soil state and surface roughness.
+    With an :class:`LS2DAtmosphereModule` present, soil temperature/moisture,
+    soil type index and bulk roughness lengths ``z0mav``/``z0hav`` are taken
+    from LS2D.
     """
+
+    SUPPORTED_LAND_USE_SETS = frozenset({"basic", "build", "crop", "depac", "ifs"})
 
 
 @register_module
@@ -203,4 +206,4 @@ class LS2DAtmosphereModule(ExternalForcingModule):
             "LS2DAtmosphereModule: building les_input on DALES grid (k=%d)",
             self.zt.size,
         )
-        return era.get_les_input(self.zt)
+        return cast(LESInput, era.get_les_input(self.zt))

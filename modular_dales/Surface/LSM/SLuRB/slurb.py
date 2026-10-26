@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Literal, Self
+from pathlib import Path
+from typing import Literal, Self
 
 import netCDF4
 import numpy as np
@@ -9,10 +10,10 @@ from modular_dales.Geometry.geometry_modification import (
     GeometricModification,
     ModifierClass,
 )
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class slbCreatorClass(ModifierClass[SLURBModification]):
             else:
                 getattr(self, submod.varname)[geometry] = submod.value
 
-    def output_nc(self, filename: str) -> None:
+    def output_nc(self, filename: str | Path) -> None:
         with netCDF4.Dataset(filename, "w") as nc:
             nc.createDimension("x", len(self.x))
             nc.createDimension("y", len(self.y))
@@ -149,7 +150,7 @@ class SLURBModule(simulation_module):
         repr=False,
         metadata={"serialize": True},
     )
-    slb_generator: Any = field(
+    slb_generator: slbCreatorClass | None = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
     )
     urban_fraction: float | None = nml_field(
@@ -299,10 +300,12 @@ class SLURBModule(simulation_module):
         if self.slb_generator is None:
             self.slb_generator = slbCreatorClass(self.grid)
 
-    def prepare_calculations(self) -> None:
+    def prepare_calculation(self) -> None:
         """Set up SLURB geometry and update namelist."""
         # Initialize generator if not already done
         self.init_generator()
+        if self.slb_generator is None:
+            raise RuntimeError("SLURB generator not initialized")
 
         # Apply SLURB modifications
         for modification in self.slb_modifications.modifications:

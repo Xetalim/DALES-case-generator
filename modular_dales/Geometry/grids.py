@@ -11,7 +11,7 @@ from pyproj import CRS
 
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ class GridDales(simulation_module):
     dz: npt.NDArray[np.floating[Any]] = field(init=False)
     zt: npt.NDArray[np.floating[Any]] = field(init=False)
     zm: npt.NDArray[np.floating[Any]] = field(init=False)
-    dz0: float = field(
+    dz0: float = field(  # type: ignore[misc]
         init=True,
         repr=True,
         metadata={"serialize": True},
@@ -559,7 +559,7 @@ class GridDales(simulation_module):
 
 
 @dataclass
-class GridDalesOpenBC(GridDales):
+class GridDalesOpenBC(GridDales):  # type: ignore[misc]
     def __post_init__(self) -> None:
         super().__post_init__()
         self.xt = self.x0 + np.arange(0.5 * self.dx, self.xsize, self.dx)

@@ -60,7 +60,7 @@ def assert_roundtrip_simulation_outputs_identical(
 
         stage = "roundtrip_output_compare"
         assert_dirs_equal(out1, out2)
-    except Exception:
+    except Exception:  # noqa: BLE001
         case_name = getattr(sim1, "case_name", "<unavailable>")
         out1_str = str(out1) if out1 is not None else "<unavailable>"
         out2_str = str(out2) if out2 is not None else "<unavailable>"

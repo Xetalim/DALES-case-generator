@@ -12,7 +12,7 @@ from modular_dales.modular.time_dependent_scalars import (
     Z_DIM,
     resolve_time_axis,
 )
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 from modular_dales.vars import get_var_by_name
 
 from .simulation_module import simulation_module

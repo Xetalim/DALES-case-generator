@@ -6,8 +6,8 @@ from typing import Any, Protocol
 import numpy as np
 import numpy.typing as npt
 
-from modular_dales.Geometry.GridDales import GridDales
-from modular_dales.MODULE_REGISTRY import register_module, register_special_serializing
+from modular_dales.Geometry.grids import GridDales
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -22,7 +22,6 @@ class GeometryModifier(Protocol):
     idymesh: npt.NDArray[np.integer[Any]]
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class AllGeometry:
@@ -32,7 +31,6 @@ class AllGeometry:
         return np.ones_like(modifier.meshx, dtype=bool)
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class CircleRealGeometry:
@@ -49,7 +47,6 @@ class CircleRealGeometry:
         return mask
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class RectangleRealGeometry:
@@ -69,7 +66,6 @@ class RectangleRealGeometry:
         )
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class RectangleIdxGeometry:
@@ -89,7 +85,6 @@ class RectangleIdxGeometry:
         )
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class CircleIdxGeometry:
@@ -105,7 +100,6 @@ class CircleIdxGeometry:
         ) ** 2 <= self.size**2
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class MaskGeometry:
@@ -127,7 +121,6 @@ class MaskGeometry:
         return mask_arr.astype(bool)
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class FuncGeometry:
@@ -149,7 +142,6 @@ class FuncGeometry:
         return mask_arr.astype(bool)
 
 
-@register_special_serializing
 @register_module
 @dataclass
 class CheckerboardIdxGeometry:

@@ -18,7 +18,7 @@ The file must have x/y (or lon/lat) coordinates.  It will be bilinearly
 interpolated onto the DALES grid using rasterio/get_reproject.
 
 The returned xarray Dataset follows the same convention used by
-``get_from_LCZ.build_land_surface_dataset`` so it can be consumed by
+``get_from_lcz.build_land_surface_dataset`` so it can be consumed by
 ``lsm_sources.apply_from_netcdf`` through ``LSMModule`` orchestration.
 """
 
@@ -27,18 +27,23 @@ from __future__ import annotations
 import logging
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import rasterio
 import xarray as xr
+
+if TYPE_CHECKING:
+    from rasterio._typing import CRSInput
 from rasterio.enums import Resampling
+from rasterio.profiles import Profile
 from rasterio.transform import from_bounds
 
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.IO_helpers import raster_to_xarray
 from modular_dales.IO_helpers.raster import fix_lambert_offsets, get_reproject
 from modular_dales.Surface.LSM.LCZ.downloaders import get_esa
-from modular_dales.Surface.LSM.LCZ.get_from_LCZ import (
+from modular_dales.Surface.LSM.LCZ.get_from_lcz import (
     map_esa_to_ifs,
     map_soil_type,
 )
@@ -62,24 +67,26 @@ NC_MORPH_VARS = ["D_Z0_town", "D_BLD", "D_BLD_HEIG", "WALL_O_HOR"]
 def _get_src_crs(ds_in: xr.Dataset) -> str | None:
     """Best-effort extraction of CRS string from an xarray Dataset."""
     # 1. grid_mapping variable (CF convention)
+    crs_wkt: str | None = None
     for var in ds_in.data_vars:
         gm = ds_in[var].attrs.get("grid_mapping")
         if gm and gm in ds_in:
             crs_wkt = ds_in[gm].attrs.get("crs_wkt") or ds_in[gm].attrs.get(
                 "spatial_ref"
             )
+
             if crs_wkt:
-                return crs_wkt
+                return str(crs_wkt)
     # 2. spatial_ref coordinate
     if "spatial_ref" in ds_in.coords:
         crs_wkt = ds_in.coords["spatial_ref"].attrs.get("crs_wkt")
         if crs_wkt:
-            return crs_wkt
+            return str(crs_wkt)
     # 3. dataset-level attribute
     for attr in ("crs", "proj4", "projection"):
         val = ds_in.attrs.get(attr)
         if val:
-            return val
+            return str(val)
     return None
 
 
@@ -102,7 +109,7 @@ def _open_nc_normalised(nc_path: Path) -> xr.Dataset:
 
 def _reproject_da(
     da: xr.DataArray,
-    src_crs: str,
+    src_crs: CRSInput,
     grid: GridDales,
     out_tif: Path,
     resampling: Resampling = Resampling.bilinear,
@@ -129,16 +136,18 @@ def _reproject_da(
         data_to_reproject.shape[1],
     )
 
-    profile = {
-        "driver": "GTiff",
-        "dtype": "float32",
-        "nodata": float("nan"),
-        "count": 1,
-        "height": data_to_reproject.shape[1],
-        "width": data_to_reproject.shape[2],
-        "transform": src_transform,
-        "crs": src_crs,
-    }
+    profile = Profile(
+        data={
+            "driver": "GTiff",
+            "dtype": "float32",
+            "nodata": float("nan"),
+            "count": 1,
+            "height": data_to_reproject.shape[1],
+            "width": data_to_reproject.shape[2],
+            "transform": src_transform,
+            "crs": src_crs,
+        }
+    )
 
     get_reproject(
         grid,
@@ -157,7 +166,7 @@ def _reproject_da(
     return result
 
 
-def _derive_slurb_fields(raw: dict) -> dict:
+def _derive_slurb_fields(raw: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     """Convert raw NetCDF morph fields to SLuRB-named arrays."""
     out = {}
     if "D_Z0_town" in raw:
@@ -221,9 +230,13 @@ def load_from_netcdf(
             "from_netcdf: no CRS found in '%s'; assuming same projection as DALES grid",
             nc_path,
         )
+        if grid.crs is None:
+            raise ValueError(
+                "from_netcdf: no CRS found in input file and DALES grid has no CRS"
+            )
         src_crs = grid.crs
 
-    data_vars: dict = {}
+    data_vars: dict[str, xr.DataArray] = {}
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
@@ -259,7 +272,7 @@ def load_from_netcdf(
             )
 
         # --- morphological fields --------------------------------------------
-        raw_morph: dict = {}
+        raw_morph: dict[str, np.ndarray] = {}
         for nc_name in NC_MORPH_VARS:
             if nc_name not in ds_in:
                 continue

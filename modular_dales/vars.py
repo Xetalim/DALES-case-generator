@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ class TimeHeightVariable(ProfileVariable):
 class NudgingVariable(TimeHeightVariable):
     """A time-height nudging target linked to its physical state variable."""
 
-    target: ProfileVariable
+    target: ProfileVariable = field(kw_only=True)
 
     def __init__(
         self,

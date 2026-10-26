@@ -10,7 +10,7 @@ from modular_dales.Atmosphere import (
 )
 from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
 from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.modular import dales_simulation
 from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
 from modular_dales.vars import qt, thetal, tke, ua, va, wa
@@ -50,9 +50,9 @@ def build_warmstart_base_sim(
     atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=1e-2)))
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0)))
     atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
-    atmo.add(InterpolatedProfile(
-        variable=tke, z=[0, 4000, 5000], points=[1.0, 1e-8, 1e-8]
-    ))
+    atmo.add(
+        InterpolatedProfile(variable=tke, z=[0, 4000, 5000], points=[1.0, 1e-8, 1e-8])
+    )
     sim += atmo
 
     sim += ConstantSurfaceTemperatureModule(

@@ -19,7 +19,7 @@ def load_any_boundary_var(
     boundary: str,
     grid: GridDalesOpenBC,
     indices: "NestingIndices",
-    isel: bool | None = False,
+    isel: bool | None | dict[str, int] = False,
     expand_dims: bool = False,
     expand_dims_time0: str | None = None,
     var_postfix: str = "",
@@ -38,7 +38,7 @@ def load_any_boundary_var(
     :param indices: Indices describing where in the supergrid the edges of the current grid lie.
     :type indices: nesting_idx
     :param isel: If True, selects variable var at the correct boundary index in the host grid. If dict, select according to the dict.
-    :type isel: Union[bool, None]
+    :type isel: Union[bool, None, dict[str,int]]
     :param expand_dims: Bool to enable expanding the time dimension with variable expand_dims_time0.
     :param expand_dims_time0: Variable to expand the time dimension with. Requires expand_dims=True
     :param var_postfix: Postfix for the var to load; somtimes the input variable has an extra long name.

@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
-from Transform import Transform
 
-from modular_dales.Geometry.GridDales import GridDalesOpenBC
+from modular_dales.Geometry.grids import GridDalesOpenBC
 from modular_dales.logging_wrapper import logwrap
+
+from .Transform import Transform
 
 if TYPE_CHECKING:
     from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
@@ -69,20 +70,22 @@ def initial_fields(
     # Calculate lat lon for cell centers
     X, Y = np.meshgrid(grid.xt, grid.yt)
     lat, lon = transform.xy_to_latlon(X, Y)
-    lat = xr.DataArray(
+    lat_arr = xr.DataArray(
         lat,
         dims=["yt", "xt"],
         coords={"yt": grid.yt, "xt": grid.xt},
         name="lat",
     )
-    lon = xr.DataArray(
+    lon_arr = xr.DataArray(
         lon,
         dims=["yt", "xt"],
         coords={"yt": grid.yt, "xt": grid.xt},
         name="lon",
     )
     # Create dataset and add initial fields
-    initfields = xr.merge([u0, v0, w0, thl0, qt0, e120, lat, lon], combine_attrs="drop")
+    initfields = xr.merge(
+        [u0, v0, w0, thl0, qt0, e120, lat_arr, lon_arr], combine_attrs="drop"
+    )
     # Add transform
     initfields = initfields.assign({"transform": data["transform"]})
     # Add variable attributes

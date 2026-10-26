@@ -19,7 +19,7 @@ from modular_dales.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
 )
 from modular_dales.LBC.openbc import do_openboundary
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class Nest_in_KNMI(do_openboundary, _KNMIOpenBCOptions):
         logger.info("Setting namelist NAMSURFACE:thls to %f", prepper.thls)
         self.set_nml_section("NAMSURFACE", "thls", prepper.thls)
 
-        (data,) = dask.optimize(data)
+        (data,) = dask.base.optimize(data)
 
         logger.debug("Setting up boundary fields (KNMI source)")
         boundaries = harmonie_boundary.boundary_fields(config, self.openBCgrid, data)
@@ -90,14 +90,14 @@ class Nest_in_KNMI(do_openboundary, _KNMIOpenBCOptions):
             self.openBCgrid,
             data,
             transform,
-            output_path=self.output_path,
+            output_path=self.output_path.as_posix(),
         )
 
         boundaries = self._apply_noise(boundaries)
-        self.boundaries, self.initfields = dask.optimize(boundaries, initfields_ds)
+        self.boundaries, self.initfields = dask.base.optimize(boundaries, initfields_ds)
 
     def _build_config(self) -> OpenBoundaryConfig:
-        download_module = resolve_knmi_harmonie_download_module(self)
+        download_module = resolve_knmi_harmonie_download_module(self.sim)
         ml_glob = self.ml_glob
         sfc_glob = self.sfc_glob
         use_grib = self.use_grib

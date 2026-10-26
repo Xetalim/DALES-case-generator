@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 import numpy as np
 import xarray as xr
 
-from modular_dales.Geometry.GridDales import GridDalesOpenBC
+from modular_dales.Geometry.grids import GridDalesOpenBC
 from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
 from modular_dales.logging_wrapper import logwrap
 

@@ -65,9 +65,10 @@ def assert_dirs_equal(left: Path, right: Path) -> None:
                         # we want to make sure it differs only on date
                         ds_left = xr.open_dataset(left_entry)
                         ds_right = xr.open_dataset(right_entry)
-
-                        del ds_left.attrs["history"]
-                        del ds_right.attrs["history"]
+                        if "history" in ds_left.attrs:
+                            del ds_left.attrs["history"]
+                        if "history" in ds_right.attrs:
+                            del ds_right.attrs["history"]
                         if not ds_left.identical(ds_right):
                             differing_files.append(name)
                 continue

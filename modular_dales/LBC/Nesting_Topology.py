@@ -7,7 +7,7 @@ from modular_dales.LBC.nesting_idx import NestingIndices
 from modular_dales.LBC.openbc import do_openboundary
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class NestingTopology(simulation_module):
     supernest_supergrid: Optional["GridDales"] = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
-    indices: dict | None = field(
+    indices: dict[str, int] | None = field(
         default=None, repr=False, metadata={"serialize": False}, init=False
     )
     nestings: list["GridDales"] = field(
@@ -67,10 +67,10 @@ class NestingTopology(simulation_module):
     def __add__(self, other: GridDales) -> Self:
         """Combine nesting topologies if needed."""
         if isinstance(other, GridDales):
-            logger.info("Adding GridDales to Nesting_Topology: %s", other)
+            logger.info("Adding GridDales to nesting_topology: %s", other)
             self.nestings.append(other)
         else:
-            raise TypeError("Can only add GridDales instances to Nesting_Topology")
+            raise TypeError("Can only add GridDales instances to nesting_topology")
         return self
 
     def __iadd__(self, other: GridDales) -> Self:
@@ -87,7 +87,7 @@ class NestingTopology(simulation_module):
                 parts += " (top-level nest):"
         if not parts:
             parts = "No nestings defined"
-        return f"Nesting_Topology with {len(self.nestings)} nestings:{parts}"
+        return f"nesting_topology with {len(self.nestings)} nestings:{parts}"
 
     def prepare_calculation(self) -> None:
         """Return nesting info for a specific index if available."""
@@ -141,7 +141,7 @@ class NestingTopology(simulation_module):
                 self.openbc_module = self.retrieve_module(do_openboundary)
             else:
                 raise ValueError(
-                    "Nesting_Topology requires a do_openboundary module to set indices for boundary condition interpolation."
+                    "nesting_topology requires a do_openboundary module to set indices for boundary condition interpolation."
                 )
             self.openbc_module.indices = NestingIndices.from_grids(
                 supernest_supergrid, supernest_subgrid

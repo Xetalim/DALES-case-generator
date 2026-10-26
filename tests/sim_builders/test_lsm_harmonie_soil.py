@@ -14,10 +14,11 @@ from modular_dales.Configuration.output_modules import (
 )
 from modular_dales.Configuration.run_and_time import TimeModule
 from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.Geometry.GridDales import GridDales
+from modular_dales.Geometry.grids import GridDales
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
-from modular_dales.Surface.LSM.LSM import LSMModule
+from modular_dales.Surface.LSM import LandUseSet
+from modular_dales.Surface.LSM.lsm_module import LSMModule
+from modular_dales.Surface.LSM.lu_modifications import LandUseModification
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     SoilTemperatureMoistureFromHarmonie,
     UniformSkinTemperature,
@@ -64,6 +65,7 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
 
     sim += atmo
     lsm = LSMModule(
+        land_use_set=LandUseSet.DEPAC,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -72,16 +74,19 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
         dz_soil=[1.89, 0.72, 0.21, 0.07],
         albedoav=0.22,
     )
-    lsm += UniformSkinTemperature(305)
-    # lsm += UniformSoilTemperature([293, 293, 293, 293])
+    lsm.add(UniformSkinTemperature(305), priority=600)
+    # A uniform soil source uses lsm.add(UniformSoilTemperature(...), priority=600).
     harmonie_soil_levels = [0.01, 0.04, 0.1, 0.2, 0.4, 0.6, 0.8, 1, 1.5, 2, 3, 5, 8, 12]
 
-    lsm += SoilTemperatureMoistureFromHarmonie(
-        "/Users/andrevanginkel/Documents/20_Code/21_Input_Output_scripts/21.03_paris_NWP/atmo_interpolated/soil_new.nc",
-        harmonie_soil_valid_time="2023-08-20T00:00:00",
-        harmonie_soil_height_levels=harmonie_soil_levels,
+    lsm.add(
+        SoilTemperatureMoistureFromHarmonie(
+            "/Users/andrevanginkel/Documents/20_Code/21_Input_Output_scripts/21.03_paris_NWP/atmo_interpolated/soil_new.nc",
+            harmonie_soil_valid_time="2023-08-20T00:00:00",
+            harmonie_soil_height_levels=harmonie_soil_levels,
+        ),
+        priority=600,
     )
-    lsm += LandUseModification(geometry=AllGeometry(), type="grs")
+    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
     sim += lsm
 
     sim += RadiationModule(

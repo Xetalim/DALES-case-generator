@@ -27,7 +27,7 @@ from modular_dales.modular.forcing import (
 )
 from modular_dales.modular.namelist import nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.MODULE_REGISTRY import register_module
+from modular_dales.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -382,10 +382,10 @@ class do_openboundary(simulation_module):
             initfields_writer = self.initfields.to_netcdf(
                 path=self.output_path / "input" / self.initfields.attrs["title"],
                 mode="w",
-                format="netcdf4",
+                format="NETCDF4",
                 compute=False,
             )
-            (initfields_writer,) = dask.optimize(initfields_writer)
+            (initfields_writer,) = dask.base.optimize(initfields_writer)
             logger.debug("Writing initial fields")
 
             initfields_writer.compute()
@@ -399,10 +399,10 @@ class do_openboundary(simulation_module):
         openboundaries_writer = self.boundaries.to_netcdf(
             path=self.output_path / "input" / self.boundaries.attrs["title"],
             mode="w",
-            format="netcdf4",
+            format="NETCDF4",
             compute=False,
         )
-        (openboundaries_writer,) = dask.optimize(openboundaries_writer)
+        (openboundaries_writer,) = dask.base.optimize(openboundaries_writer)
         logger.debug("Writing boundaries")
 
         openboundaries_writer.compute()
@@ -432,7 +432,7 @@ class Nest_in_Harmonie(do_openboundary, _HarmonieOpenBCOptions):
         self.set_nml_section("NAMSURFACE", "ps", self.harmonieprepper.ps)
         logger.info("Setting namelist NAMSURFACE:thls to %f", self.harmonieprepper.thls)
         self.set_nml_section("NAMSURFACE", "thls", self.harmonieprepper.thls)
-        (data,) = dask.optimize(data)
+        (data,) = dask.base.optimize(data)
 
         self.boundaries = harmonie_boundary.boundary_fields(
             config, self.openBCgrid, data
@@ -442,9 +442,9 @@ class Nest_in_Harmonie(do_openboundary, _HarmonieOpenBCOptions):
             self.openBCgrid,
             data,
             transform,
-            output_path=self.output_path,
+            output_path=self.output_path.as_posix(),
         )
-        self.boundaries, self.initfields = dask.optimize(
+        self.boundaries, self.initfields = dask.base.optimize(
             self.boundaries, self.initfields
         )
 

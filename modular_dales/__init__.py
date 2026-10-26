@@ -47,8 +47,8 @@ from .Geometry.geometry_modification import (
     RectangleIdxGeometry,
     RectangleRealGeometry,
 )
-from .Geometry.GridDales import GridDales, GridDalesOpenBC
-from .IBM.IBM import (
+from .Geometry.grids import GridDales, GridDalesOpenBC
+from .IBM.ibm import (
     FromAHN,
     FromGlobalDEM,
     IBMModification,
@@ -72,11 +72,9 @@ from .modular.time_dependent import (
     TimedependentModule,
 )
 from .modular.time_dependent_scalars import TimeDependentScalar
-from .MODULE_REGISTRY import (
-    MODULE_REGISTRY,
-    SINGLETON_REGISTRY,
+from .module_registry import (
+    module_registry,
     register_module,
-    register_singleton,
 )
 from .Radiation.backrad_profile import (
     BackradInterpolatedProfile,
@@ -93,14 +91,11 @@ from .Radiation.radiation_types import (
 )
 from .Surface.LSM.base import BaseLSMModule
 from .Surface.LSM.homogeneous import LSMHomogeneousModule
-from .Surface.LSM.LandUseModifications import LandUseModification, LandUseModifications
-from .Surface.LSM.LSM import (
-    AGSParameters,
-    FromBofek,
-    FromLCZ,
-    FromTop10,
+from .Surface.LSM.lsm_module import (
     LSMModule,
 )
+from .Surface.LSM.lsm_sources import FromBofek, FromLCZ, FromTop10
+from .Surface.LSM.lu_modifications import LandUseModification, LandUseModifications
 from .Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -124,10 +119,6 @@ from .Surface.surface import (
 from .vars import VariableDefinition, get_all_vars
 
 __all__ = [
-    # Registry and logging helpers
-    "MODULE_REGISTRY",
-    "SINGLETON_REGISTRY",
-    "AGSParameters",
     "AllGeometry",
     # AtmosphereModule, AtmosphericProfile, InterpolatedProfile
     "AtmosphereModule",
@@ -224,8 +215,9 @@ __all__ = [
     "do_openboundary",
     "get_all_vars",
     "logwrap",
+    # Registry and logging helpers
+    "module_registry",
     "register_module",
-    "register_singleton",
     "setup_logging",
     "simulation_module",
 ]

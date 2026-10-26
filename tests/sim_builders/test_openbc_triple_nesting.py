@@ -28,13 +28,16 @@ from modular_dales.Configuration.output_modules import (
 from modular_dales.Geometry.geometry_modification import AllGeometry
 from modular_dales.modular.simulation_module import set_nml_section
 from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM.LandUseModifications import LandUseModification
-from modular_dales.Surface.LSM.LSM import (
+from modular_dales.Surface.LSM import LandUseSet
+from modular_dales.Surface.LSM.lsm_module import (
+    LSMModule,
+)
+from modular_dales.Surface.LSM.lsm_sources import (
     FromBofek,
     FromLCZ,
     FromTop10,
-    LSMModule,
 )
+from modular_dales.Surface.LSM.lu_modifications import LandUseModification
 from modular_dales.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -137,6 +140,7 @@ def _attach_common_physics(
     #     ps=100000.0,
     # )
     lsm = LSMModule(
+        land_use_set=LandUseSet.IFS,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -145,20 +149,29 @@ def _attach_common_physics(
         dz_soil=[1.89, 0.72, 0.21, 0.07],
         albedoav=0.22,
     )
-    lsm += UniformSkinTemperature(291)
-    lsm += UniformSoilTemperature([288, 288, 288, 288])
-    lsm += UniformSoilMoisture(
-        [
-            0.36867549,
-            0.25300502,
-            0.14997292,
-            0.16459982,
-        ]
+    lsm.add(UniformSkinTemperature(291), priority=600)
+    lsm.add(UniformSoilTemperature([288, 288, 288, 288]), priority=600)
+    lsm.add(
+        UniformSoilMoisture(
+            [
+                0.36867549,
+                0.25300502,
+                0.14997292,
+                0.16459982,
+            ]
+        ),
+        priority=600,
     )
-    lsm += LandUseModification(geometry=AllGeometry(), type="grs")
-    lsm += FromLCZ()
-    lsm += FromBofek(spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data")
-    lsm += FromTop10(spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data")
+    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    lsm.add(FromLCZ(), priority=100)
+    lsm.add(
+        FromTop10(spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data"),
+        priority=300,
+    )
+    lsm.add(
+        FromBofek(spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data"),
+        priority=400,
+    )
     sim += lsm
 
     slurb = SLURBModule(deep_soil_temperature=293)
@@ -633,7 +646,7 @@ def _vertical_cross_nearest_match(
                 if dist < best_dist:
                     best_dist = dist
                     best_path = path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Failed to process file {path}: {e}")
             continue
 
