@@ -24,6 +24,8 @@ from modular_dales import (
 from modular_dales.Atmosphere import InterpolatedProfile, lin
 from modular_dales.vars import *
 
+from tests.helpers import open_dataset
+
 
 def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
     sim = dales_simulation(case_name, machine_conf)
@@ -228,37 +230,18 @@ def spraying_runtime_case(machine_conf: dict) -> dales_simulation:
 
 def assert_sprayed_salt_in_fielddump(output_path: Path) -> None:
     run_dir = output_path / "run_001"
-    candidates = [
-        run_dir / "fielddump.001.nc",
-        output_path / "fielddump.nc",
-    ]
-    fielddump_path = next((path for path in candidates if path.is_file()), None)
-    if fielddump_path is None:
-        raise AssertionError(
-            f"No fielddump output found in expected locations: {candidates}"
-        )
-
-    with xr.open_dataset(fielddump_path) as ds:
+    with open_dataset(run_dir, "fielddump") as ds:
         if "salt" not in ds.variables:
             raise AssertionError(
-                f"Expected sprayed tracer variable 'salt' in {fielddump_path.name}, got {list(ds.variables)}"
+                f"Expected sprayed tracer variable 'salt' in {run_dir.name}, got {list(ds.variables)}"
             )
 
-        salt = np.asarray(ds["salt"].values, dtype=float)
-        if salt.ndim < 2:
-            raise AssertionError(
-                f"Expected time-dependent salt field in {fielddump_path.name}, got shape {salt.shape}"
-            )
+        salt = ds["salt"]
 
-        time_axis = 0
-        salt_means = np.nanmean(salt.reshape(salt.shape[time_axis], -1), axis=1)
-        if salt_means.size < 2:
-            raise AssertionError(
-                f"Need at least two fielddump times to verify spraying trend, got {salt_means.size}"
-            )
+        salt_means = salt.mean(dim=("xt", "yt", "zt")).values
 
-        if not (salt_means[-1] > salt_means[0]):
+        if not (float(salt_means[-1]) > float(salt_means[0])):
             raise AssertionError(
                 "Expected mean salt concentration to increase over time due to spraying, "
-                f"but got start={salt_means[0]:.6e}, end={salt_means[-1]:.6e}."
+                f"but got start={float(salt_means[0]):.6e}, end={float(salt_means[-1]):.6e}."
             )

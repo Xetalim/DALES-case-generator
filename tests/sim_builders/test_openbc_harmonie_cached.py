@@ -21,9 +21,15 @@ from modular_dales import (
 from modular_dales.Atmosphere import lin
 from modular_dales.vars import qt, thetal, tke, ua, va, w
 
-FORECAST_ROOT = Path(
-    "/Users/andrevanginkel/Documents/30_Data/32_campus_case/32.01_harm_2026032618"
-)
+DATA_PATH = Path("HARM_TEST_DATA")
+
+
+def extract_zip(path):
+    archive = "tests/openbc_test_input/HARM_TEST_DATA.zip"
+    import zipfile
+
+    with zipfile.ZipFile(archive, "r") as zip_ref:
+        zip_ref.extractall(Path(path))
 
 
 def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
@@ -32,10 +38,7 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
     The 18 UTC forecast supplies one hour of boundaries for a 60-second run.
     Missing local archives skip this machine-specific case, never download them.
     """
-    for product in ("P5", "P3"):
-        archive = FORECAST_ROOT / f"HARM43_V1_{product}_2026032618.tar"
-        if not archive.is_file():
-            pytest.skip(f"Cached HARMONIE archive is unavailable: {archive}")
+    extract_zip(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
     cdo_path = shutil.which("cdo")
     if cdo_path is None:
         pytest.skip("CDO is required for the cached HARMONIE conversion workflow")
@@ -84,7 +87,9 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
     )
     sim += KNMIHarmonieForecastDownloadModule(
         forecast_datetime="2026032618",
-        download_root=str(FORECAST_ROOT),
+        download_root=str(
+            Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"]) / "HARM_TEST_DATA"
+        ),
         cdo_path=cdo_path,
         delete_grib_files=False,
         convert_to_netcdf=False,
@@ -107,10 +112,8 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
     The 18 UTC forecast supplies one hour of boundaries for a 60-second run.
     Missing local archives skip this machine-specific case, never download them.
     """
-    for product in ("P5", "P3"):
-        archive = FORECAST_ROOT / f"HARM43_V1_{product}_2026032618.tar"
-        if not archive.is_file():
-            pytest.skip(f"Cached HARMONIE archive is unavailable: {archive}")
+    extract_zip(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
+
     cdo_path = shutil.which("cdo")
     if cdo_path is None:
         pytest.skip("CDO is required for the cached HARMONIE conversion workflow")
@@ -149,8 +152,16 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
     )
     atmo = AtmosphereModule()
     sim += HarmonieAtmosphereModule(
-        harmonie_ml_glob=str(FORECAST_ROOT / "HARM43_V1_P5_*/*"),
-        harmonie_sfc_glob=str(FORECAST_ROOT / "HARM43_V1_P3_*/*"),
+        harmonie_ml_glob=str(
+            Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
+            / "HARM_TEST_DATA"
+            / "HARM43_V1_P5_*/*"
+        ),
+        harmonie_sfc_glob=str(
+            Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
+            / "HARM_TEST_DATA"
+            / "HARM43_V1_P3_*/*"
+        ),
         harmonie_start="2026-03-26T18:00:00",
         harmonie_end="2026-03-26T19:00:00",
         harmonie_time0="2026-03-26T18:00:00",

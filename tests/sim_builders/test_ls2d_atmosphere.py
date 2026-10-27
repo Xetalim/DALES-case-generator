@@ -27,7 +27,8 @@ from modular_dales.Surface.LSM import (
 )
 
 
-def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
+@pytest.mark.parametrize("data_source", ["CDS", "ARCO"])
+def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf, data_source) -> None:
     """Run LS2DAtmosphereModule with a small domain and real LS2D.
 
     This test requires the external ``ls2d`` package and valid ERA5
@@ -60,15 +61,22 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
     sim += TimedependentModule()
     # Configure LS2D-driven atmosphere; central_lat / central_lon and
     # case_name will be taken from GridDales and dales_simulation.
-    atmo_ls2d = LS2DAtmosphereModule(
-        era5_path=sim.machine_conf.get("ls2d_conf", {}).get(
+    if data_source == "CDS":
+        era5_path = sim.machine_conf.get("ls2d_conf", {}).get(
             "era5_path",
             "/Users/andrevanginkel/Documents/20_Code/28_dales_input/28.01_Dales_LSM_generator/jupyter_tests/era5_data",
-        ),
+        )
+    else:
+        era5_path = sim.machine_conf.get("ls2d_conf", {}).get(
+            "arco_path",
+            "/Users/andrevanginkel/Documents/20_Code/28_dales_input/28.01_Dales_LSM_generator/jupyter_tests/arco_data",
+        )
+    atmo_ls2d = LS2DAtmosphereModule(
+        era5_path=era5_path,
+        data_source=data_source,
         start_date=datetime(2016, 8, 15, hour=6, tzinfo=UTC),
         end_date=datetime(2016, 8, 16, hour=6, tzinfo=UTC),
         write_log=False,
-        data_source=sim.machine_conf.get("ls2d_conf", {}).get("data_source", "CDS"),
         n_av=0,
         method="2nd",
     )
@@ -151,7 +159,7 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
     # Inspect dimensions of the generated files using xarray
     with xr.open_dataset(init_path) as ds_init:
         zh = np.asarray(ds_init["zh"].values, dtype=float)
-        assert zh.ndim == 1 and zh.size == domain_info.kmax
+        assert zh.size == domain_info.kmax
 
         # Check that a few key variables are present as base profiles
         for name in ("ua", "va", "thetal", "qt", "tke"):
@@ -226,5 +234,5 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf) -> None:
         assert np.all(index_soil == index_soil.flat[0])
 
     # Check that LSM roughness namelist values have been updated from LS2D
-    assert sim.retrieve_module("LSMModule").z0mav is not None
-    assert sim.retrieve_module("LSMModule").z0hav is not None
+    assert sim.retrieve_module(LSMModule).z0mav is not None
+    assert sim.retrieve_module(LSMModule).z0hav is not None

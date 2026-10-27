@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import cast
+import pytest
 
 import numpy as np
 import xarray as xr
@@ -44,7 +45,7 @@ from modular_dales.Surface.LSM.translation_tables.landuse_types import (
 from modular_dales.vars import *
 
 
-def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
+def SLURB_LCZ_case(machine_conf: dict, tileset="IFS") -> dales_simulation:
     """Construct a simulation combining SLURB and LCZ-based LSM configuration."""
     sim = dales_simulation("SLURB_case", machine_conf)
 
@@ -104,7 +105,7 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
         iinterp_theta=1,
         dz_soil=[1.89, 0.72, 0.21, 0.07],
         albedoav=0.22,
-        land_use_set=LandUseSet.DEPAC,
+        land_use_set=getattr(LandUseSet, tileset),
     )
     lsm.add(UniformSkinTemperature(291), priority=600)
     lsm.add(UniformSoilTemperature([288, 288, 288, 288]), priority=600)
@@ -119,7 +120,10 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
         ),
         priority=600,
     )
-    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    if tileset == "DEPAC":
+        lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    elif tileset == "IFS":
+        lsm.add(LandUseModification(geometry=AllGeometry(), type="sg"), priority=0)
     lsm.add(FromLCZ(), priority=100)
     sim += lsm
 
@@ -143,7 +147,7 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
 
 def SLURB_DEPAC_case(machine_conf: dict) -> dales_simulation:
     """Derive DEPAC tile fractions and SLuRB morphology from LCZ data."""
-    sim = SLURB_LCZ_case(machine_conf)
+    sim = SLURB_LCZ_case(machine_conf, tileset="DEPAC")
     return sim
 
 

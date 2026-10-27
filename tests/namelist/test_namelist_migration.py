@@ -11,7 +11,7 @@ from docs.conf import _append_namelist_field_docs
 from modular_dales.modular.dales_simulation import dales_simulation
 from modular_dales.modular.namelist import get_namelist_spec, nml_field
 from modular_dales.modular.simulation_module import simulation_module
-from tests.test_namelist_fields import NamelistModule
+from tests.namelist.test_namelist_fields import NamelistModule
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY_KEYS = {"nml", "key", "required", "raise_conflict", "doc", "units"}

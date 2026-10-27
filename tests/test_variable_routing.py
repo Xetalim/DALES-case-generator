@@ -7,8 +7,8 @@ from modular_dales import vars
 from modular_dales.Atmosphere import (
     AtmosphereModule,
     AtmosphericProfile,
-    lin,
     TimedAtmosphereProfile,
+    lin,
 )
 from modular_dales.modular.dales_simulation import dales_simulation
 

@@ -2,13 +2,13 @@ import hashlib
 import logging
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import geopandas as gpd
 import numpy as np
 import rasterio
 import xarray as xr
 from pyproj import Transformer
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rasterio._typing import CRSInput
@@ -32,7 +32,7 @@ logger.debug("Entered module: %s", __name__)
 
 def get_cached_AHN(
     cache_dir: str | Path, grid: GridDales
-) -> tuple[np.ndarray, rasterio.Affine, CRSInput, Profile]:
+) -> tuple[np.ndarray, rasterio.Affine, "CRSInput", Profile]:
     """
     Download and cache AHN (Actueel Hoogtebestand Nederland) elevation data for a given grid.
 
@@ -47,7 +47,7 @@ def get_cached_AHN(
         tuple: A tuple containing:
             - mosaic (ndarray): Merged elevation data as numpy array with shape (bands, height, width).
             - out_transform (Affine): Geospatial transformation matrix for the output raster.
-            - dst_crs (str): Destination coordinate reference system (EPSG:28992).
+            - dst_crs (CRSInput": Destination coordinate reference system (EPSG:28992).
             - profile (dict): Rasterio profile dictionary with metadata (driver, dimensions, dtype, crs, transform, compression).
 
     Notes:

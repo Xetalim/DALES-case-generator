@@ -4,7 +4,7 @@ import filecmp
 import subprocess
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 import xarray as xr
@@ -20,6 +20,17 @@ def load_machine_conf() -> dict:
     """Load the machine configuration YAML as a dictionary."""
     with MACHINE_CONF_PATH.open("r") as f:
         return yaml.safe_load(f)
+
+
+def open_dataset(
+    path: Path, dataset_type: Literal["fielddump", "crossxy", "crossxz", "crossyz"]
+) -> xr.Dataset:
+    """Open an xarray dataset from the given path."""
+    if dataset_type not in {"fielddump", "crossxy", "crossxz", "crossyz"}:
+        raise ValueError(f"Unsupported dataset type: {dataset_type}")
+    # first try if it exists as a multi-file
+
+    return xr.open_mfdataset(str(path / f"{dataset_type}.*.nc"))
 
 
 def assert_dirs_equal(left: Path, right: Path) -> None:

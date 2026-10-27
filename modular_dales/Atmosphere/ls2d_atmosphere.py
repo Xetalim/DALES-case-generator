@@ -3,7 +3,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import cast
+from typing import cast, Literal
 
 import ls2d
 
@@ -133,7 +133,7 @@ class LS2DAtmosphereModule(ExternalForcingModule):
         repr=True,
         metadata={"serialize": True},
     )
-    data_source: str = field(
+    data_source: Literal["CDS", "ARCO"] = field(
         default="CDS",
         init=True,
         repr=True,
@@ -176,34 +176,59 @@ class LS2DAtmosphereModule(ExternalForcingModule):
             )
 
     def load_les_input(self) -> LESInput:
+        if self.start_date is None or self.end_date is None:
+            raise ValueError("Start and end dates must be set")
 
-        settings = {
-            "central_lat": self.central_lat,
-            "central_lon": self.central_lon,
-            "area_size": self.area_size,
-            "case_name": self.case_name,
-            "era5_path": self.era5_path,
-            "start_date": self.start_date,
-            "end_date": self.end_date,
-            "write_log": self.write_log,
-            "data_source": self.data_source,
-        }
+        if self.data_source == "CDS":
+            settings = {
+                "central_lat": self.central_lat,
+                "central_lon": self.central_lon,
+                "area_size": self.area_size,
+                "case_name": self.case_name,
+                "era5_path": self.era5_path,
+                "start_date": self.start_date.replace(
+                    tzinfo=None
+                ),  # while LS2D expects naive datetime objects
+                "end_date": self.end_date.replace(
+                    tzinfo=None
+                ),  # while LS2D expects naive datetime objects
+                "write_log": self.write_log,
+                "data_source": self.data_source,
+            }
 
-        logger.info("LS2DAtmosphereModule: downloading ERA5 via LS2D")
-        retry_exponential(
-            lambda: ls2d.download_era5(settings, exit_when_waiting=False),
-            max_attempts=30,
-            max_total_time=3600,
-            base_delay=60,
-            max_delay=180,
-        )
+            logger.info("LS2DAtmosphereModule: downloading ERA5 via LS2D")
+            retry_exponential(
+                lambda: ls2d.download_era5(settings, exit_when_waiting=False),
+                max_attempts=30,
+                max_total_time=3600,
+                base_delay=60,
+                max_delay=180,
+            )
 
-        logger.info("LS2DAtmosphereModule: reading ERA5 via LS2D.Read_era5")
-        era = ls2d.Read_era5(settings)
-        era.calculate_forcings(n_av=self.n_av, method=self.method)
+            logger.info("LS2DAtmosphereModule: reading ERA5 via LS2D.Read_era5")
+            era = ls2d.Read_era5(settings)
+            era.calculate_forcings(n_av=self.n_av, method=self.method)
 
-        logger.info(
-            "LS2DAtmosphereModule: building les_input on DALES grid (k=%d)",
-            self.zt.size,
-        )
-        return cast(LESInput, era.get_les_input(self.zt))
+            logger.info(
+                "LS2DAtmosphereModule: building les_input on DALES grid (k=%d)",
+                self.zt.size,
+            )
+            return cast(LESInput, era.get_les_input(self.zt))
+        elif self.data_source == "ARCO":
+            settings = {
+                "central_lat": self.central_lat,
+                "central_lon": self.central_lon,
+                "area_size": self.area_size,
+                "case_name": self.case_name,
+                "era5_path": self.era5_path,
+                "start_date": self.start_date.replace(tzinfo=None),
+                "end_date": self.end_date.replace(tzinfo=None),
+                "write_log": self.write_log,
+            }
+            logger.info("LS2DAtmosphereModule: reading local ERA5 via LS2D.Read_era5")
+            ls2d.download_era5_arco(settings)
+            ds_3d = ls2d.read_era5_arco(settings)
+            ds_1d = ls2d.create_column_input(ds_3d, self.zt, n_av=self.n_av)
+            return cast(LESInput, ds_1d)
+        else:
+            raise ValueError(f"Unsupported data source: {self.data_source}")
