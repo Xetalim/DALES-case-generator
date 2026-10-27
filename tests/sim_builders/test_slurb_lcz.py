@@ -37,7 +37,7 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
     """Construct a simulation combining SLURB and LCZ-based LSM configuration."""
     sim = dales_simulation("SLURB_case", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     domain_info = GridDales(
         itot=32,
@@ -54,7 +54,7 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
         dz0=10,
         proj4="+proj=sterea +lat_0=52.1561605555556 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.4171,50.3319,465.5524,1.9342,-1.6677,9.1019,4.0725 +units=m +no_defs +type=crs",
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
@@ -84,7 +84,7 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim += atmo
+    sim.add(atmo)
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
@@ -110,23 +110,23 @@ def SLURB_LCZ_case(machine_conf: dict) -> dales_simulation:
     )
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
     lsm.add(FromLCZ(), priority=100)
-    sim += lsm
+    sim.add(lsm)
 
     slurb = SLURBModule(deep_soil_temperature=293)
-    slurb += SLURBModification(
+    slurb.add(SLURBModification(
         geometry=AllGeometry(),
         vars=[SLURBVariableModification(varname="albedo_av", value=10)],
-    )
-    sim += slurb
+    ))
+    sim.add(slurb)
 
-    sim += RadiationModule(
+    sim.add(RadiationModule(
         iradiation=4,
-    )
+    ))
 
-    sim += EasyOutputModule(output_interval=10)
+    sim.add(EasyOutputModule(output_interval=10))
 
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
-    sim += time_module
+    sim.add(time_module)
     return sim
 
 

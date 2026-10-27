@@ -32,7 +32,7 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
     """Construct a simple simulation including a SLURB configuration."""
     sim = dales_simulation("SLURB_case", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     domain_info = GridDales(
         itot=16,
@@ -48,7 +48,7 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=10.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
@@ -64,7 +64,7 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim += atmo
+    sim.add(atmo)
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
@@ -85,21 +85,21 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
         ),
         priority=0,
     )
-    sim += lsm
+    sim.add(lsm)
 
     slurb = SLURBModule(deep_soil_temperature=293)
-    slurb += SLURBModification(
+    slurb.add(SLURBModification(
         geometry=AllGeometry(),
         vars=[SLURBVariableModification(varname="albedo_av", value=10)],
-    )
-    sim += slurb
+    ))
+    sim.add(slurb)
 
-    sim += RadiationModule(
+    sim.add(RadiationModule(
         iradiation=4,
-    )
+    ))
 
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
-    sim += time_module
+    sim.add(time_module)
     return sim
 
 

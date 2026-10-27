@@ -309,19 +309,19 @@ if __name__ == "__main__":
 
     sim = dales_simulation("openbc_triple64_parent_l1", machine_conf)
     sim.init_output_folder()
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
     _set_child_vertical_grid(supergrid, midgrid)
 
-    sim += supergrid
+    sim.add(supergrid)
 
     nesting = NestingTopology()
-    nesting += supergrid
-    nesting += midgrid
+    nesting.add(supergrid)
+    nesting.add(midgrid)
     nesting.my_idx = nesting.nestings.index(supergrid)
-    sim += nesting
+    sim.add(nesting)
 
     start_ts, end_ts = _may_start_end(start_day)
     spatial_data_path = sim.machine_conf.get("lsm_conf", {}).get(
@@ -329,7 +329,7 @@ if __name__ == "__main__":
     )
 
     if use_ls2d:
-        sim += TimedependentModule()
+        sim.add(TimedependentModule())
     if use_ls2d:
         atmo_ls2d = LS2DAtmosphereModule(
             era5_path=sim.machine_conf.get("ls2d_conf", {}).get(
@@ -346,12 +346,12 @@ if __name__ == "__main__":
             do_nudging=True,
             smooth_initial_uv_to_geostrophic=True,
         )
-        sim += atmo_ls2d
+        sim.add(atmo_ls2d)
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0)))
-    sim += atmo
+    sim.add(atmo)
 
-    sim += TimeModule(
+    sim.add(TimeModule(
         xtime=12.0,
         xyear=2026,
         runtime=(end_ts - start_ts).total_seconds(),
@@ -359,7 +359,7 @@ if __name__ == "__main__":
         startmonth=5,
         startday=start_day,
         inferfromdatetime=True,
-    )
+    ))
 
     lsm = LSMModule(
         land_use_set=LandUseSet.IFS,
@@ -400,33 +400,33 @@ if __name__ == "__main__":
         ),
         priority=300,
     )
-    sim += lsm
+    sim.add(lsm)
     slurb = SLURBModule(
         deep_soil_temperature=273.15 + 15,
         building_indoor_temperature=273.15 + 21,
     )
-    sim += slurb
+    sim.add(slurb)
 
-    sim += RadiationModule(iradiation=4)
+    sim.add(RadiationModule(iradiation=4))
 
-    sim += LSMCrossModule(enabled=True, dtav=60)
-    sim += CapeModule(enabled=True, dtav=120)
-    sim += StatsModule(enabled=True, dtav=5, timeav=5)
-    sim += FielddumpModule(dtav=120, lfielddump=True, le12=False)
-    sim += RadfieldModule(enabled=True, dtav=120, timeav=120)
-    sim += TimestatModule(enabled=True, dtav=60)
+    sim.add(LSMCrossModule(enabled=True, dtav=60))
+    sim.add(CapeModule(enabled=True, dtav=120))
+    sim.add(StatsModule(enabled=True, dtav=5, timeav=5))
+    sim.add(FielddumpModule(dtav=120, lfielddump=True, le12=False))
+    sim.add(RadfieldModule(enabled=True, dtav=120, timeav=120))
+    sim.add(TimestatModule(enabled=True, dtav=60))
     x_meas = [x0]
     y_meas = [y0]
     x_meas.append(float(grid.xt[32 - 1]))
     y_meas.append(float(grid.yt[11 - 1]))
-    sim += VirtualMeasurementOutputModule(x=x_meas, y=y_meas, enabled=True)
-    sim += ColumnStatisticsOutputModule(x=x_meas, y=y_meas, enabled=True)
-    sim += NetCDFStatisticsSyncModule()
+    sim.add(VirtualMeasurementOutputModule(x=x_meas, y=y_meas, enabled=True))
+    sim.add(ColumnStatisticsOutputModule(x=x_meas, y=y_meas, enabled=True))
+    sim.add(NetCDFStatisticsSyncModule())
 
     xz_coords = [float(grid.y0 + 0.5 * grid.ysize)]
     yz_coords = [float(grid.x0 + 0.5 * grid.xsize)]
 
-    sim += CrossSectionOutputModule(
+    sim.add(CrossSectionOutputModule(
         cross_enabled=True,
         cross_dtav=10,
         xy_coords=[float(grid.zt[0])],
@@ -435,12 +435,12 @@ if __name__ == "__main__":
         xy_enabled=True,
         xz_enabled=True,
         yz_enabled=True,
-    )
+    ))
 
-    sim += SamplingModule(output_interval=120)
-    sim += CheckSimulationModule(
+    sim.add(SamplingModule(output_interval=120))
+    sim.add(CheckSimulationModule(
         check_interval=120, stop_on_invalid=False, check_tendencies=True
-    )
+    ))
     # if sim.nml.get("namchecksim") is None:
     #     sim.nml["namchecksim"] = {}
     # sim.nml["namchecksim"]["tcheck"] = 60

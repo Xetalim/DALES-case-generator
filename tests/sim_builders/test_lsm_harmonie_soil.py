@@ -30,7 +30,7 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
     """Construct a simple simulation including an LSM configuration."""
     sim = dales_simulation("LSM_case", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
     # 293219, 277925
     domain_info = GridDales(
         itot=64,
@@ -47,7 +47,7 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
         dz0=5.0,
         proj4="+proj=lcc +lat_1=48.85 +lat_0=48.85 +lon_0=2.35 +k_0=1 +x_0=246999.973166197 +y_0=246999.953483689 +R=6371229 +units=m +no_defs",
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
@@ -63,7 +63,7 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim += atmo
+    sim.add(atmo)
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
@@ -87,15 +87,15 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
         priority=600,
     )
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
-    sim += lsm
+    sim.add(lsm)
 
-    sim += RadiationModule(
+    sim.add(RadiationModule(
         iradiation=4,
-    )
+    ))
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
-    sim += time_module
-    sim += CheckSimulationModule(check_interval=10)
-    sim += EasyOutputModule(output_interval=5)
+    sim.add(time_module)
+    sim.add(CheckSimulationModule(check_interval=10))
+    sim.add(EasyOutputModule(output_interval=5))
     return sim
 
 

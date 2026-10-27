@@ -17,10 +17,10 @@ def _configure_sim(sim) -> None:
 
 def test_virtual_measurement_resolves_real_coordinates(machine_conf):
     sim = _build_basic_sim(machine_conf("virtual_measurement"))
-    sim += VirtualMeasurementOutputModule(
+    sim.add(VirtualMeasurementOutputModule(
         x=[14.9, 149.0],
         y=[6.0, 144.9],
-    )
+    ))
 
     _configure_sim(sim)
 
@@ -32,10 +32,10 @@ def test_virtual_measurement_resolves_real_coordinates(machine_conf):
 
 def test_colstat_preserves_explicit_indices(machine_conf):
     sim = _build_basic_sim(machine_conf("colstat"))
-    sim += ColumnStatisticsOutputModule(
+    sim.add(ColumnStatisticsOutputModule(
         x_idx=[2, 5],
         y_idx=[3, 4],
-    )
+    ))
 
     _configure_sim(sim)
 
@@ -47,12 +47,12 @@ def test_colstat_preserves_explicit_indices(machine_conf):
 
 def test_spraying_sources_are_routed_from_shared_point_fields(machine_conf):
     sim = _build_basic_sim(machine_conf("spraying_shared_points"))
-    sim += SprayingModule(
+    sim.add(SprayingModule(
         x_idx=[3],
         y_idx=[4],
         z_idx=[2],
         lwater_spraying=True,
-    )
+    ))
 
     _configure_sim(sim)
 
@@ -63,12 +63,12 @@ def test_spraying_sources_are_routed_from_shared_point_fields(machine_conf):
 
 def test_spraying_sources_resolve_real_coordinates(machine_conf):
     sim = _build_basic_sim(machine_conf("spraying_real_coords"))
-    sim += SprayingModule(
+    sim.add(SprayingModule(
         x=14.0,
         y=25.0,
         z=5.0,
         lwater_spraying=True,
-    )
+    ))
 
     _configure_sim(sim)
 

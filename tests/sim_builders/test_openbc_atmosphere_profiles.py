@@ -32,7 +32,7 @@ def _build_openbc_atmo_sim(
     sim = dales_simulation(casename, machine_conf)
 
     # Basic namelist + grid + surface so the pipeline can run
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     # Minimal grid: small domain to keep files lightweight
     grid = GridDales(
@@ -49,7 +49,7 @@ def _build_openbc_atmo_sim(
         alpha=1.0,
         dz0=10.0,
     )
-    sim += grid
+    sim.add(grid)
 
     atmo = AtmosphereModule()
 
@@ -91,19 +91,19 @@ def _build_openbc_atmo_sim(
         )
     )
 
-    sim += atmo
+    sim.add(atmo)
 
     # Simple surface so job.001 has basic settings
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=0.0001,
         z0hav=0.0001,
         ps=100000,
         albedoav=0.22,
-    )
+    ))
 
     # Configure time so Atmosphere profiles have a reference start
-    sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600)
+    sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600))
 
     boundary_u_const = AtmosphericProfile(
         variable=ua,
@@ -186,11 +186,11 @@ def _build_openbc_atmo_sim(
         noise_seed=42,
         noise_variables=["u", "v"],
     )
-    sim += openbc
+    sim.add(openbc)
 
-    sim += EasyOutputModule(
+    sim.add(EasyOutputModule(
         output_interval=10,
-    )
+    ))
 
     return sim
 

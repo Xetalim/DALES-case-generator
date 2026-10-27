@@ -18,7 +18,7 @@ def _build_basic_sim(machine_conf: dict) -> dales_simulation:
     """Construct a minimal but non-trivial simulation using a few modules."""
     sim = dales_simulation("basic", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     domain_info = GridDales(
         itot=16,
@@ -34,7 +34,7 @@ def _build_basic_sim(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=5.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
@@ -49,12 +49,12 @@ def _build_basic_sim(machine_conf: dict) -> dales_simulation:
             points=[1, 1e-8, 1e-8],
         )
     )
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15, z0mav=0.0001, z0hav=0.0001, ps=100000, albedoav=0.22
-    )
-    sim += atmo
+    ))
+    sim.add(atmo)
 
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
-    sim += time_module
+    sim.add(time_module)
 
     return sim

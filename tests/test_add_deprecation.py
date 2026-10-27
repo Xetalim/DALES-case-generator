@@ -16,7 +16,7 @@ def test_ibm_module_add_is_supported_and_iadd_is_deprecated() -> None:
     assert module.ibm_modifications == [modification]
 
     with pytest.warns(DeprecationWarning, match=r"IBM configuration.*add\(\)"):
-        module += modification
+        module.add(modification)
 
     assert module.ibm_modifications == [modification, modification]
 
@@ -29,6 +29,6 @@ def test_land_use_add_is_supported_and_iadd_is_deprecated() -> None:
     assert modifications.modifications == [modification]
 
     with pytest.warns(DeprecationWarning, match=r"land-use modifications.*add\(\)"):
-        modifications += modification
+        modifications.add(modification)
 
     assert modifications.modifications == [modification, modification]

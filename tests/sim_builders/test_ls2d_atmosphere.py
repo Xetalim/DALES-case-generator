@@ -41,7 +41,7 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf, data_source) -> None:
 
     sim = dales_simulation("ls2d_atmosphere", machine_conf("ls2d_atmosphere"))
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
     domain_info = GridDales(
         itot=16,
         jtot=16,
@@ -56,9 +56,9 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf, data_source) -> None:
         alpha=1.009,
         dz0=20.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
-    sim += TimedependentModule()
+    sim.add(TimedependentModule())
     # Configure LS2D-driven atmosphere; central_lat / central_lon and
     # case_name will be taken from GridDales and dales_simulation.
     if data_source == "CDS":
@@ -80,17 +80,17 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf, data_source) -> None:
         n_av=0,
         method="2nd",
     )
-    sim += atmo_ls2d
+    sim.add(atmo_ls2d)
 
     # Base AtmosphereModule; LS2DAtmosphereModule will inject LS2D-based
     # initial profiles here so that ``init.<exp_id>.nc`` is written via
     # the standard AtmosphereModule machinery.
     atmo = AtmosphereModule()
-    sim += atmo
+    sim.add(atmo)
 
     # Enable radiation so that a backrad file is required; we keep the
     # configuration minimal here and do not depend on external RRTMG data.
-    sim += RadiationModule(iradiation=4)
+    sim.add(RadiationModule(iradiation=4))
 
     # Add an LSM module that explicitly opts into LS2D-driven soil and
     # roughness using FromLS2D. Explicit uniform thermal sources take
@@ -112,15 +112,15 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf, data_source) -> None:
         priority=600,
     )
     lsm.add(UniformSoilMoisture(soil_moisture=[0.3, 0.3, 0.3, 0.3]), priority=600)
-    sim += lsm
+    sim.add(lsm)
 
-    sim += TimeModule(xtime=6, xday=15, xyear=2016, runtime=24 * 3600.0)
+    sim.add(TimeModule(xtime=6, xday=15, xyear=2016, runtime=24 * 3600.0))
 
-    sim += EasyOutputModule(output_interval=60)
+    sim.add(EasyOutputModule(output_interval=60))
 
-    sim += CheckSimulationModule(
+    sim.add(CheckSimulationModule(
         check_interval=360, check_tendencies=False, stop_on_invalid=False
-    )
+    ))
 
     # Run with microphysics turned on (two-moment scheme)
     set_nml_section(

@@ -31,7 +31,7 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
     """Construct a simulation including an IBM configuration."""
     sim = dales_simulation("IBM", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     domain_info = GridDales(
         itot=16,
@@ -47,7 +47,7 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=5.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=0.5, ddz=1e-3)))
@@ -63,12 +63,12 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim += atmo
-    sim += TimeModule(xday=2, xtime=12.0, xyear=2023, runtime=60)
+    sim.add(atmo)
+    sim.add(TimeModule(xday=2, xtime=12.0, xyear=2023, runtime=60))
 
-    sim += RadiationModule(
+    sim.add(RadiationModule(
         iradiation=2,
-    )
+    ))
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
@@ -83,7 +83,7 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
     lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
     lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
-    sim += lsm
+    sim.add(lsm)
 
     ibm = IBMModule(thlibm=293.15, thlroof=293.15)
     ibm.add(IBMModification(geometry=AllGeometry(), height=0))
@@ -91,7 +91,7 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
         geometry=RectangleIdxGeometry(minx=4, maxx=6, miny=4, maxy=4),
         height=20,
     ))
-    sim += ibm
+    sim.add(ibm)
     return sim
 
 

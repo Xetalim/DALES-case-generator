@@ -29,8 +29,8 @@ from tests.helpers import open_dataset
 
 def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
     sim = dales_simulation(case_name, machine_conf)
-    sim += DefaultNamelistModule()
-    sim += GridDales(
+    sim.add(DefaultNamelistModule())
+    sim.add(GridDales(
         itot=8,
         jtot=8,
         kmax=64,
@@ -43,7 +43,7 @@ def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
         y0=0.0,
         alpha=1.0,
         dz0=10.0,
-    )
+    ))
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=2.0, ddz=0.0)))
@@ -54,9 +54,9 @@ def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
     atmo.add(
         InterpolatedProfile(variable=tke, z=[0, 1000, 3000], points=[0.2, 0.02, 0.01])
     )
-    sim += atmo
+    sim.add(atmo)
 
-    sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=120)
+    sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=120))
 
     if sim.nml.get("RUN") is None:
         sim.nml["RUN"] = {}
@@ -68,63 +68,63 @@ def _base_runtime_case(machine_conf: dict, case_name: str) -> dales_simulation:
 
 def radiation_type_4_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "radiation_type_4_case")
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=1.0e-4,
         z0hav=1.0e-4,
         ps=100000.0,
         albedoav=0.22,
-    )
-    sim += RadiationModule(iradiation=4)
-    sim += EasyOutputModule(output_interval=30)
+    ))
+    sim.add(RadiationModule(iradiation=4))
+    sim.add(EasyOutputModule(output_interval=30))
     return sim
 
 
 def radiation_type_5_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "radiation_type_5_case")
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=1.0e-4,
         z0hav=1.0e-4,
         ps=100000.0,
         albedoav=0.22,
-    )
-    sim += RadiationModule(iradiation=5)
-    sim += EasyOutputModule(output_interval=30)
+    ))
+    sim.add(RadiationModule(iradiation=5))
+    sim.add(EasyOutputModule(output_interval=30))
     return sim
 
 
 def radiation_backrad_profile_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "radiation_backrad_profile_case")
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=1.0e-4,
         z0hav=1.0e-4,
         ps=100000.0,
         albedoav=0.22,
-    )
-    sim += RadiationModule(
+    ))
+    sim.add(RadiationModule(
         iradiation=4,
         backrad_profile=BackradPressureProfile(
             pressure_pa=[100000.0, 85000.0, 70000.0, 50000.0, 30000.0, 10000.0],
             temperature_k=[290.0, 281.0, 272.0, 257.0, 235.0, 212.0],
             specific_humidity_kgkg=[1.1e-2, 6.0e-3, 3.0e-3, 9.0e-4, 1.5e-4, 2.0e-5],
         ),
-    )
-    sim += EasyOutputModule(output_interval=30)
+    ))
+    sim.add(EasyOutputModule(output_interval=30))
     return sim
 
 
 def radiation_backrad_interpolated_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "radiation_backrad_interpolated_case")
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=1.0e-4,
         z0hav=1.0e-4,
         ps=100000.0,
         albedoav=0.22,
-    )
-    sim += RadiationModule(
+    ))
+    sim.add(RadiationModule(
         iradiation=4,
         backrad_interpolated_profile=BackradInterpolatedProfile(
             pressure_pa=[100000.0, 70000.0, 40000.0, 10000.0],
@@ -141,14 +141,14 @@ def radiation_backrad_interpolated_case(machine_conf: dict) -> dales_simulation:
                 10000.0,
             ],
         ),
-    )
-    sim += EasyOutputModule(output_interval=30)
+    ))
+    sim.add(EasyOutputModule(output_interval=30))
     return sim
 
 
 def lsm_homogeneous_runtime_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "lsm_homogeneous_runtime_case")
-    sim += LSMHomogeneousModule(
+    sim.add(LSMHomogeneousModule(
         ps=100000.0,
         z0mav=1.0e-4,
         z0hav=1.0e-4,
@@ -197,23 +197,23 @@ def lsm_homogeneous_runtime_case(machine_conf: dict) -> dales_simulation:
         tskin_water=289.0,
         thls=293.15,
         lheterogeneous=False,
-    )
-    sim += RRTMGRadiationModule()
-    sim += EasyOutputModule(output_interval=30)
+    ))
+    sim.add(RRTMGRadiationModule())
+    sim.add(EasyOutputModule(output_interval=30))
     return sim
 
 
 def spraying_runtime_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "spraying_runtime_case")
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=1.0e-4,
         z0hav=1.0e-4,
         ps=100000.0,
         albedoav=0.22,
-    )
-    sim += RadiationModule(iradiation=0)
-    sim += SprayingModule(
+    ))
+    sim.add(RadiationModule(iradiation=0))
+    sim.add(SprayingModule(
         lsalt_spraying=True,
         lwater_spraying=False,
         x_idx=4,
@@ -223,8 +223,8 @@ def spraying_runtime_case(machine_conf: dict) -> dales_simulation:
         salinity=1.0,
         tracer="salt",
         lsalt_sponge=False,
-    )
-    sim += EasyOutputModule(output_interval=10, enable_output=True)
+    ))
+    sim.add(EasyOutputModule(output_interval=10, enable_output=True))
     return sim
 
 

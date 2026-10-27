@@ -80,7 +80,7 @@ def test_triple_nested_simulation_setup(machine_conf):
     for idx, grid in enumerate(grids):
         simname = f"triple_{idx}"
         sim = dales_simulation(simname, conf)
-        sim += DefaultNamelistModule()
+        sim.add(DefaultNamelistModule())
 
         atmo = AtmosphereModule()
         atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=0)))
@@ -125,9 +125,9 @@ def test_triple_nested_simulation_setup(machine_conf):
                 shape=lin(surf_val=0.0, ddz=0.0),
             )
         )
-        sim += atmo
+        sim.add(atmo)
 
-        sim += TimeModule(
+        sim.add(TimeModule(
             xday=1,
             xtime=12.0,
             xyear=2023,
@@ -135,21 +135,21 @@ def test_triple_nested_simulation_setup(machine_conf):
             startyear=2023,
             startmonth=1,
             startday=1,
-        )
-        sim += ConstantSurfaceTemperatureModule(
+        ))
+        sim.add(ConstantSurfaceTemperatureModule(
             thls=293.15, z0mav=1e-4, z0hav=1e-4, ps=100000
-        )
+        ))
 
-        sim += grid
+        sim.add(grid)
 
         # Build simple nesting topology containing all grids up to current
         nesting = NestingTopology()
         for g in grids:
-            nesting += g
+            nesting.add(g)
         nesting.my_idx = nesting.nestings.index(grid)
-        sim += nesting
+        sim.add(nesting)
 
-        sim += EasyOutputModule(output_interval=5)
+        sim.add(EasyOutputModule(output_interval=5))
 
         if idx != 0:
             openbc = Nest_in_Dales(
@@ -165,7 +165,7 @@ def test_triple_nested_simulation_setup(machine_conf):
                 outpath_coarse=sims[-1].output_path / "run_001/",
                 outpath_coarse_old=sims[-1].output_path / "run_001/",
             )
-            sim += openbc
+            sim.add(openbc)
 
         # Run preprocessing to prepare outputs
         sim.sim_preprocessing_pipeline()

@@ -120,9 +120,9 @@ def _attach_common_physics(
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0.0)))
     atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
     atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0)))
-    sim += atmo
+    sim.add(atmo)
 
-    sim += TimeModule(
+    sim.add(TimeModule(
         # xday=180,
         xtime=12.0,
         xyear=2023,
@@ -131,7 +131,7 @@ def _attach_common_physics(
         startmonth=7,
         startday=1,
         inferfromdatetime=True,
-    )
+    ))
 
     # sim += ConstantSurfaceTemperatureModule(
     #     thls=293.15,
@@ -172,24 +172,24 @@ def _attach_common_physics(
         FromBofek(spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data"),
         priority=400,
     )
-    sim += lsm
+    sim.add(lsm)
 
     slurb = SLURBModule(deep_soil_temperature=293)
     # slurb += SLURBModification(
     #     geometry=AllGeometry(),
     #     vars=[SLURBVariableModification(varname="albedo_av", value=10)],
     # )
-    sim += slurb
+    sim.add(slurb)
 
-    sim += RadiationModule(
+    sim.add(RadiationModule(
         iradiation=4,
-    )
+    ))
 
-    sim += LSMCrossModule(enabled=True, dtav=10)
-    sim += CapeModule(enabled=True, dtav=10)
-    sim += StatsModule(enabled=True, dtav=10, timeav=10)
-    sim += FielddumpModule(dtav=100, lfielddump=True)
-    sim += RadfieldModule(enabled=True, dtav=10)
+    sim.add(LSMCrossModule(enabled=True, dtav=10))
+    sim.add(CapeModule(enabled=True, dtav=10))
+    sim.add(StatsModule(enabled=True, dtav=10, timeav=10))
+    sim.add(FielddumpModule(dtav=100, lfielddump=True))
+    sim.add(RadfieldModule(enabled=True, dtav=10))
 
     xz_coords = []
     yz_coords = []
@@ -197,7 +197,7 @@ def _attach_common_physics(
         xz_coords = [float(grid.y0 + 0.5 * grid.ysize)]
         yz_coords = [float(grid.x0 + 0.5 * grid.xsize)]
 
-    sim += CrossSectionOutputModule(
+    sim.add(CrossSectionOutputModule(
         cross_enabled=True,
         cross_dtav=10,
         xy_coords=[float(grid.zt[0])],
@@ -206,7 +206,7 @@ def _attach_common_physics(
         xy_enabled=True,
         xz_enabled=False,
         yz_enabled=False,
-    )
+    ))
 
     if sim.nml.get("namchecksim") is None:
         sim.nml["namchecksim"] = {}
@@ -221,18 +221,18 @@ def _attach_common_physics(
 
 def _build_outer_parent_sim(machine_conf: dict) -> dales_simulation:
     sim = dales_simulation("openbc_triple_parent_l1", machine_conf)
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID_SUPER)
     midgrid = _new_grid(_GRID_MID)
 
-    sim += supergrid
+    sim.add(supergrid)
 
     nesting = NestingTopology()
-    nesting += supergrid
-    nesting += midgrid
+    nesting.add(supergrid)
+    nesting.add(midgrid)
     nesting.my_idx = nesting.nestings.index(supergrid)
-    sim += nesting
+    sim.add(nesting)
 
     _attach_common_physics(sim, supergrid, center_vertical_crosssections=True)
     return sim
@@ -242,20 +242,20 @@ def _build_middle_nested_sim(
     machine_conf: dict, parent_sim: dales_simulation
 ) -> dales_simulation:
     sim = dales_simulation("openbc_triple_parent_l2", machine_conf)
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID_SUPER)
     midgrid = _new_grid(_GRID_MID)
     innergrid = _new_grid(_GRID_INNER)
 
-    sim += midgrid
+    sim.add(midgrid)
 
     nesting = NestingTopology()
-    nesting += supergrid
-    nesting += midgrid
-    nesting += innergrid
+    nesting.add(supergrid)
+    nesting.add(midgrid)
+    nesting.add(innergrid)
     nesting.my_idx = nesting.nestings.index(midgrid)
-    sim += nesting
+    sim.add(nesting)
 
     openbc = Nest_in_Dales(
         time0="2023-01-01T12:00:10",
@@ -270,7 +270,7 @@ def _build_middle_nested_sim(
         outpath_coarse=parent_sim.output_path / "run_001",
         outpath_coarse_old=parent_sim.output_path / "run_001",
     )
-    sim += openbc
+    sim.add(openbc)
 
     _attach_common_physics(sim, midgrid, center_vertical_crosssections=True)
     return sim
@@ -280,18 +280,18 @@ def _build_inner_nested_sim(
     machine_conf: dict, middle_sim: dales_simulation
 ) -> dales_simulation:
     sim = dales_simulation("openbc_triple_child_l3", machine_conf)
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     midgrid = _new_grid(_GRID_MID)
     innergrid = _new_grid(_GRID_INNER)
 
-    sim += innergrid
+    sim.add(innergrid)
 
     nesting = NestingTopology()
-    nesting += midgrid
-    nesting += innergrid
+    nesting.add(midgrid)
+    nesting.add(innergrid)
     nesting.my_idx = nesting.nestings.index(innergrid)
-    sim += nesting
+    sim.add(nesting)
 
     openbc = Nest_in_Dales(
         time0="2023-01-01T12:00:10",
@@ -306,7 +306,7 @@ def _build_inner_nested_sim(
         outpath_coarse=middle_sim.output_path / "run_001",
         outpath_coarse_old=middle_sim.output_path / "run_001",
     )
-    sim += openbc
+    sim.add(openbc)
 
     _attach_common_physics(sim, innergrid, center_vertical_crosssections=True)
     return sim
@@ -465,19 +465,19 @@ _GRID64_INNER = {
 
 def _build_outer_parent_sim_scaled64(machine_conf: dict) -> dales_simulation:
     sim = dales_simulation("openbc_triple64_parent_l1", machine_conf)
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
     midgrid.inherit_vertical_grid(supergrid)
 
-    sim += supergrid
+    sim.add(supergrid)
 
     nesting = NestingTopology()
-    nesting += supergrid
-    nesting += midgrid
+    nesting.add(supergrid)
+    nesting.add(midgrid)
     nesting.my_idx = nesting.nestings.index(supergrid)
-    sim += nesting
+    sim.add(nesting)
 
     _attach_common_physics(sim, supergrid, True)
     return sim
@@ -487,7 +487,7 @@ def _build_middle_nested_sim_scaled64(
     machine_conf: dict, parent_sim: dales_simulation
 ) -> dales_simulation:
     sim = dales_simulation("openbc_triple64_parent_l2", machine_conf)
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
@@ -495,14 +495,14 @@ def _build_middle_nested_sim_scaled64(
     innergrid = _new_grid(_GRID64_INNER)
     innergrid.inherit_vertical_grid(midgrid)
 
-    sim += midgrid
+    sim.add(midgrid)
 
     nesting = NestingTopology()
-    nesting += supergrid
-    nesting += midgrid
-    nesting += innergrid
+    nesting.add(supergrid)
+    nesting.add(midgrid)
+    nesting.add(innergrid)
     nesting.my_idx = nesting.nestings.index(midgrid)
-    sim += nesting
+    sim.add(nesting)
     dxturb = midgrid.xsize / midgrid.itot * 4.0
     dyturb = midgrid.ysize / midgrid.jtot * 4.0
     openbc = Nest_in_Dales(
@@ -523,7 +523,7 @@ def _build_middle_nested_sim_scaled64(
         outpath_coarse=parent_sim.output_path / "run_001",
         outpath_coarse_old=parent_sim.output_path / "run_001",
     )
-    sim += openbc
+    sim.add(openbc)
 
     _attach_common_physics(sim, midgrid, True)
     return sim
@@ -533,7 +533,7 @@ def _build_inner_nested_sim_scaled64(
     machine_conf: dict, middle_sim: dales_simulation
 ) -> dales_simulation:
     sim = dales_simulation("openbc_triple64_child_l3", machine_conf)
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
@@ -541,13 +541,13 @@ def _build_inner_nested_sim_scaled64(
     innergrid = _new_grid(_GRID64_INNER)
     innergrid.inherit_vertical_grid(midgrid)
 
-    sim += innergrid
+    sim.add(innergrid)
 
     nesting = NestingTopology()
-    nesting += midgrid
-    nesting += innergrid
+    nesting.add(midgrid)
+    nesting.add(innergrid)
     nesting.my_idx = nesting.nestings.index(innergrid)
-    sim += nesting
+    sim.add(nesting)
 
     dxturb = innergrid.xsize / innergrid.itot * 4.0
     dyturb = innergrid.ysize / innergrid.jtot * 4.0
@@ -569,7 +569,7 @@ def _build_inner_nested_sim_scaled64(
         outpath_coarse=middle_sim.output_path / "run_001",
         outpath_coarse_old=middle_sim.output_path / "run_001",
     )
-    sim += openbc
+    sim.add(openbc)
 
     _attach_common_physics(sim, innergrid, True)
     return sim

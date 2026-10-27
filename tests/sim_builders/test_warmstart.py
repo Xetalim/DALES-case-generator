@@ -27,9 +27,9 @@ def build_warmstart_base_sim(
 ) -> dales_simulation:
     """Construct a tiny DALES case suitable for warmstart continuity tests."""
     sim = dales_simulation(case_name, machine_conf)
-    sim += DefaultNamelistModule(lwarmstart=bool(lwarmstart), trestart=int(trestart))
+    sim.add(DefaultNamelistModule(lwarmstart=bool(lwarmstart), trestart=int(trestart)))
 
-    sim += GridDales(
+    sim.add(GridDales(
         itot=int(domain["itot"]),
         jtot=int(domain["jtot"]),
         kmax=int(domain["kmax"]),
@@ -42,7 +42,7 @@ def build_warmstart_base_sim(
         y0=0,
         alpha=1.0,
         dz0=5.0,
-    )
+    ))
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3.0, ddz=1e-3)))
@@ -53,24 +53,24 @@ def build_warmstart_base_sim(
     atmo.add(
         InterpolatedProfile(variable=tke, z=[0, 4000, 5000], points=[1.0, 1e-8, 1e-8])
     )
-    sim += atmo
+    sim.add(atmo)
 
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=1e-4,
         z0hav=1e-4,
         ps=100000.0,
         albedoav=0.22,
-    )
-    sim += TimeModule(
+    ))
+    sim.add(TimeModule(
         xtime=0.0,
         xday=1,
         xyear=2025,
         runtime=float(tfinal),
         trestart=float(trestart),
-    )
+    ))
     if extra_modules:
         for module in extra_modules:
-            sim += module
+            sim.add(module)
 
     return sim

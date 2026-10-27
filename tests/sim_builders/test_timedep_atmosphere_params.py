@@ -26,7 +26,7 @@ def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
     """Construct a simulation with time-dependent scalar params inside AtmosphericProfile."""
     sim = dales_simulation("timedep_atmosphere_params", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
     domain_info = GridDales(
         itot=16,
         jtot=16,
@@ -41,9 +41,9 @@ def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=20.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
     timesteps = np.append(np.insert(np.linspace(0, 300, num=5), 1, 0.1), 720)
-    sim += TimedependentModule(timesteps=timesteps)
+    sim.add(TimedependentModule(timesteps=timesteps))
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=2, ddz=1e-3)))
@@ -58,7 +58,7 @@ def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=TimeDependentScalar(
             times=timesteps,
             values=np.append(
@@ -72,11 +72,11 @@ def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
         z0hav=0.0001,
         ps=100000,
         albedoav=0.22,
-    )
-    sim += atmo
-    sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=720)
+    ))
+    sim.add(atmo)
+    sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=720))
 
-    sim += EasyOutputModule(output_interval=10)
+    sim.add(EasyOutputModule(output_interval=10))
     return sim
 
 

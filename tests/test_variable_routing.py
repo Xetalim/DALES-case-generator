@@ -90,7 +90,7 @@ def test_add_routes_physical_profiles_by_destination(variable):
     atmo = AtmosphereModule()
     sim = dales_simulation("routing", {})
     sim.grid = SimpleNamespace(zt=np.array([5.0, 15.0]))
-    sim += atmo
+    sim.add(atmo)
     state = AtmosphericProfile(variable=variable, shape=lin(surf_val=2.0, ddz=0.0))
     target = AtmosphericProfile(variable=variable, shape=lin(surf_val=4.0, ddz=0.0))
     atmo.add(

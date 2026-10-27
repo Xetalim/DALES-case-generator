@@ -74,7 +74,7 @@ def _build_nested_sim_with_easyoutput(
     sim = dales_simulation(casename, machine_conf)
 
     # Basic namelist + coarse grid
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     supergrid = GridDales(
         itot=16,
@@ -107,7 +107,7 @@ def _build_nested_sim_with_easyoutput(
         dz0=10.0,
     )
 
-    sim += supergrid
+    sim.add(supergrid)
 
     # Simple atmosphere with linear profiles for basic variables
     atmo = AtmosphereModule()
@@ -142,33 +142,33 @@ def _build_nested_sim_with_easyoutput(
         )
     )
 
-    sim += atmo
+    sim.add(atmo)
 
     # Short runtime so the produced files stay small
-    sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
+    sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60))
 
     # Simple surface module
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=0.0001,
         z0hav=0.0001,
         ps=100000,
         albedoav=0.22,
-    )
+    ))
 
     # Nesting topology: supergrid hosting subgrid; this also configures
     # cross-section indices in namcrosssection so DALES writes cross* files.
     nesting = NestingTopology()
-    nesting += supergrid
+    nesting.add(supergrid)
     nesting.my_idx = nesting.nestings.index(supergrid)
-    nesting += subgrid
-    sim += nesting
+    nesting.add(subgrid)
+    sim.add(nesting)
 
     # Enable fielddumps and cross-sections via EasyOutputModule
-    sim += EasyOutputModule(
+    sim.add(EasyOutputModule(
         output_interval=1,
         enable_output=True,
-    )
+    ))
 
     # Minimal additional namelist tweaks to keep parity with other examples
     if sim.nml.get("namchecksim") is None:

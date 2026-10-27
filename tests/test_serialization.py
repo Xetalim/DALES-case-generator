@@ -87,7 +87,7 @@ def test_module_binding_and_runtime_flags_are_not_serialized():
     module = DefaultNamelistModule()
     configured = asdict_user_set(module)
     sim = dales_simulation("test", {})
-    sim += module
+    sim.add(module)
     module.do_config_done = True
     module.ensure_prepared()
     assert asdict_user_set(module) == configured

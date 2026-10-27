@@ -27,7 +27,7 @@ def sim_2_case(machine_conf: dict) -> dales_simulation:
     """Construct a simulation from a YAML string, for testing deserialization."""
     sim = dales_simulation("complicated", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     domain_info = GridDales(
         itot=16,
@@ -43,7 +43,7 @@ def sim_2_case(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=5.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
@@ -59,12 +59,12 @@ def sim_2_case(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim += atmo
-    sim += TimeModule(xday=0, xtime=12.0, xyear=2023, runtime=60)
+    sim.add(atmo)
+    sim.add(TimeModule(xday=0, xtime=12.0, xyear=2023, runtime=60))
 
-    sim += RadiationModule(
+    sim.add(RadiationModule(
         iradiation=4,
-    )
+    ))
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
@@ -79,5 +79,5 @@ def sim_2_case(machine_conf: dict) -> dales_simulation:
     lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
     lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
-    sim += lsm
+    sim.add(lsm)
     return sim

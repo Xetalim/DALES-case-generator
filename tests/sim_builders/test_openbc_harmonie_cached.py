@@ -44,8 +44,8 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         pytest.skip("CDO is required for the cached HARMONIE conversion workflow")
 
     sim = dales_simulation("openbc_harmonie_cached_2026032618", machine_conf)
-    sim += DefaultNamelistModule()
-    sim += GridDales(
+    sim.add(DefaultNamelistModule())
+    sim.add(GridDales(
         itot=16,
         jtot=16,
         kmax=20,
@@ -59,7 +59,7 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         proj4="EPSG:28992",
         alpha=1.0,
         dz0=20.0,
-    )
+    ))
     atmosphere = AtmosphereModule()
     for variable, value in (
         (ua, 3.0),
@@ -72,11 +72,11 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         atmosphere.add(
             AtmosphericProfile(variable=variable, shape=lin(surf_val=value, ddz=0.0))
         )
-    sim += atmosphere
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(atmosphere)
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
-    )
-    sim += TimeModule(
+    ))
+    sim.add(TimeModule(
         xtime=18.0,
         xyear=2026,
         runtime=60,
@@ -84,8 +84,8 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         startmonth=3,
         startday=26,
         inferfromdatetime=True,
-    )
-    sim += KNMIHarmonieForecastDownloadModule(
+    ))
+    sim.add(KNMIHarmonieForecastDownloadModule(
         forecast_datetime="2026032618",
         download_root=str(
             Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"]) / "HARM_TEST_DATA"
@@ -94,7 +94,7 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         delete_grib_files=False,
         convert_to_netcdf=False,
         check_disk_space=False,
-    )
+    ))
     boundaries = Nest_in_KNMI(
         time0="2026-03-26T18:00:00",
         start="2026-03-26T18:00:00",
@@ -102,7 +102,7 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
         e12=0.1,
         tchunk=1,
     )
-    sim += boundaries
+    sim.add(boundaries)
     return sim
 
 
@@ -119,8 +119,8 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
         pytest.skip("CDO is required for the cached HARMONIE conversion workflow")
 
     sim = dales_simulation("openbc_harmonie_cached_2026032618_timedep", machine_conf)
-    sim += DefaultNamelistModule()
-    sim += GridDales(
+    sim.add(DefaultNamelistModule())
+    sim.add(GridDales(
         itot=16,
         jtot=16,
         kmax=20,
@@ -134,14 +134,14 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
         proj4="EPSG:28992",
         alpha=1.0,
         dz0=20.0,
-    )
+    ))
 
-    sim += TimedependentModule()
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(TimedependentModule())
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
-    )
+    ))
 
-    sim += TimeModule(
+    sim.add(TimeModule(
         xtime=18.0,
         xyear=2026,
         runtime=60,
@@ -149,9 +149,9 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
         startmonth=3,
         startday=26,
         inferfromdatetime=True,
-    )
+    ))
     atmo = AtmosphereModule()
-    sim += HarmonieAtmosphereModule(
+    sim.add(HarmonieAtmosphereModule(
         harmonie_ml_glob=str(
             Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
             / "HARM_TEST_DATA"
@@ -169,7 +169,7 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
         do_nudging=True,
         smooth_initial_uv_to_geostrophic=False,
         infer_adv_tendencies=True,
-    )
+    ))
     atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0)))
-    sim += atmo
+    sim.add(atmo)
     return sim

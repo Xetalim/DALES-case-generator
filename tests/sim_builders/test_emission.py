@@ -20,7 +20,7 @@ def emission_case(machine_conf: dict) -> dales_simulation:
 
     sim = dales_simulation("emission_case", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     domain_info = GridDales(
         itot=16,
@@ -36,21 +36,21 @@ def emission_case(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=5.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=3600)
-    sim += time_module
+    sim.add(time_module)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=0.0, ddz=0)))
     atmo.add(AtmosphericProfile(variable=va, shape=lin(surf_val=0.0, ddz=0)))
     atmo.add(AtmosphericProfile(variable=thetal, shape=lin(surf_val=293.15, ddz=0)))
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0)))
-    sim += atmo
+    sim.add(atmo)
 
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15, z0mav=0.0001, z0hav=0.0001, ps=100000, albedoav=0.22
-    )
+    ))
 
     emis = EmissionModule()
 
@@ -110,6 +110,6 @@ def emission_case(machine_conf: dict) -> dales_simulation:
         stack_exit_area=1.0,
     ))
 
-    sim += emis
-    sim += EasyOutputModule()
+    sim.add(emis)
+    sim.add(EasyOutputModule())
     return sim

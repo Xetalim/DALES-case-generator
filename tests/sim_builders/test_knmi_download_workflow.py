@@ -66,8 +66,8 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
         )
 
     sim = dales_simulation("knmi_download_workflow_real", machine_conf)
-    sim += DefaultNamelistModule()
-    sim += GridDales(
+    sim.add(DefaultNamelistModule())
+    sim.add(GridDales(
         itot=16,
         jtot=16,
         kmax=20,
@@ -80,7 +80,7 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
         y0=0.0,
         alpha=1.0,
         dz0=20.0,
-    )
+    ))
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3.0, ddz=1e-3)))
@@ -95,16 +95,16 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
             points=[1, 1e-8, 1e-8],
         )
     )
-    sim += atmo
+    sim.add(atmo)
 
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=0.0001,
         z0hav=0.0001,
         ps=100000,
         albedoav=0.22,
-    )
-    sim += TimeModule(
+    ))
+    sim.add(TimeModule(
         xtime=float(time0_dt.hour),
         xday=int(time0_dt.day),
         xyear=int(time0_dt.year),
@@ -112,12 +112,12 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
         startyear=int(time0_dt.year),
         startmonth=int(time0_dt.month),
         startday=int(time0_dt.day),
-    )
+    ))
 
     cache_base = (
         Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"]) / "knmi_download_cache"
     )
-    sim += KNMIHarmonieForecastDownloadModule(
+    sim.add(KNMIHarmonieForecastDownloadModule(
         forecast_datetime=forecast_datetime,
         download_root=cache_base.as_posix(),
         api_key_file=api_key_file,
@@ -126,7 +126,7 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
         minimum_free_space_gb=2.0,
         disk_space_safety_factor=2.0,
         delete_grib_files=True,
-    )
+    ))
 
     openbc = Nest_in_KNMI(
         time0=time0_dt.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -135,7 +135,7 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
         e12=0.1,
         tchunk=1,
     )
-    sim += openbc
+    sim.add(openbc)
     return sim
 
 

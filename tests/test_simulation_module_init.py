@@ -52,7 +52,7 @@ def test_module_allows_deferred_construction(factory):
         _ = module.sim
     sim = dales_simulation("test", {})
     module.module_name = "test"
-    sim += module
+    sim.add(module)
     module.do_config()
     assert module.sim is sim
     assert sim.modules == [module]
@@ -64,14 +64,14 @@ def test_attachment_is_idempotent_and_rejects_reassignment():
     module._attach_to_sim(sim)
     assert module.sim is sim
     assert sim.modules == []
-    sim += module
-    sim += module
+    sim.add(module)
+    sim.add(module)
     assert sim.modules == [module]
     assert module.attachments == 1
     assert module.simulation_name() == "test"
     other = dales_simulation("other", {})
     with pytest.raises(ValueError, match="different simulation"):
-        other += module
+        other.add(module)
     assert other.modules == []
     with pytest.raises(AttributeError):
         module.sim = other
@@ -124,7 +124,7 @@ def test_atmosphere_configuration_is_detached_until_grid_access():
     sim = dales_simulation("atmosphere", {})
     sim.grid = SimpleNamespace(zt=np.array([5.0, 15.0]))
     assert not sim.has_atmosphere_module
-    sim += module
+    sim.add(module)
     assert sim.has_atmosphere_module
     np.testing.assert_allclose(module.provide_forcings().initial[ua.name], 2.0)
 
@@ -133,6 +133,6 @@ def test_surface_attachment_sets_simulation_flag():
     module = ConstantFluxesModule()
     sim = dales_simulation("surface", {})
     assert not sim.has_surface_module
-    sim += module
+    sim.add(module)
     assert sim.has_surface_module
     assert module.sim is sim

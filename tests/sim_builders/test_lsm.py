@@ -40,7 +40,7 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
     """Construct a simple simulation including an LSM configuration."""
     sim = dales_simulation("LSM_case", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     domain_info = GridDales(
         itot=16,
@@ -56,7 +56,7 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=5.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=1e-3)))
@@ -72,7 +72,7 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim += atmo
+    sim.add(atmo)
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
@@ -87,13 +87,13 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
     lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
     lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
-    sim += lsm
+    sim.add(lsm)
 
-    sim += RadiationModule(
+    sim.add(RadiationModule(
         iradiation=4,
-    )
+    ))
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
-    sim += time_module
+    sim.add(time_module)
     return sim
 
 
@@ -117,7 +117,7 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
 
     sim = dales_simulation("lsm_emission_ags_co2_case", machine_conf)
 
-    sim += DefaultNamelistModule()
+    sim.add(DefaultNamelistModule())
 
     if "co2" not in get_var_by_name():
         register_var(
@@ -144,7 +144,7 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
         alpha=1.0,
         dz0=5.0,
     )
-    sim += domain_info
+    sim.add(domain_info)
 
     # Base state needed by open boundaries.
     atmo = AtmosphereModule()
@@ -155,7 +155,7 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.004, ddz=0.0)))
     atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0)))
     atmo.add(AtmosphericProfile(variable=co2_var, shape=lin(surf_val=420.0, ddz=0.0)))
-    sim += atmo
+    sim.add(atmo)
 
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
@@ -171,7 +171,7 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
     lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
     lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
-    sim += lsm
+    sim.add(lsm)
 
     # AGS switch requested by user.
     if sim.nml.get("namlsm") is None:
@@ -180,27 +180,27 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
 
     # Only tracer input needed: CO2 concentration.
     emis = EmissionModule()
-    emis += EmissionTracer(
+    emis.add(EmissionTracer(
         name="co2",
         long_name="Carbon Dioxide (CO2)",
         unit="ppm",
         molar_mass=44.009,
         lemis=True,
-    )
-    sim += emis
+    ))
+    sim.add(emis)
 
     # Keep surface forcing simple and stable.
-    sim += ConstantSurfaceTemperatureModule(
+    sim.add(ConstantSurfaceTemperatureModule(
         thls=293.15,
         z0mav=0.0001,
         z0hav=0.0001,
         ps=100000,
         albedoav=0.22,
-    )
+    ))
 
-    sim += TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600)
-    sim += RadiationModule(iradiation=4)
-    sim += EasyOutputModule(output_interval=60)
+    sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600))
+    sim.add(RadiationModule(iradiation=4))
+    sim.add(EasyOutputModule(output_interval=60))
 
     return sim
 
