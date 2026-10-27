@@ -54,22 +54,22 @@ def emission_case(machine_conf: dict) -> dales_simulation:
 
     emis = EmissionModule()
 
-    emis += EmissionTracer(
+    emis.add(EmissionTracer(
         name="co2",
         long_name="Carbon Dioxide (CO2)",
         unit="ppm",
         molar_mass=44.009,
         lemis=True,
-    )
-    emis += EmissionTracer(
+    ))
+    emis.add(EmissionTracer(
         name="so2",
         long_name="Sulfur Dioxide (SO2)",
         unit="ppb",
         molar_mass=64.066,
         lemis=True,
-    )
+    ))
 
-    emis += EmissionPointSource(
+    emis.add(EmissionPointSource(
         tracer_name="co2",
         x_idx=4,
         y_idx=4,
@@ -78,8 +78,8 @@ def emission_case(machine_conf: dict) -> dales_simulation:
         volume=1.0,
         emission=10.0,
         stack_exit_area=1.0,
-    )
-    emis += EmissionPointSource(
+    ))
+    emis.add(EmissionPointSource(
         tracer_name="co2",
         x_idx=8,
         y_idx=8,
@@ -88,8 +88,8 @@ def emission_case(machine_conf: dict) -> dales_simulation:
         volume=1.0,
         emission=5.0,
         stack_exit_area=1.0,
-    )
-    emis += EmissionPointSource(
+    ))
+    emis.add(EmissionPointSource(
         tracer_name="so2",
         x_idx=2,
         y_idx=2,
@@ -98,8 +98,8 @@ def emission_case(machine_conf: dict) -> dales_simulation:
         volume=1.0,
         emission=3.0,
         stack_exit_area=1.0,
-    )
-    emis += EmissionPointSource(
+    ))
+    emis.add(EmissionPointSource(
         tracer_name="so2",
         x_idx=10,
         y_idx=10,
@@ -108,7 +108,7 @@ def emission_case(machine_conf: dict) -> dales_simulation:
         volume=1.0,
         emission=7.0,
         stack_exit_area=1.0,
-    )
+    ))
 
     sim += emis
     sim += EasyOutputModule()

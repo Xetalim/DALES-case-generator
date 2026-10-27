@@ -3,13 +3,14 @@
 This module mirrors the IBM module pattern:
 
 - Emission tracers and point sources are represented as dataclasses that can be
-    added to the module using the ``+=`` operator.
+    added to the module using :meth:`EmissionModule.add`.
 - The module then constructs the internal emissions data structures and writes
     the required NetCDF files during ``prepare_calculation`` / ``write_files``.
 
 """
 
 import logging
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Self
 
@@ -70,14 +71,14 @@ class EmissionModule(simulation_module):
     Tracers and point sources can be added directly to this module, e.g.::
 
         emis = EmissionModule()
-        emis += EmissionTracer(
+        emis.add(EmissionTracer(
             name="co2",
             long_name="Carbon Dioxide (CO2)",
             unit="ppm",
             molar_mass=44.009,
             lemis=True,
-        )
-        emis += EmissionPointSource(
+        ))
+        emis.add(EmissionPointSource(
             tracer_name="co2",
             x_idx=8,
             y_idx=8,
@@ -86,7 +87,7 @@ class EmissionModule(simulation_module):
             volume=1.0,
             emission=10.0,
             stack_exit_area=1.0,
-        )
+        ))
 
     Args:
       sim: Parent simulation instance
@@ -152,11 +153,10 @@ class EmissionModule(simulation_module):
     # ------------------------------------------------------------------
     # Public API for adding tracers / point sources
     # ------------------------------------------------------------------
-    def __add__(self, item: Any) -> Self:
+    def add(self, item: Any) -> Self:
         """Add a tracer or point source to the module.
 
-        This mirrors the pattern used by :class:`IBMModule`, allowing
-        users to configure emissions programmatically via ``+=``.
+        This allows users to configure emissions programmatically.
         """
 
         if isinstance(item, EmissionTracer):
@@ -170,10 +170,17 @@ class EmissionModule(simulation_module):
             )
         return self
 
+    def __add__(self, item: Any) -> Self:
+        return self.add(item)
+
     def __iadd__(self, item: Any) -> Self:
         """In-place addition for ``+=`` syntax."""
-
-        return self.__add__(item)
+        warnings.warn(
+            "Using '+=' to add emission items is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(item)
 
     def prepare_calculation(self) -> None:
         """Set up emission tracers and update namelist.

@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import subprocess
+import warnings
 from dataclasses import is_dataclass
 from pathlib import Path, PosixPath
 from typing import Any, Self, cast
@@ -176,9 +177,9 @@ class dales_simulation:
 
     Usage:
         sim = dales_simulation(case_name, machine_conf)
-        sim += DefaultNamelistModule()
-        sim += GridModule()
-        sim += LSMModule()
+        sim.add(DefaultNamelistModule())
+        sim.add(GridModule())
+        sim.add(LSMModule())
         # ... add other modules ...
         sim._initialize_modules()  # Initialize grid and validation
         sim.do_config()             # Configure namelist
@@ -269,7 +270,7 @@ class dales_simulation:
 
         self._initialized = True
 
-    def __add__(self, module: "simulation_module") -> "dales_simulation":
+    def add(self, module: "simulation_module") -> Self:
         """Add a module to the simulation registry.
 
         Args:
@@ -296,6 +297,9 @@ class dales_simulation:
             self.grid = module
         return self
 
+    def __add__(self, module: "simulation_module") -> "dales_simulation":
+        return self.add(module)
+
     def __iadd__(self, module: "simulation_module") -> Self:
         """In-place addition of a module (+=).
 
@@ -305,8 +309,12 @@ class dales_simulation:
         Returns:
             self: Returns the simulation instance
         """
-        self.__add__(module)
-        return self
+        warnings.warn(
+            "Using '+=' to add simulation modules is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(module)
 
     def do_config(self) -> None:
         """Configure all modules.
@@ -634,6 +642,6 @@ class dales_simulation:
             else:
                 module = cls(**mod_cfg)
 
-            sim += module
+            sim.add(module)
 
         return sim

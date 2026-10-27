@@ -86,11 +86,11 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
     sim += lsm
 
     ibm = IBMModule(thlibm=293.15, thlroof=293.15)
-    ibm += IBMModification(geometry=AllGeometry(), height=0)
-    ibm += IBMModification(
+    ibm.add(IBMModification(geometry=AllGeometry(), height=0))
+    ibm.add(IBMModification(
         geometry=RectangleIdxGeometry(minx=4, maxx=6, miny=4, maxy=4),
         height=20,
-    )
+    ))
     sim += ibm
     return sim
 

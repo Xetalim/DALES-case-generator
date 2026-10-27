@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass, field
 from typing import Literal, Self
 
@@ -28,11 +29,19 @@ class LandUseModifications:
         default_factory=list, metadata={"serialize": True}
     )
 
-    def __add__(self, modification: LandUseModification) -> Self:
+    def add(self, modification: LandUseModification) -> Self:
         """Add a modification."""
         self.modifications.append(modification)
         return self
 
+    def __add__(self, modification: LandUseModification) -> Self:
+        return self.add(modification)
+
     def __iadd__(self, modification: LandUseModification) -> Self:
         """In-place addition."""
-        return self.__add__(modification)
+        warnings.warn(
+            "Using '+=' to add land-use modifications is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(modification)

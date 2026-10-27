@@ -1,6 +1,7 @@
 """Immersed Boundary Method (IBM) module for building and geometry representation."""
 
 import logging
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Self
@@ -303,7 +304,7 @@ class IBMModule(simulation_module):
         default="IBMModule", init=False, metadata={"serialize": False}
     )
 
-    def __add__(self, obj: IBMSourceLayer | IBMModification) -> Self:
+    def add(self, obj: IBMSourceLayer | IBMModification) -> Self:
         """Add IBM modification to module.
 
         Args:
@@ -324,9 +325,17 @@ class IBMModule(simulation_module):
             )
         return self
 
+    def __add__(self, obj: IBMSourceLayer | IBMModification) -> Self:
+        return self.add(obj)
+
     def __iadd__(self, obj: IBMSourceLayer | IBMModification) -> Self:
         """In-place addition."""
-        return self.__add__(obj)
+        warnings.warn(
+            "Using '+=' to add IBM configuration is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(obj)
 
     def has_terrain_source(self) -> bool:
         """Return whether any terrain source was configured."""
@@ -465,11 +474,19 @@ class IBMModifications:
         default_factory=list, metadata={"serialize": True}
     )
 
-    def __add__(self, modification: IBMModification) -> Self:
+    def add(self, modification: IBMModification) -> Self:
         """Add a modification."""
         self.modifications.append(modification)
         return self
 
+    def __add__(self, modification: IBMModification) -> Self:
+        return self.add(modification)
+
     def __iadd__(self, modification: IBMModification) -> Self:
         """In-place addition."""
-        return self.__add__(modification)
+        warnings.warn(
+            "Using '+=' to add IBM modifications is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(modification)

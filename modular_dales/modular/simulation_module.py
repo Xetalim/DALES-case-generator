@@ -53,7 +53,7 @@ def set_nml_section(
 
 @dataclass
 class simulation_module(ABC):
-    """Detached configuration bound explicitly to a simulation via ``sim +=``."""
+    """Detached configuration bound explicitly to a simulation via ``sim.add()``."""
 
     _sim: "dales_simulation | None" = field(
         default=None,
@@ -106,7 +106,7 @@ class simulation_module(ABC):
     def sim(self) -> "dales_simulation":
         """Return the bound simulation, raising for detached configurations."""
         if self._sim is None:
-            raise RuntimeError("Module is detached; attach it with sim += module first")
+            raise RuntimeError("Module is detached; attach it with sim.add(module) first")
         return self._sim
 
     def _attach_to_sim(self, sim: "dales_simulation") -> None:

@@ -1,4 +1,5 @@
 import logging
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Self
@@ -55,21 +56,32 @@ class SLURBModifications:
         default_factory=list, metadata={"serialize": True}
     )
 
-    def __add__(
+    def add(
         self, modification: SLURBModification | list[SLURBModification]
     ) -> Self:
-        """Add a modification."""
+        """Add one or more SLURB modifications."""
         if isinstance(modification, list):
             self.modifications.extend(modification)
         else:
             self.modifications.append(modification)
         return self
 
+    def __add__(
+        self, modification: SLURBModification | list[SLURBModification]
+    ) -> Self:
+        """Add a modification."""
+        return self.add(modification)
+
     def __iadd__(
         self, modification: SLURBModification | list[SLURBModification]
     ) -> Self:
         """In-place addition."""
-        return self.__add__(modification)
+        warnings.warn(
+            "Using '+=' to add SLURB modifications is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(modification)
 
 
 @dataclass
@@ -280,20 +292,28 @@ class SLURBModule(simulation_module):
         default="SLURBModule", init=False, metadata={"serialize": False}
     )
 
-    def __add__(self, obj: SLURBModification | SLURBModifications) -> Self:
+    def add(self, obj: SLURBModification | SLURBModifications) -> Self:
         """Add SLURB modifications to module."""
         if isinstance(obj, SLURBModification):
-            self.slb_modifications += obj
+            self.slb_modifications.add(obj)
         elif isinstance(obj, SLURBModifications):
-            self.slb_modifications += obj.modifications
+            self.slb_modifications.add(obj.modifications)
         else:
             raise TypeError(
                 f"Expected SLURBModification/SLURBModifications, got {type(obj)}"
             )
         return self
 
+    def __add__(self, obj: SLURBModification | SLURBModifications) -> Self:
+        return self.add(obj)
+
     def __iadd__(self, obj: SLURBModification | SLURBModifications) -> Self:
-        return self.__add__(obj)
+        warnings.warn(
+            "Using '+=' to add SLURB modifications is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(obj)
 
     def init_generator(self) -> None:
         """Initialize SLURB generator."""

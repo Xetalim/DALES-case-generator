@@ -1,4 +1,5 @@
 import logging
+import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Self
 
@@ -64,7 +65,7 @@ class NestingTopology(simulation_module):
         default="nesting_topology", init=False, metadata={"serialize": False}
     )
 
-    def __add__(self, other: GridDales) -> Self:
+    def add(self, other: GridDales) -> Self:
         """Combine nesting topologies if needed."""
         if isinstance(other, GridDales):
             logger.info("Adding GridDales to nesting_topology: %s", other)
@@ -73,9 +74,17 @@ class NestingTopology(simulation_module):
             raise TypeError("Can only add GridDales instances to nesting_topology")
         return self
 
+    def __add__(self, other: GridDales) -> Self:
+        return self.add(other)
+
     def __iadd__(self, other: GridDales) -> Self:
         """In-place addition for combining nesting topologies."""
-        return self.__add__(other)
+        warnings.warn(
+            "Using '+=' to add grids to NestingTopology is deprecated; use add() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add(other)
 
     def __repr__(self) -> str:
         parts = ""
