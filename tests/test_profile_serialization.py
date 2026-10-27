@@ -3,18 +3,17 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from modular_dales.Atmosphere import (
-    AtmosphericProfile,
-    InterpolatedProfile,
+from MoDa.Atmosphere.Profile import (
     TimedAtmosphereProfile,
 )
-from modular_dales.Atmosphere.shapes import exp, expsinw, lin, linmlsurf
-from modular_dales.modular.serialize_deserialize import (
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.Atmosphere.shapes import exp, expsinw, lin, linmlsurf
+from MoDa.modular.serialize_deserialize import (
     _deserialize_dataclass,
     asdict_user_set,
 )
-from modular_dales.modular.time_dependent_scalars import TimeDependentScalar
-from modular_dales.vars import ua
+from MoDa.modular.time_dependent_scalars import TimeDependentScalar
+from MoDa.vars import ua
 
 
 def test_interpolated_profile_roundtrip_skips_incompatible_union_member():

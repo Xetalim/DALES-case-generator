@@ -1,8 +1,8 @@
 import pytest
 
-from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.IBM.ibm import IBMModification, IBMModule
-from modular_dales.Surface.LSM.lu_modifications import (
+from MoDa.Geometry.geometry_modification import AllGeometry
+from MoDa.IBM.ibm import IBMModification, IBMModule
+from MoDa.Surface.LSM.lu_modifications import (
     LandUseModification,
     LandUseModifications,
 )

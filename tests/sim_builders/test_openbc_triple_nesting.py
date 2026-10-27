@@ -5,19 +5,18 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     DefaultNamelistModule,
     GridDales,
-    InterpolatedProfile,
     Nest_in_Dales,
     NestingTopology,
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import lin
-from modular_dales.Configuration.output_modules import (
+from MoDa.Atmosphere import lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.Configuration.output_modules import (
     CapeModule,
     CrossSectionOutputModule,
     FielddumpModule,
@@ -25,28 +24,28 @@ from modular_dales.Configuration.output_modules import (
     RadfieldModule,
     StatsModule,
 )
-from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.modular.simulation_module import set_nml_section
-from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM import LandUseSet
-from modular_dales.Surface.LSM.lsm_module import (
+from MoDa.Geometry.geometry_modification import AllGeometry
+from MoDa.modular.simulation_module import set_nml_section
+from MoDa.Radiation.radiation import RadiationModule
+from MoDa.Surface.LSM import LandUseSet
+from MoDa.Surface.LSM.lsm_module import (
     LSMModule,
 )
-from modular_dales.Surface.LSM.lsm_sources import (
+from MoDa.Surface.LSM.lsm_sources import (
     FromBofek,
     FromLCZ,
     FromTop10,
 )
-from modular_dales.Surface.LSM.lu_modifications import LandUseModification
-from modular_dales.Surface.LSM.modular_temps_moisture import (
+from MoDa.Surface.LSM.lu_modifications import LandUseModification
+from MoDa.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.Surface.LSM.SLuRB.slurb import (
+from MoDa.Surface.LSM.SLuRB.slurb import (
     SLURBModule,
 )
-from modular_dales.vars import *
+from MoDa.vars import *
 from tests.helpers import run_command_with_report
 
 _GRID_SUPER = {
@@ -122,16 +121,18 @@ def _attach_common_physics(
     atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=0.1, ddz=0.0)))
     sim.add(atmo)
 
-    sim.add(TimeModule(
-        # xday=180,
-        xtime=12.0,
-        xyear=2023,
-        runtime=60,
-        startyear=2023,
-        startmonth=7,
-        startday=1,
-        inferfromdatetime=True,
-    ))
+    sim.add(
+        TimeModule(
+            # xday=180,
+            xtime=12.0,
+            xyear=2023,
+            runtime=60,
+            startyear=2023,
+            startmonth=7,
+            startday=1,
+            inferfromdatetime=True,
+        )
+    )
 
     # sim += ConstantSurfaceTemperatureModule(
     #     thls=293.15,
@@ -181,9 +182,11 @@ def _attach_common_physics(
     # )
     sim.add(slurb)
 
-    sim.add(RadiationModule(
-        iradiation=4,
-    ))
+    sim.add(
+        RadiationModule(
+            iradiation=4,
+        )
+    )
 
     sim.add(LSMCrossModule(enabled=True, dtav=10))
     sim.add(CapeModule(enabled=True, dtav=10))
@@ -197,16 +200,18 @@ def _attach_common_physics(
         xz_coords = [float(grid.y0 + 0.5 * grid.ysize)]
         yz_coords = [float(grid.x0 + 0.5 * grid.xsize)]
 
-    sim.add(CrossSectionOutputModule(
-        cross_enabled=True,
-        cross_dtav=10,
-        xy_coords=[float(grid.zt[0])],
-        xz_coords=xz_coords,
-        yz_coords=yz_coords,
-        xy_enabled=True,
-        xz_enabled=False,
-        yz_enabled=False,
-    ))
+    sim.add(
+        CrossSectionOutputModule(
+            cross_enabled=True,
+            cross_dtav=10,
+            xy_coords=[float(grid.zt[0])],
+            xz_coords=xz_coords,
+            yz_coords=yz_coords,
+            xy_enabled=True,
+            xz_enabled=False,
+            yz_enabled=False,
+        )
+    )
 
     if sim.nml.get("namchecksim") is None:
         sim.nml["namchecksim"] = {}

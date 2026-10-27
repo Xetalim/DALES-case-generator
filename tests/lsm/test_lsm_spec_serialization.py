@@ -3,12 +3,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from modular_dales.Geometry.geometry_modification import MaskGeometry
-from modular_dales.modular.serialize_deserialize import (
+from MoDa.Geometry.geometry_modification import MaskGeometry
+from MoDa.modular.serialize_deserialize import (
     _deserialize_dataclass,
     asdict_user_set,
 )
-from modular_dales.Surface.LSM import (
+from MoDa.Surface.LSM import (
     FromBofek,
     FromLCZ,
     FromLS2D,
@@ -24,7 +24,7 @@ from modular_dales.Surface.LSM import (
     VaryingSoilMoisture,
     VaryingSoilTemperature,
 )
-from modular_dales.Surface.LSM.lu_modifications import (
+from MoDa.Surface.LSM.lu_modifications import (
     LandUseModification,
     LandUseModifications,
 )

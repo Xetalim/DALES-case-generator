@@ -3,9 +3,8 @@ from __future__ import annotations
 import netCDF4
 import numpy as np
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
@@ -13,9 +12,10 @@ from modular_dales import (
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import TimedAtmosphereProfile, lin
-from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.vars import *
+from MoDa.Atmosphere import lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile, TimedAtmosphereProfile
+from MoDa.Configuration.output_modules import EasyOutputModule
+from MoDa.vars import *
 
 
 def _build_openbc_atmo_sim(
@@ -94,13 +94,15 @@ def _build_openbc_atmo_sim(
     sim.add(atmo)
 
     # Simple surface so job.001 has basic settings
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15,
-        z0mav=0.0001,
-        z0hav=0.0001,
-        ps=100000,
-        albedoav=0.22,
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            ps=100000,
+            albedoav=0.22,
+        )
+    )
 
     # Configure time so Atmosphere profiles have a reference start
     sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600))
@@ -188,9 +190,11 @@ def _build_openbc_atmo_sim(
     )
     sim.add(openbc)
 
-    sim.add(EasyOutputModule(
-        output_interval=10,
-    ))
+    sim.add(
+        EasyOutputModule(
+            output_interval=10,
+        )
+    )
 
     return sim
 

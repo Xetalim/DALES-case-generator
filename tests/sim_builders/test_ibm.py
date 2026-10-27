@@ -1,30 +1,29 @@
 from __future__ import annotations
 
-from modular_dales import dales_simulation
-from modular_dales.Atmosphere import (
+from MoDa import dales_simulation
+from MoDa.Atmosphere import (
     AtmosphereModule,
-    AtmosphericProfile,
-    InterpolatedProfile,
     lin,
 )
-from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.geometry_modification import (
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
+from MoDa.Configuration.run_and_time import TimeModule
+from MoDa.Geometry.geometry_modification import (
     AllGeometry,
     RectangleIdxGeometry,
 )
-from modular_dales.Geometry.grids import GridDales
-from modular_dales.IBM.ibm import IBMModification, IBMModule
-from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM import LandUseSet
-from modular_dales.Surface.LSM.lsm_module import LSMModule
-from modular_dales.Surface.LSM.lu_modifications import LandUseModification
-from modular_dales.Surface.LSM.modular_temps_moisture import (
+from MoDa.Geometry.grids import GridDales
+from MoDa.IBM.ibm import IBMModification, IBMModule
+from MoDa.Radiation.radiation import RadiationModule
+from MoDa.Surface.LSM import LandUseSet
+from MoDa.Surface.LSM.lsm_module import LSMModule
+from MoDa.Surface.LSM.lu_modifications import LandUseModification
+from MoDa.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.vars import *
+from MoDa.vars import *
 
 
 def IBM_case(machine_conf: dict) -> dales_simulation:
@@ -66,9 +65,11 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
     sim.add(atmo)
     sim.add(TimeModule(xday=2, xtime=12.0, xyear=2023, runtime=60))
 
-    sim.add(RadiationModule(
-        iradiation=2,
-    ))
+    sim.add(
+        RadiationModule(
+            iradiation=2,
+        )
+    )
     lsm = LSMModule(
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
@@ -87,10 +88,12 @@ def IBM_case(machine_conf: dict) -> dales_simulation:
 
     ibm = IBMModule(thlibm=293.15, thlroof=293.15)
     ibm.add(IBMModification(geometry=AllGeometry(), height=0))
-    ibm.add(IBMModification(
-        geometry=RectangleIdxGeometry(minx=4, maxx=6, miny=4, maxy=4),
-        height=20,
-    ))
+    ibm.add(
+        IBMModification(
+            geometry=RectangleIdxGeometry(minx=4, maxx=6, miny=4, maxy=4),
+            height=20,
+        )
+    )
     sim.add(ibm)
     return sim
 

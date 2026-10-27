@@ -3,17 +3,17 @@ from pathlib import Path
 
 import pytest
 
-from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D
-from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.modular.dales_simulation import dales_simulation
-from modular_dales.modular.serialize_deserialize import (
+from MoDa.Atmosphere.ls2d_atmosphere import FromLS2D
+from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
+from MoDa.modular.dales_simulation import dales_simulation
+from MoDa.modular.serialize_deserialize import (
     _deserialize_dataclass,
     _deserialize_value,
     asdict_user_set,
 )
-from modular_dales.modular.time_dependent_scalars import TimeDependentScalar
-from modular_dales.Surface.surface import ConstantFluxesModule
-from modular_dales.vars import ua
+from MoDa.modular.time_dependent_scalars import TimeDependentScalar
+from MoDa.Surface.surface import ConstantFluxesModule
+from MoDa.vars import ua
 
 
 def test_ordinary_dataclass_filters_defaults_and_runtime_fields():

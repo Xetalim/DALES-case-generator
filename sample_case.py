@@ -17,54 +17,12 @@ from typing import Any
 import numpy as np
 import yaml
 
-from modular_dales import (
-    AtmosphereModule,
-    AtmosphericProfile,
-    CapeModule,
-    CrossSectionOutputModule,
-    DefaultNamelistModule,
-    FielddumpModule,
-    GridDales,
-    LSMCrossModule,
-    NestingTopology,
-    RadfieldModule,
-    RadiationModule,
-    StatsModule,
-    TimeModule,
-    dales_simulation,
-)
-from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D, LS2DAtmosphereModule
-from modular_dales.Configuration import NetCDFStatisticsSyncModule
-from modular_dales.Configuration.output_modules import (
-    CheckSimulationModule,
-    ColumnStatisticsOutputModule,
-    SamplingModule,
-    TimestatModule,
-    VirtualMeasurementOutputModule,
-)
-from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.logging_wrapper import setup_logging
-from modular_dales.modular.simulation_module import set_nml_section
-from modular_dales.modular.time_dependent import TimedependentModule
-from modular_dales.Surface.LSM import LandUseSet
-from modular_dales.Surface.LSM.lsm_module import (
-    LSMModule,
-)
-from modular_dales.Surface.LSM.lsm_sources import (
-    FromBofek,
-    FromLCZ,
-    FromTop10,
-)
-from modular_dales.Surface.LSM.lu_modifications import LandUseModification
-from modular_dales.Surface.LSM.modular_temps_moisture import (
-    UniformSkinTemperature,
-    UniformSoilMoisture,
-    UniformSoilTemperature,
-)
-from modular_dales.Surface.LSM.SLuRB.slurb import SLURBModule
-from modular_dales.vars import *
+import MoDa
+from MoDa import LBC, Atmosphere, Configuration, Geometry, Surface
+import MoDa.Atmosphere.Profile
+from MoDa.Surface import LSM
 
-setup_logging("logging.yaml")
+MoDa.setup_logging("logging.yaml")
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
@@ -151,8 +109,8 @@ def _may_start_end(start_day: int) -> tuple[datetime.datetime, datetime.datetime
     return start, end
 
 
-def _new_grid(spec: dict) -> GridDales:
-    grid = GridDales(**spec)
+def _new_grid(spec: dict) -> MoDa.GridDales:
+    grid = MoDa.GridDales(**spec)
     zt, zm, dz = make_integer_stretched_grid(grid.kmax, grid.dz0, grid.alpha)
     grid.zt = zt
     grid.zm = zm
@@ -193,7 +151,9 @@ def make_integer_stretched_grid(kmax, dz0, alpha):
     return zt, zm, dz
 
 
-def _copy_vertical_grid(source_grid: GridDales, target_grid: GridDales) -> None:
+def _copy_vertical_grid(
+    source_grid: MoDa.GridDales, target_grid: MoDa.GridDales
+) -> None:
     """Copy exact vertical coordinates from source grid to target grid."""
     if len(source_grid.zt) != target_grid.kmax:
         raise ValueError(
@@ -212,7 +172,9 @@ def _copy_vertical_grid(source_grid: GridDales, target_grid: GridDales) -> None:
     target_grid.zsize = float(target_grid.zm[-1])
 
 
-def _set_child_vertical_grid(parent_grid: GridDales, child_grid: GridDales) -> None:
+def _set_child_vertical_grid(
+    parent_grid: MoDa.GridDales, child_grid: MoDa.GridDales
+) -> None:
     child_grid.inherit_vertical_grid(parent_grid)
 
 
@@ -307,9 +269,9 @@ if __name__ == "__main__":
         yaml.safe_dump(nml_overrides, sort_keys=False), encoding="utf-8"
     )
 
-    sim = dales_simulation("openbc_triple64_parent_l1", machine_conf)
+    sim = MoDa.dales_simulation("openbc_triple64_parent_l1", machine_conf)
     sim.init_output_folder()
-    sim.add(DefaultNamelistModule())
+    sim.add(MoDa.DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
@@ -317,7 +279,7 @@ if __name__ == "__main__":
 
     sim.add(supergrid)
 
-    nesting = NestingTopology()
+    nesting = LBC.NestingTopology()
     nesting.add(supergrid)
     nesting.add(midgrid)
     nesting.my_idx = nesting.nestings.index(supergrid)
@@ -329,9 +291,9 @@ if __name__ == "__main__":
     )
 
     if use_ls2d:
-        sim.add(TimedependentModule())
+        sim.add(MoDa.TimedependentModule())
     if use_ls2d:
-        atmo_ls2d = LS2DAtmosphereModule(
+        atmo_ls2d = Atmosphere.LS2DAtmosphereModule(
             era5_path=sim.machine_conf.get("ls2d_conf", {}).get(
                 "era5_path",
                 "/tmp/era5_data",
@@ -347,22 +309,28 @@ if __name__ == "__main__":
             smooth_initial_uv_to_geostrophic=True,
         )
         sim.add(atmo_ls2d)
-    atmo = AtmosphereModule()
-    atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0)))
+    atmo = MoDa.AtmosphereModule()
+    atmo.add(
+        MoDa.Atmosphere.Profile.AtmosphericProfile(
+            variable=MoDa.vars.tke, shape=Atmosphere.lin(surf_val=1, ddz=0)
+        )
+    )
     sim.add(atmo)
 
-    sim.add(TimeModule(
-        xtime=12.0,
-        xyear=2026,
-        runtime=(end_ts - start_ts).total_seconds(),
-        startyear=2026,
-        startmonth=5,
-        startday=start_day,
-        inferfromdatetime=True,
-    ))
+    sim.add(
+        MoDa.TimeModule(
+            xtime=12.0,
+            xyear=2026,
+            runtime=(end_ts - start_ts).total_seconds(),
+            startyear=2026,
+            startmonth=5,
+            startday=start_day,
+            inferfromdatetime=True,
+        )
+    )
 
-    lsm = LSMModule(
-        land_use_set=LandUseSet.IFS,
+    lsm = Surface.LSMModule(
+        land_use_set=LSM.LandUseSet.IFS,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -375,9 +343,9 @@ if __name__ == "__main__":
     if not is_nested:
         lsm.add(
             [
-                UniformSkinTemperature(294),
-                UniformSoilTemperature([294, 294, 294, 294]),
-                UniformSoilMoisture(
+                LSM.UniformSkinTemperature(294),
+                LSM.UniformSoilTemperature([294, 294, 294, 294]),
+                LSM.UniformSoilMoisture(
                     [
                         0.36867549,
                         0.25300502,
@@ -388,59 +356,69 @@ if __name__ == "__main__":
             ],
             priority=600,
         )
-    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
-    lsm.add(FromLCZ(urban_natural_lcz_to_natural_lsm=True), priority=100)
-    if use_ls2d:
-        lsm.add(FromLS2D(), priority=500)
-    lsm.add(FromBofek(spatial_data_path=spatial_data_path), priority=400)
     lsm.add(
-        FromTop10(
+        LSM.LandUseModification(geometry=Geometry.AllGeometry(), type="grs"), priority=0
+    )
+    lsm.add(LSM.FromLCZ(urban_natural_lcz_to_natural_lsm=True), priority=100)
+    if use_ls2d:
+        lsm.add(LSM.FromLS2D(), priority=500)
+    lsm.add(LSM.FromBofek(spatial_data_path=spatial_data_path), priority=400)
+    lsm.add(
+        LSM.FromTop10(
             urban_natural_lcz_to_natural_lsm=True,
             spatial_data_path=spatial_data_path,
         ),
         priority=300,
     )
     sim.add(lsm)
-    slurb = SLURBModule(
+    slurb = Surface.SlurbModule(
         deep_soil_temperature=273.15 + 15,
         building_indoor_temperature=273.15 + 21,
     )
     sim.add(slurb)
 
-    sim.add(RadiationModule(iradiation=4))
+    sim.add(MoDa.RadiationModule(iradiation=4))
 
-    sim.add(LSMCrossModule(enabled=True, dtav=60))
-    sim.add(CapeModule(enabled=True, dtav=120))
-    sim.add(StatsModule(enabled=True, dtav=5, timeav=5))
-    sim.add(FielddumpModule(dtav=120, lfielddump=True, le12=False))
-    sim.add(RadfieldModule(enabled=True, dtav=120, timeav=120))
-    sim.add(TimestatModule(enabled=True, dtav=60))
+    sim.add(Configuration.LSMCrossModule(enabled=True, dtav=60))
+    sim.add(Configuration.CapeModule(enabled=True, dtav=120))
+    sim.add(Configuration.StatsModule(enabled=True, dtav=5, timeav=5))
+    sim.add(Configuration.FielddumpModule(dtav=120, lfielddump=True, le12=False))
+    sim.add(Configuration.RadfieldModule(enabled=True, dtav=120, timeav=120))
+    sim.add(Configuration.TimestatModule(enabled=True, dtav=60))
     x_meas = [x0]
     y_meas = [y0]
     x_meas.append(float(grid.xt[32 - 1]))
     y_meas.append(float(grid.yt[11 - 1]))
-    sim.add(VirtualMeasurementOutputModule(x=x_meas, y=y_meas, enabled=True))
-    sim.add(ColumnStatisticsOutputModule(x=x_meas, y=y_meas, enabled=True))
-    sim.add(NetCDFStatisticsSyncModule())
+    sim.add(
+        Configuration.VirtualMeasurementOutputModule(x=x_meas, y=y_meas, enabled=True)
+    )
+    sim.add(
+        Configuration.ColumnStatisticsOutputModule(x=x_meas, y=y_meas, enabled=True)
+    )
+    sim.add(Configuration.NetCDFStatisticsSyncModule())
 
     xz_coords = [float(grid.y0 + 0.5 * grid.ysize)]
     yz_coords = [float(grid.x0 + 0.5 * grid.xsize)]
 
-    sim.add(CrossSectionOutputModule(
-        cross_enabled=True,
-        cross_dtav=10,
-        xy_coords=[float(grid.zt[0])],
-        xz_coords=xz_coords,
-        yz_coords=yz_coords,
-        xy_enabled=True,
-        xz_enabled=True,
-        yz_enabled=True,
-    ))
+    sim.add(
+        Configuration.CrossSectionOutputModule(
+            cross_enabled=True,
+            cross_dtav=10,
+            xy_coords=[float(grid.zt[0])],
+            xz_coords=xz_coords,
+            yz_coords=yz_coords,
+            xy_enabled=True,
+            xz_enabled=True,
+            yz_enabled=True,
+        )
+    )
 
-    sim.add(SamplingModule(output_interval=120))
-    sim.add(CheckSimulationModule(
-        check_interval=120, stop_on_invalid=False, check_tendencies=True
-    ))
+    sim.add(Configuration.SamplingModule(output_interval=120))
+    sim.add(
+        Configuration.CheckSimulationModule(
+            check_interval=120, stop_on_invalid=False, check_tendencies=True
+        )
+    )
     # if sim.nml.get("namchecksim") is None:
     #     sim.nml["namchecksim"] = {}
     # sim.nml["namchecksim"]["tcheck"] = 60
@@ -448,25 +426,25 @@ if __name__ == "__main__":
         sim.nml["namnetcdfstats"] = {}
     sim.nml["namnetcdfstats"]["deflate"] = 0
     if use_ls2d:
-        set_nml_section(
+        MoDa.set_nml_section(
             sim.nml, sim.nml_docs, "user_defined", "PHYSICS", "ltimedep", True
         )
-        set_nml_section(
+        MoDa.set_nml_section(
             sim.nml, sim.nml_docs, "user_defined", "NAMNUDGE", "lnudge", True
         )
-    set_nml_section(
+    MoDa.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "namsubgrid", "sgs_surface_fix", False
     )
-    set_nml_section(
+    MoDa.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "timer", "ltimer", True
     )  #     namelist /TIMER/ ltimer, ltimer_print, ltimer_write
-    set_nml_section(
+    MoDa.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "timer", "ltimer_write", True
     )  #     namelist /TIMER/ ltimer, ltimer_print, ltimer_write
-    set_nml_section(
+    MoDa.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "namnetcdfstats", "lnofill", True
     )
-    set_nml_section(
+    MoDa.set_nml_section(
         sim.nml,
         sim.nml_docs,
         "user_defined",
@@ -480,7 +458,7 @@ if __name__ == "__main__":
             if not isinstance(values, dict):
                 continue
             for key, value in values.items():
-                set_nml_section(
+                MoDa.set_nml_section(
                     sim.nml,
                     sim.nml_docs,
                     "user_defined",

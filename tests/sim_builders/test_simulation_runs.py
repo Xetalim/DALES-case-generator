@@ -2,9 +2,8 @@ import subprocess
 
 import pytest
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
@@ -13,9 +12,10 @@ from modular_dales import (
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import InterpolatedProfile, lin
-from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.vars import *
+from MoDa.Atmosphere import lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.Configuration.output_modules import EasyOutputModule
+from MoDa.vars import *
 
 
 @pytest.mark.slow
@@ -127,18 +127,22 @@ def test_triple_nested_simulation_setup(machine_conf):
         )
         sim.add(atmo)
 
-        sim.add(TimeModule(
-            xday=1,
-            xtime=12.0,
-            xyear=2023,
-            runtime=60,
-            startyear=2023,
-            startmonth=1,
-            startday=1,
-        ))
-        sim.add(ConstantSurfaceTemperatureModule(
-            thls=293.15, z0mav=1e-4, z0hav=1e-4, ps=100000
-        ))
+        sim.add(
+            TimeModule(
+                xday=1,
+                xtime=12.0,
+                xyear=2023,
+                runtime=60,
+                startyear=2023,
+                startmonth=1,
+                startday=1,
+            )
+        )
+        sim.add(
+            ConstantSurfaceTemperatureModule(
+                thls=293.15, z0mav=1e-4, z0hav=1e-4, ps=100000
+            )
+        )
 
         sim.add(grid)
 

@@ -2,9 +2,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
@@ -13,9 +12,10 @@ from modular_dales import (
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.modular.simulation_module import set_nml_section
-from modular_dales.vars import *
+from MoDa.Atmosphere.Profile import AtmosphericProfile
+from MoDa.Configuration.output_modules import EasyOutputModule
+from MoDa.modular.simulation_module import set_nml_section
+from MoDa.vars import *
 from tests.helpers import run_command_with_report
 from tests.sim_builders.test_openbc import (
     _assert_crosssection_matches_fielddump_scalar_slice_coord,
@@ -93,22 +93,26 @@ def _build_coarse_sim_with_easyoutput(
     atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
     sim.add(atmo)
 
-    sim.add(TimeModule(
-        xday=1,
-        xtime=12.0,
-        xyear=2023,
-        runtime=60,
-        startyear=2023,
-        startmonth=1,
-        startday=1,
-    ))
+    sim.add(
+        TimeModule(
+            xday=1,
+            xtime=12.0,
+            xyear=2023,
+            runtime=60,
+            startyear=2023,
+            startmonth=1,
+            startday=1,
+        )
+    )
 
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15,
-        z0mav=0.0001,
-        z0hav=0.0001,
-        ps=100000,
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            ps=100000,
+        )
+    )
 
     sim.add(EasyOutputModule(output_interval=10, enable_output=True))
 
@@ -144,22 +148,26 @@ def _build_nested_openbc_sim_from_coarse(
     atmo.add(AtmosphericProfile(variable=wa, shape=lin(surf_val=0.0, ddz=0.0)))
     sim2.add(atmo)
 
-    sim2.add(TimeModule(
-        xday=1,
-        xtime=12.0,
-        xyear=2023,
-        runtime=60,
-        startyear=2023,
-        startmonth=1,
-        startday=1,
-    ))
+    sim2.add(
+        TimeModule(
+            xday=1,
+            xtime=12.0,
+            xyear=2023,
+            runtime=60,
+            startyear=2023,
+            startmonth=1,
+            startday=1,
+        )
+    )
 
-    sim2.add(ConstantSurfaceTemperatureModule(
-        thls=293.15,
-        z0mav=0.0001,
-        z0hav=0.0001,
-        ps=100000,
-    ))
+    sim2.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            ps=100000,
+        )
+    )
 
     if sim2.nml.get("namnetcdfstats") is None:
         sim2.nml["namnetcdfstats"] = {}

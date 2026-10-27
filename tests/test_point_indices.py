@@ -1,6 +1,6 @@
 import pytest
 
-from modular_dales.Configuration.output_modules import prepare_point_indices
+from MoDa.Configuration.output_modules import prepare_point_indices
 
 
 @pytest.mark.parametrize("allow_idx_list", [True, False])

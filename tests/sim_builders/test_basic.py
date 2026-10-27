@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from modular_dales.Atmosphere import (
+from MoDa.Atmosphere import (
     AtmosphereModule,
-    AtmosphericProfile,
-    InterpolatedProfile,
     lin,
 )
-from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.grids import GridDales
-from modular_dales.modular import dales_simulation
-from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
-from modular_dales.vars import *
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
+from MoDa.Configuration.run_and_time import TimeModule
+from MoDa.Geometry.grids import GridDales
+from MoDa.modular import dales_simulation
+from MoDa.Surface.surface import ConstantSurfaceTemperatureModule
+from MoDa.vars import *
 
 
 def _build_basic_sim(machine_conf: dict) -> dales_simulation:
@@ -49,9 +48,11 @@ def _build_basic_sim(machine_conf: dict) -> dales_simulation:
             points=[1, 1e-8, 1e-8],
         )
     )
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15, z0mav=0.0001, z0hav=0.0001, ps=100000, albedoav=0.22
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15, z0mav=0.0001, z0hav=0.0001, ps=100000, albedoav=0.22
+        )
+    )
     sim.add(atmo)
 
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)

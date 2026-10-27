@@ -4,27 +4,27 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from modular_dales.Atmosphere.ls2d_atmosphere import FromLS2D
-from modular_dales.Geometry.grids import GridDales
-from modular_dales.Surface.LSM import lsm_netcdf, lsm_slurb, lsm_sources
-from modular_dales.Surface.LSM.lsm_data import (
+from MoDa.Atmosphere.ls2d_atmosphere import FromLS2D
+from MoDa.Geometry.grids import GridDales
+from MoDa.Surface.LSM import lsm_netcdf, lsm_slurb, lsm_sources
+from MoDa.Surface.LSM.lsm_data import (
     LAND_USE_PARAMETERS,
     LandUseFields,
     SoilFields,
 )
-from modular_dales.Surface.LSM.lsm_module import LSMModule
-from modular_dales.Surface.LSM.lsm_output import LSM_output_dales
-from modular_dales.Surface.LSM.lsm_sources import (
+from MoDa.Surface.LSM.lsm_module import LSMModule
+from MoDa.Surface.LSM.lsm_output import LSM_output_dales
+from MoDa.Surface.LSM.lsm_sources import (
     FromBofek,
     FromLCZ,
     FromNetCDF,
     FromTop10,
 )
-from modular_dales.Surface.LSM.lu_modifications import (
+from MoDa.Surface.LSM.lu_modifications import (
     LandUseModification,
     LandUseModifications,
 )
-from modular_dales.Surface.LSM.modular_temps_moisture import (
+from MoDa.Surface.LSM.modular_temps_moisture import (
     SoilTemperatureMoistureFromHarmonie,
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -33,7 +33,7 @@ from modular_dales.Surface.LSM.modular_temps_moisture import (
     VaryingSoilMoisture,
     VaryingSoilTemperature,
 )
-from modular_dales.Surface.LSM.translation_tables.landuse_types import (
+from MoDa.Surface.LSM.translation_tables.landuse_types import (
     LandUseSet,
     get_land_use_definitions,
 )
@@ -301,7 +301,7 @@ def test_lsm_adds_thermal_sources_without_reordering():
 
 @pytest.fixture
 def grid():
-    from modular_dales.modular.dales_simulation import dales_simulation
+    from MoDa.modular.dales_simulation import dales_simulation
 
     sim = dales_simulation("test", {})
     grid = GridDales(
@@ -333,9 +333,7 @@ def lcz_loader(grid, monkeypatch):
         }
     )
     loader = Mock(return_value=dataset)
-    monkeypatch.setattr(
-        "modular_dales.Surface.LSM.LCZ.get_from_lcz.do_everything", loader
-    )
+    monkeypatch.setattr("MoDa.Surface.LSM.LCZ.get_from_lcz.do_everything", loader)
     return loader
 
 
@@ -556,7 +554,7 @@ def test_from_lcz_supports_depac_with_slurb(grid, monkeypatch, include_slurb):
     )
     loader = Mock(return_value=dataset)
     monkeypatch.setattr(
-        "modular_dales.Surface.LSM.LCZ.get_from_lcz.do_everything",
+        "MoDa.Surface.LSM.LCZ.get_from_lcz.do_everything",
         loader,
     )
     writer = LSM_output_dales(grid, LandUseSet.DEPAC, include_slurb=include_slurb)
@@ -590,9 +588,7 @@ def test_from_lcz_supports_depac_with_slurb(grid, monkeypatch, include_slurb):
 def test_lcz_source_requires_projection_before_loading(grid, monkeypatch):
     monkeypatch.setattr(grid, "crs", None)
     loader = Mock()
-    monkeypatch.setattr(
-        "modular_dales.Surface.LSM.LCZ.get_from_lcz.do_everything", loader
-    )
+    monkeypatch.setattr("MoDa.Surface.LSM.LCZ.get_from_lcz.do_everything", loader)
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(grid.sim)
     with pytest.raises(ValueError, match="valid projection"):
@@ -615,9 +611,7 @@ def test_netcdf_source_finalizes_depac_and_optional_slurb(
         }
     )
     loader = Mock(return_value=dataset)
-    monkeypatch.setattr(
-        "modular_dales.Surface.LSM.LCZ.from_netcdf.load_from_netcdf", loader
-    )
+    monkeypatch.setattr("MoDa.Surface.LSM.LCZ.from_netcdf.load_from_netcdf", loader)
     apply_slurb = Mock()
     monkeypatch.setattr(lsm_slurb, "apply_from_netcdf", apply_slurb)
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
@@ -659,7 +653,7 @@ def test_debug_initializes_arrays_without_serialization(grid, monkeypatch):
 
 
 def test_preparation_preserves_stage_order():
-    from modular_dales.modular.dales_simulation import dales_simulation
+    from MoDa.modular.dales_simulation import dales_simulation
 
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(dales_simulation("test", {}))

@@ -8,9 +8,9 @@ from types import SimpleNamespace
 import pytest
 
 from docs.conf import _append_namelist_field_docs
-from modular_dales.modular.dales_simulation import dales_simulation
-from modular_dales.modular.namelist import get_namelist_spec, nml_field
-from modular_dales.modular.simulation_module import simulation_module
+from MoDa.modular.dales_simulation import dales_simulation
+from MoDa.modular.namelist import get_namelist_spec, nml_field
+from MoDa.modular.simulation_module import simulation_module
 from tests.namelist.test_namelist_fields import NamelistModule
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,7 +18,7 @@ LEGACY_KEYS = {"nml", "key", "required", "raise_conflict", "doc", "units"}
 
 
 def migrated_modules():
-    for path in sorted((ROOT / "modular_dales").rglob("*.py")):
+    for path in sorted((ROOT / "MoDa").rglob("*.py")):
         tree = ast.parse(path.read_text())
         if any(
             isinstance(node, ast.Call)
@@ -30,7 +30,7 @@ def migrated_modules():
 
 
 def test_source_has_no_legacy_namelist_declarations():
-    for path in (ROOT / "modular_dales").rglob("*.py"):
+    for path in (ROOT / "MoDa").rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text())):
             if not isinstance(node, ast.Call):
                 continue
@@ -110,7 +110,7 @@ def test_docs_ignore_non_dataclass_modules(obj):
 
 
 def test_migrated_forcing_metadata(monkeypatch):
-    from modular_dales.Surface.surface import ConstantFluxesModule
+    from MoDa.Surface.surface import ConstantFluxesModule
 
     definition = next(
         item for item in fields(ConstantFluxesModule) if item.name == "ps"

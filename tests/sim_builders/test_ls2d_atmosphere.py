@@ -6,19 +6,19 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from modular_dales import dales_simulation
-from modular_dales.Atmosphere import AtmosphereModule, FromLS2D, LS2DAtmosphereModule
-from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.Configuration.output_modules import (
+from MoDa import dales_simulation
+from MoDa.Atmosphere import AtmosphereModule, FromLS2D, LS2DAtmosphereModule
+from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
+from MoDa.Configuration.output_modules import (
     CheckSimulationModule,
     EasyOutputModule,
 )
-from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.grids import GridDales
-from modular_dales.modular.simulation_module import set_nml_section
-from modular_dales.modular.time_dependent import TimedependentModule
-from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM import (
+from MoDa.Configuration.run_and_time import TimeModule
+from MoDa.Geometry.grids import GridDales
+from MoDa.modular.simulation_module import set_nml_section
+from MoDa.modular.time_dependent import TimedependentModule
+from MoDa.Radiation.radiation import RadiationModule
+from MoDa.Surface.LSM import (
     LandUseSet,
     LSMModule,
     UniformSkinTemperature,
@@ -74,8 +74,8 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf, data_source) -> None:
     atmo_ls2d = LS2DAtmosphereModule(
         era5_path=era5_path,
         data_source=data_source,
-        start_date=datetime(2016, 8, 15, hour=6, tzinfo=UTC),
-        end_date=datetime(2016, 8, 16, hour=6, tzinfo=UTC),
+        start_date=datetime(2026, 8, 15, hour=6, tzinfo=UTC),
+        end_date=datetime(2026, 8, 16, hour=6, tzinfo=UTC),
         write_log=False,
         n_av=0,
         method="2nd",
@@ -114,13 +114,15 @@ def test_ls2d_atmosphere_full_ls2d_pipeline(machine_conf, data_source) -> None:
     lsm.add(UniformSoilMoisture(soil_moisture=[0.3, 0.3, 0.3, 0.3]), priority=600)
     sim.add(lsm)
 
-    sim.add(TimeModule(xtime=6, xday=15, xyear=2016, runtime=24 * 3600.0))
+    sim.add(TimeModule(xtime=6, xday=15, xyear=2026, runtime=24 * 3600.0))
 
     sim.add(EasyOutputModule(output_interval=60))
 
-    sim.add(CheckSimulationModule(
-        check_interval=360, check_tendencies=False, stop_on_invalid=False
-    ))
+    sim.add(
+        CheckSimulationModule(
+            check_interval=360, check_tendencies=False, stop_on_invalid=False
+        )
+    )
 
     # Run with microphysics turned on (two-moment scheme)
     set_nml_section(

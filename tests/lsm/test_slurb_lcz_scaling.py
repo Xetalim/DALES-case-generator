@@ -4,14 +4,14 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from modular_dales.Geometry.grids import GridDales
-from modular_dales.Surface.LSM.lsm_output import LSM_output_dales
-from modular_dales.Surface.LSM.lsm_slurb import (
+from MoDa.Geometry.grids import GridDales
+from MoDa.Surface.LSM.lsm_output import LSM_output_dales
+from MoDa.Surface.LSM.lsm_slurb import (
     apply_from_netcdf,
     apply_slurb_parameters_lcz,
 )
-from modular_dales.Surface.LSM.SLuRB.slurb import slbCreatorClass
-from modular_dales.Surface.LSM.translation_tables.landuse_types import LandUseSet
+from MoDa.Surface.LSM.SLuRB.slurb import slbCreatorClass
+from MoDa.Surface.LSM.translation_tables.landuse_types import LandUseSet
 
 
 @pytest.mark.parametrize("include_slurb", [False, True])

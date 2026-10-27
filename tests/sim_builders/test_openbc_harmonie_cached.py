@@ -5,9 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
@@ -18,8 +17,9 @@ from modular_dales import (
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import lin
-from modular_dales.vars import qt, thetal, tke, ua, va, w
+from MoDa.Atmosphere import lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile
+from MoDa.vars import qt, thetal, tke, ua, va, w
 
 DATA_PATH = Path("HARM_TEST_DATA")
 
@@ -45,21 +45,23 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
 
     sim = dales_simulation("openbc_harmonie_cached_2026032618", machine_conf)
     sim.add(DefaultNamelistModule())
-    sim.add(GridDales(
-        itot=16,
-        jtot=16,
-        kmax=20,
-        xsize=1600.0,
-        ysize=1600.0,
-        kmax_soil=4,
-        xlat=52.25,
-        xlon=5.45,
-        x0=136173.0 - 800.0,
-        y0=455912.0 - 800.0,
-        proj4="EPSG:28992",
-        alpha=1.0,
-        dz0=20.0,
-    ))
+    sim.add(
+        GridDales(
+            itot=16,
+            jtot=16,
+            kmax=20,
+            xsize=1600.0,
+            ysize=1600.0,
+            kmax_soil=4,
+            xlat=52.25,
+            xlon=5.45,
+            x0=136173.0 - 800.0,
+            y0=455912.0 - 800.0,
+            proj4="EPSG:28992",
+            alpha=1.0,
+            dz0=20.0,
+        )
+    )
     atmosphere = AtmosphereModule()
     for variable, value in (
         (ua, 3.0),
@@ -73,28 +75,34 @@ def openbc_harmonie_cached_case(machine_conf: dict) -> dales_simulation:
             AtmosphericProfile(variable=variable, shape=lin(surf_val=value, ddz=0.0))
         )
     sim.add(atmosphere)
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
-    ))
-    sim.add(TimeModule(
-        xtime=18.0,
-        xyear=2026,
-        runtime=60,
-        startyear=2026,
-        startmonth=3,
-        startday=26,
-        inferfromdatetime=True,
-    ))
-    sim.add(KNMIHarmonieForecastDownloadModule(
-        forecast_datetime="2026032618",
-        download_root=str(
-            Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"]) / "HARM_TEST_DATA"
-        ),
-        cdo_path=cdo_path,
-        delete_grib_files=False,
-        convert_to_netcdf=False,
-        check_disk_space=False,
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
+        )
+    )
+    sim.add(
+        TimeModule(
+            xtime=18.0,
+            xyear=2026,
+            runtime=60,
+            startyear=2026,
+            startmonth=3,
+            startday=26,
+            inferfromdatetime=True,
+        )
+    )
+    sim.add(
+        KNMIHarmonieForecastDownloadModule(
+            forecast_datetime="2026032618",
+            download_root=str(
+                Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"]) / "HARM_TEST_DATA"
+            ),
+            cdo_path=cdo_path,
+            delete_grib_files=False,
+            convert_to_netcdf=False,
+            check_disk_space=False,
+        )
+    )
     boundaries = Nest_in_KNMI(
         time0="2026-03-26T18:00:00",
         start="2026-03-26T18:00:00",
@@ -120,56 +128,64 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
 
     sim = dales_simulation("openbc_harmonie_cached_2026032618_timedep", machine_conf)
     sim.add(DefaultNamelistModule())
-    sim.add(GridDales(
-        itot=16,
-        jtot=16,
-        kmax=20,
-        xsize=1600.0,
-        ysize=1600.0,
-        kmax_soil=4,
-        xlat=52.25,
-        xlon=5.45,
-        x0=136173.0 - 800.0,
-        y0=455912.0 - 800.0,
-        proj4="EPSG:28992",
-        alpha=1.0,
-        dz0=20.0,
-    ))
+    sim.add(
+        GridDales(
+            itot=16,
+            jtot=16,
+            kmax=20,
+            xsize=1600.0,
+            ysize=1600.0,
+            kmax_soil=4,
+            xlat=52.25,
+            xlon=5.45,
+            x0=136173.0 - 800.0,
+            y0=455912.0 - 800.0,
+            proj4="EPSG:28992",
+            alpha=1.0,
+            dz0=20.0,
+        )
+    )
 
     sim.add(TimedependentModule())
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22
+        )
+    )
 
-    sim.add(TimeModule(
-        xtime=18.0,
-        xyear=2026,
-        runtime=60,
-        startyear=2026,
-        startmonth=3,
-        startday=26,
-        inferfromdatetime=True,
-    ))
+    sim.add(
+        TimeModule(
+            xtime=18.0,
+            xyear=2026,
+            runtime=60,
+            startyear=2026,
+            startmonth=3,
+            startday=26,
+            inferfromdatetime=True,
+        )
+    )
     atmo = AtmosphereModule()
-    sim.add(HarmonieAtmosphereModule(
-        harmonie_ml_glob=str(
-            Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
-            / "HARM_TEST_DATA"
-            / "HARM43_V1_P5_*/*"
-        ),
-        harmonie_sfc_glob=str(
-            Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
-            / "HARM_TEST_DATA"
-            / "HARM43_V1_P3_*/*"
-        ),
-        harmonie_start="2026-03-26T18:00:00",
-        harmonie_end="2026-03-26T19:00:00",
-        harmonie_time0="2026-03-26T18:00:00",
-        harmonie_tchunk=1,
-        do_nudging=True,
-        smooth_initial_uv_to_geostrophic=False,
-        infer_adv_tendencies=True,
-    ))
+    sim.add(
+        HarmonieAtmosphereModule(
+            harmonie_ml_glob=str(
+                Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
+                / "HARM_TEST_DATA"
+                / "HARM43_V1_P5_*/*"
+            ),
+            harmonie_sfc_glob=str(
+                Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"])
+                / "HARM_TEST_DATA"
+                / "HARM43_V1_P3_*/*"
+            ),
+            harmonie_start="2026-03-26T18:00:00",
+            harmonie_end="2026-03-26T19:00:00",
+            harmonie_time0="2026-03-26T18:00:00",
+            harmonie_tchunk=1,
+            do_nudging=True,
+            smooth_initial_uv_to_geostrophic=False,
+            infer_adv_tendencies=True,
+        )
+    )
     atmo.add(AtmosphericProfile(variable=tke, shape=lin(surf_val=1, ddz=0)))
     sim.add(atmo)
     return sim

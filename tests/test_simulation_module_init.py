@@ -5,12 +5,13 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from modular_dales.Atmosphere import AtmosphereModule, AtmosphericProfile, lin
-from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.modular.dales_simulation import dales_simulation
-from modular_dales.modular.simulation_module import simulation_module
-from modular_dales.Surface.surface import ConstantFluxesModule
-from modular_dales.vars import ua
+from MoDa.Atmosphere import AtmosphereModule, lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile
+from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
+from MoDa.modular.dales_simulation import dales_simulation
+from MoDa.modular.simulation_module import simulation_module
+from MoDa.Surface.surface import ConstantFluxesModule
+from MoDa.vars import ua
 
 
 @dataclass

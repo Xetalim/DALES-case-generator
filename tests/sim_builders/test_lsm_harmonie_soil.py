@@ -1,29 +1,28 @@
 from __future__ import annotations
 
-from modular_dales import dales_simulation
-from modular_dales.Atmosphere import (
+from MoDa import dales_simulation
+from MoDa.Atmosphere import (
     AtmosphereModule,
-    AtmosphericProfile,
-    InterpolatedProfile,
     lin,
 )
-from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.Configuration.output_modules import (
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
+from MoDa.Configuration.output_modules import (
     CheckSimulationModule,
     EasyOutputModule,
 )
-from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.Geometry.grids import GridDales
-from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM import LandUseSet
-from modular_dales.Surface.LSM.lsm_module import LSMModule
-from modular_dales.Surface.LSM.lu_modifications import LandUseModification
-from modular_dales.Surface.LSM.modular_temps_moisture import (
+from MoDa.Configuration.run_and_time import TimeModule
+from MoDa.Geometry.geometry_modification import AllGeometry
+from MoDa.Geometry.grids import GridDales
+from MoDa.Radiation.radiation import RadiationModule
+from MoDa.Surface.LSM import LandUseSet
+from MoDa.Surface.LSM.lsm_module import LSMModule
+from MoDa.Surface.LSM.lu_modifications import LandUseModification
+from MoDa.Surface.LSM.modular_temps_moisture import (
     SoilTemperatureMoistureFromHarmonie,
     UniformSkinTemperature,
 )
-from modular_dales.vars import *
+from MoDa.vars import *
 
 
 def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
@@ -89,9 +88,11 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
     sim.add(lsm)
 
-    sim.add(RadiationModule(
-        iradiation=4,
-    ))
+    sim.add(
+        RadiationModule(
+            iradiation=4,
+        )
+    )
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
     sim.add(time_module)
     sim.add(CheckSimulationModule(check_interval=10))

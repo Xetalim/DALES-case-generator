@@ -6,20 +6,19 @@ from pathlib import Path
 
 import pytest
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
-    InterpolatedProfile,
     KNMIHarmonieForecastDownloadModule,
     Nest_in_KNMI,
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import lin
-from modular_dales.vars import qt, thetal, tke, ua, va, wa
+from MoDa.Atmosphere import lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.vars import qt, thetal, tke, ua, va, wa
 from tests.generic_testers import run_simulation_and_check_job
 
 
@@ -67,20 +66,22 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
 
     sim = dales_simulation("knmi_download_workflow_real", machine_conf)
     sim.add(DefaultNamelistModule())
-    sim.add(GridDales(
-        itot=16,
-        jtot=16,
-        kmax=20,
-        xsize=1600.0,
-        ysize=1600.0,
-        kmax_soil=4,
-        xlat=52.25,
-        xlon=5.45,
-        x0=0.0,
-        y0=0.0,
-        alpha=1.0,
-        dz0=20.0,
-    ))
+    sim.add(
+        GridDales(
+            itot=16,
+            jtot=16,
+            kmax=20,
+            xsize=1600.0,
+            ysize=1600.0,
+            kmax_soil=4,
+            xlat=52.25,
+            xlon=5.45,
+            x0=0.0,
+            y0=0.0,
+            alpha=1.0,
+            dz0=20.0,
+        )
+    )
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3.0, ddz=1e-3)))
@@ -97,36 +98,42 @@ def knmi_download_workflow_case(machine_conf: dict) -> dales_simulation:
     )
     sim.add(atmo)
 
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15,
-        z0mav=0.0001,
-        z0hav=0.0001,
-        ps=100000,
-        albedoav=0.22,
-    ))
-    sim.add(TimeModule(
-        xtime=float(time0_dt.hour),
-        xday=int(time0_dt.day),
-        xyear=int(time0_dt.year),
-        runtime=60,
-        startyear=int(time0_dt.year),
-        startmonth=int(time0_dt.month),
-        startday=int(time0_dt.day),
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            ps=100000,
+            albedoav=0.22,
+        )
+    )
+    sim.add(
+        TimeModule(
+            xtime=float(time0_dt.hour),
+            xday=int(time0_dt.day),
+            xyear=int(time0_dt.year),
+            runtime=60,
+            startyear=int(time0_dt.year),
+            startmonth=int(time0_dt.month),
+            startday=int(time0_dt.day),
+        )
+    )
 
     cache_base = (
         Path(machine_conf["case_conf"]["BASE_OUTPUT_PATH"]) / "knmi_download_cache"
     )
-    sim.add(KNMIHarmonieForecastDownloadModule(
-        forecast_datetime=forecast_datetime,
-        download_root=cache_base.as_posix(),
-        api_key_file=api_key_file,
-        cdo_path=cdo_path,
-        check_disk_space=True,
-        minimum_free_space_gb=2.0,
-        disk_space_safety_factor=2.0,
-        delete_grib_files=True,
-    ))
+    sim.add(
+        KNMIHarmonieForecastDownloadModule(
+            forecast_datetime=forecast_datetime,
+            download_root=cache_base.as_posix(),
+            api_key_file=api_key_file,
+            cdo_path=cdo_path,
+            check_disk_space=True,
+            minimum_free_space_gb=2.0,
+            disk_space_safety_factor=2.0,
+            delete_grib_files=True,
+        )
+    )
 
     openbc = Nest_in_KNMI(
         time0=time0_dt.strftime("%Y-%m-%dT%H:%M:%S"),

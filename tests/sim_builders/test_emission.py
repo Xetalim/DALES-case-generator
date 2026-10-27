@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from modular_dales import dales_simulation
-from modular_dales.Atmosphere import AtmosphereModule, AtmosphericProfile, lin
-from modular_dales.Configuration.defaultnamelist import DefaultNamelistModule
-from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.Configuration.run_and_time import TimeModule
-from modular_dales.Emission.emission import (
+from MoDa import dales_simulation
+from MoDa.Atmosphere import AtmosphereModule, lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile
+from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
+from MoDa.Configuration.output_modules import EasyOutputModule
+from MoDa.Configuration.run_and_time import TimeModule
+from MoDa.Emission.emission import (
     EmissionModule,
     EmissionPointSource,
     EmissionTracer,
 )
-from modular_dales.Geometry.grids import GridDales
-from modular_dales.Surface.surface import ConstantSurfaceTemperatureModule
-from modular_dales.vars import *
+from MoDa.Geometry.grids import GridDales
+from MoDa.Surface.surface import ConstantSurfaceTemperatureModule
+from MoDa.vars import *
 
 
 def emission_case(machine_conf: dict) -> dales_simulation:
@@ -48,67 +49,81 @@ def emission_case(machine_conf: dict) -> dales_simulation:
     atmo.add(AtmosphericProfile(variable=qt, shape=lin(surf_val=0.0, ddz=0)))
     sim.add(atmo)
 
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15, z0mav=0.0001, z0hav=0.0001, ps=100000, albedoav=0.22
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15, z0mav=0.0001, z0hav=0.0001, ps=100000, albedoav=0.22
+        )
+    )
 
     emis = EmissionModule()
 
-    emis.add(EmissionTracer(
-        name="co2",
-        long_name="Carbon Dioxide (CO2)",
-        unit="ppm",
-        molar_mass=44.009,
-        lemis=True,
-    ))
-    emis.add(EmissionTracer(
-        name="so2",
-        long_name="Sulfur Dioxide (SO2)",
-        unit="ppb",
-        molar_mass=64.066,
-        lemis=True,
-    ))
+    emis.add(
+        EmissionTracer(
+            name="co2",
+            long_name="Carbon Dioxide (CO2)",
+            unit="ppm",
+            molar_mass=44.009,
+            lemis=True,
+        )
+    )
+    emis.add(
+        EmissionTracer(
+            name="so2",
+            long_name="Sulfur Dioxide (SO2)",
+            unit="ppb",
+            molar_mass=64.066,
+            lemis=True,
+        )
+    )
 
-    emis.add(EmissionPointSource(
-        tracer_name="co2",
-        x_idx=4,
-        y_idx=4,
-        height=10.0,
-        temperature=293.0,
-        volume=1.0,
-        emission=10.0,
-        stack_exit_area=1.0,
-    ))
-    emis.add(EmissionPointSource(
-        tracer_name="co2",
-        x_idx=8,
-        y_idx=8,
-        height=20.0,
-        temperature=293.0,
-        volume=1.0,
-        emission=5.0,
-        stack_exit_area=1.0,
-    ))
-    emis.add(EmissionPointSource(
-        tracer_name="so2",
-        x_idx=2,
-        y_idx=2,
-        height=15.0,
-        temperature=293.0,
-        volume=1.0,
-        emission=3.0,
-        stack_exit_area=1.0,
-    ))
-    emis.add(EmissionPointSource(
-        tracer_name="so2",
-        x_idx=10,
-        y_idx=10,
-        height=25.0,
-        temperature=293.0,
-        volume=1.0,
-        emission=7.0,
-        stack_exit_area=1.0,
-    ))
+    emis.add(
+        EmissionPointSource(
+            tracer_name="co2",
+            x_idx=4,
+            y_idx=4,
+            height=10.0,
+            temperature=293.0,
+            volume=1.0,
+            emission=10.0,
+            stack_exit_area=1.0,
+        )
+    )
+    emis.add(
+        EmissionPointSource(
+            tracer_name="co2",
+            x_idx=8,
+            y_idx=8,
+            height=20.0,
+            temperature=293.0,
+            volume=1.0,
+            emission=5.0,
+            stack_exit_area=1.0,
+        )
+    )
+    emis.add(
+        EmissionPointSource(
+            tracer_name="so2",
+            x_idx=2,
+            y_idx=2,
+            height=15.0,
+            temperature=293.0,
+            volume=1.0,
+            emission=3.0,
+            stack_exit_area=1.0,
+        )
+    )
+    emis.add(
+        EmissionPointSource(
+            tracer_name="so2",
+            x_idx=10,
+            y_idx=10,
+            height=25.0,
+            temperature=293.0,
+            volume=1.0,
+            emission=7.0,
+            stack_exit_area=1.0,
+        )
+    )
 
     sim.add(emis)
     sim.add(EasyOutputModule())

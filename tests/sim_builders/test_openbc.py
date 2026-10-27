@@ -5,56 +5,24 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import lin
-from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.LBC import NestingTopology
-from modular_dales.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
+from MoDa.Atmosphere import lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile
+from MoDa.Configuration.output_modules import EasyOutputModule
+from MoDa.LBC import NestingTopology
+from MoDa.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
     _promote_boundary_stagger_dims,
 )
-from modular_dales.modular.simulation_module import set_nml_section
-from modular_dales.vars import *
+from MoDa.modular.simulation_module import set_nml_section
+from MoDa.vars import *
 from tests.helpers import run_command_with_report
-
-
-@pytest.mark.skip(reason="openBCModule not fully implemented yet")
-def test_openbc(atmo_netcdf_file, surface_netcdf_file, simulation_report) -> None:
-    """Smoke test for OpenBC module using generated NetCDF inputs.
-
-    This is preserved from the original test file and remains skipped until
-    openBCModule is fully implemented.
-    """
-
-    print("Testing openBCModule with atmospheric profile from netCDF file")
-
-    file1 = atmo_netcdf_file(xlen=50, ylen=50, levlen=21, timesteps=2)
-    run_command_with_report(
-        ["ncview", str(file1)],
-        stage="ncview_atmo",
-        case_dir=Path.cwd(),
-        title="openbc ncview atmosphere crash",
-        add_report=simulation_report,
-        info_lines=[f"file={file1}"],
-    )
-    print(file1)
-    file2 = surface_netcdf_file(xlen=50, ylen=50, levlen=21, timesteps=2)
-    run_command_with_report(
-        ["ncview", str(file2)],
-        stage="ncview_surface",
-        case_dir=Path.cwd(),
-        title="openbc ncview surface crash",
-        add_report=simulation_report,
-        info_lines=[f"file={file2}"],
-    )
-    print(file2)
 
 
 def _build_nested_sim_with_easyoutput(
@@ -148,13 +116,15 @@ def _build_nested_sim_with_easyoutput(
     sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60))
 
     # Simple surface module
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15,
-        z0mav=0.0001,
-        z0hav=0.0001,
-        ps=100000,
-        albedoav=0.22,
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            ps=100000,
+            albedoav=0.22,
+        )
+    )
 
     # Nesting topology: supergrid hosting subgrid; this also configures
     # cross-section indices in namcrosssection so DALES writes cross* files.
@@ -165,10 +135,12 @@ def _build_nested_sim_with_easyoutput(
     sim.add(nesting)
 
     # Enable fielddumps and cross-sections via EasyOutputModule
-    sim.add(EasyOutputModule(
-        output_interval=1,
-        enable_output=True,
-    ))
+    sim.add(
+        EasyOutputModule(
+            output_interval=1,
+            enable_output=True,
+        )
+    )
 
     # Minimal additional namelist tweaks to keep parity with other examples
     if sim.nml.get("namchecksim") is None:

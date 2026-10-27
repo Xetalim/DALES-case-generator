@@ -5,30 +5,30 @@ from pathlib import Path
 
 import pytest
 
-from modular_dales import (
+from MoDa import (
     AtmosphereModule,
-    AtmosphericProfile,
     ConstantSurfaceTemperatureModule,
     DefaultNamelistModule,
     GridDales,
     TimeModule,
     dales_simulation,
 )
-from modular_dales.Atmosphere import InterpolatedProfile, lin
-from modular_dales.Configuration.output_modules import EasyOutputModule
-from modular_dales.Emission.emission import EmissionModule, EmissionTracer
-from modular_dales.Geometry.geometry_modification import AllGeometry
-from modular_dales.Radiation.radiation import RadiationModule
-from modular_dales.Surface.LSM import LandUseSet
-from modular_dales.Surface.LSM.lsm_module import LSMModule
-from modular_dales.Surface.LSM.lu_modifications import LandUseModification
-from modular_dales.Surface.LSM.modular_temps_moisture import (
+from MoDa.Atmosphere import lin
+from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
+from MoDa.Configuration.output_modules import EasyOutputModule
+from MoDa.Emission.emission import EmissionModule, EmissionTracer
+from MoDa.Geometry.geometry_modification import AllGeometry
+from MoDa.Radiation.radiation import RadiationModule
+from MoDa.Surface.LSM import LandUseSet
+from MoDa.Surface.LSM.lsm_module import LSMModule
+from MoDa.Surface.LSM.lu_modifications import LandUseModification
+from MoDa.Surface.LSM.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from modular_dales.vars import *
-from modular_dales.vars import (
+from MoDa.vars import *
+from MoDa.vars import (
     VariableDefinition,
     get_var_by_name,
     register_var,
@@ -89,9 +89,11 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
     lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
     sim.add(lsm)
 
-    sim.add(RadiationModule(
-        iradiation=4,
-    ))
+    sim.add(
+        RadiationModule(
+            iradiation=4,
+        )
+    )
     time_module = TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=60)
     sim.add(time_module)
     return sim
@@ -180,23 +182,27 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
 
     # Only tracer input needed: CO2 concentration.
     emis = EmissionModule()
-    emis.add(EmissionTracer(
-        name="co2",
-        long_name="Carbon Dioxide (CO2)",
-        unit="ppm",
-        molar_mass=44.009,
-        lemis=True,
-    ))
+    emis.add(
+        EmissionTracer(
+            name="co2",
+            long_name="Carbon Dioxide (CO2)",
+            unit="ppm",
+            molar_mass=44.009,
+            lemis=True,
+        )
+    )
     sim.add(emis)
 
     # Keep surface forcing simple and stable.
-    sim.add(ConstantSurfaceTemperatureModule(
-        thls=293.15,
-        z0mav=0.0001,
-        z0hav=0.0001,
-        ps=100000,
-        albedoav=0.22,
-    ))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            ps=100000,
+            albedoav=0.22,
+        )
+    )
 
     sim.add(TimeModule(xtime=0.0, xday=1, xyear=2025, runtime=600))
     sim.add(RadiationModule(iradiation=4))

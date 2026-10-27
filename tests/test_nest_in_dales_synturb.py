@@ -3,10 +3,10 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from modular_dales.LBC.nest_dales_in_dales.synturb import (
+from MoDa.LBC.nest_dales_in_dales.synturb import (
     _load_synturb_profiles,
 )
-from modular_dales.LBC.openboundary_config import OpenBoundaryConfig
+from MoDa.LBC.openboundary_config import OpenBoundaryConfig
 
 
 def _write_profiles_dataset(path: Path) -> None:
