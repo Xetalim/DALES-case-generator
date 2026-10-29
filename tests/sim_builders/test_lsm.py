@@ -5,30 +5,33 @@ from pathlib import Path
 
 import pytest
 
-from MoDa import (
-    AtmosphereModule,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.Emission.emission import EmissionModule, EmissionTracer
-from MoDa.Geometry.geometry_modification import AllGeometry
-from MoDa.Radiation.radiation import RadiationModule
-from MoDa.Surface.LSM import LandUseSet
-from MoDa.Surface.LSM.lsm_module import LSMModule
-from MoDa.Surface.LSM.lu_modifications import LandUseModification
-from MoDa.Surface.LSM.modular_temps_moisture import (
+from moda.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
+    lin,
+)
+from moda.Configuration import EasyOutputModule
+from moda.Emission.emission import EmissionModule, EmissionTracer
+from moda.Geometry.masks import AllMask
+from moda.Radiation.radiation import RadiationModule
+from moda.Surface import ConstantSurfaceTemperatureModule
+from moda.Surface.LSM import LandUseSet
+from moda.Surface.LSM.lsm_module import LSMModule
+from moda.Surface.LSM.lsm_sources.lu_modifications import LandUseModification
+from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from MoDa.vars import *
-from MoDa.vars import (
+from moda.vars import *
+from moda.vars import (
     VariableDefinition,
     get_var_by_name,
     register_var,
@@ -86,7 +89,7 @@ def simple_LSM_case(machine_conf: dict) -> dales_simulation:
     lsm.add(UniformSkinTemperature(293), priority=600)
     lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
     lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
-    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    lsm.add(LandUseModification(mask=AllMask(), type="grs"), priority=0)
     sim.add(lsm)
 
     sim.add(
@@ -172,7 +175,7 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
     lsm.add(UniformSkinTemperature(293), priority=600)
     lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
     lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
-    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    lsm.add(LandUseModification(mask=AllMask(), type="grs"), priority=0)
     sim.add(lsm)
 
     # AGS switch requested by user.

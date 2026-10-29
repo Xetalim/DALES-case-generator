@@ -8,16 +8,16 @@ import numpy as np
 import xarray as xr
 from dask.delayed import delayed
 
-from MoDa.Geometry import GridDalesOpenBC
-from MoDa.IO_helpers.raster import fix_lambert_offsets
-from MoDa.LBC.nest_dales_in_HARMONIE import hybrid_levels
-from MoDa.LBC.nest_dales_in_HARMONIE.helper import (
+from moda.Geometry import GridDalesOpenBC
+from moda.IO_helpers.raster import fix_lambert_offsets
+from moda.LBC.nest_dales_in_HARMONIE import hybrid_levels
+from moda.LBC.nest_dales_in_HARMONIE.helper import (
     calcBaseprof,
     differentiate,
 )
-from MoDa.LBC.nest_dales_in_HARMONIE.Transform import Transform
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.logging_wrapper import logwrap
+from moda.LBC.nest_dales_in_HARMONIE.Transform import Transform
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

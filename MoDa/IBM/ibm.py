@@ -1,72 +1,33 @@
 """Immersed Boundary Method (IBM) module for building and geometry representation."""
 
 import logging
-import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Self
+from typing import Any
 
 import netCDF4
 import numpy as np
 
-from MoDa.Geometry import (
+from moda.Core.namelist import nml_field
+from moda.Geometry import (
     GridDales,
-    ModifierClass,
 )
-from MoDa.Geometry.geometry_modification import GeometricModification
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
+from moda.Geometry.ModifierClass import ModifierClass
+from moda.IBM.ibm_data_sources import (
+    FromAHN,
+    FromGlobalDEM,
+    IBMModification,
+    IBMModifications,
+    IBMSourceSpec,
+    _PrioritizedIBMSource,
+)
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
 
 from .download_ahn import get_process_ahn
 from .global_dem import get_process_global_dem
 
 logger = logging.getLogger(__name__)
-
-
-@register_module
-@dataclass
-class FromAHN:
-    """AHN (Actueel Hoogtebestand Nederland) approach for IBM.
-    Add this to IBMModule to generate IBM geometry from AHN data."""
-
-
-@register_module
-@dataclass
-class FromGlobalDEM:
-    """Use a user-provided global DEM raster as IBM terrain input.
-
-    The DEM must be readable by rasterio, for example a GeoTIFF or a cloud
-    optimized GeoTIFF. It is reprojected onto the DALES grid before the same
-    post-processing used for AHN is applied. When combined with ``FromAHN``,
-    the global DEM is used as a base field and AHN refines cells where it has
-    positive resolved terrain.
-    """
-
-    dem_path: str
-    resampling: str = field(default="bilinear", metadata={"serialize": True})
-
-
-type IBMSourceLayer = FromGlobalDEM | FromAHN
-
-
-@dataclass(frozen=True)
-class _TerrainLayer:
-    """Resolved terrain field plus metadata used during IBM preparation."""
-
-    name: str
-    values: np.ndarray
-
-
-@register_module
-@dataclass
-class IBMModification(GeometricModification):
-    """Single IBM modification. Set Geometry type and parameters to define the modification."""
-
-    height: float = 0.0
-    """Building height"""
-    mode: str = field(default="replace")
-    """How the modification affects terrain: replace, add, or subtract."""
 
 
 class IBMCreatorClass(ModifierClass[IBMModification]):
@@ -131,69 +92,18 @@ class IBMCreatorClass(ModifierClass[IBMModification]):
 @register_module
 @dataclass
 class IBMModule(simulation_module):
-    """IBM Module for DALES simulation.
+    """Build IBM heights from terrain and geometric sources in priority order.
 
-    This module handles Immersed Boundary Method (IBM) configuration and setup for DALES
-    (Dutch Atmospheric Large-Eddy Simulation) simulations. It manages IBM modifications,
-    AHN (Actueel Hoogtebestand Nederland) terrain data integration, and generates IBM
-    geometry files.
-
-    Attributes:
-        sim (Optional[simulation_module]): Reference to parent simulation module.
-        ibm_modifications (List[IBMModification]): List of IBM geometry modifications to apply.
-        ibm_generator (Any): IBM geometry creator instance, initialized during preparation.
-        from_ahn (Optional[FromAHN]): AHN terrain data configuration object.
-        from_global_dem (Optional[FromGlobalDEM]): Global DEM terrain source.
-        ahn_zeroes_buffer (int): Buffer size for AHN zero elevation handling. Default: 5.
-        subtract_ahn_mode (bool): Whether to subtract AHN elevation data. Default: True.
-        apply_ibm (bool): Enable/disable IBM application. Default: True.
-        ibas_prf (int): Fixed base-state profile selector. Always 2.
-        iadv_mom (int): Fixed momentum advection scheme selector. Always 2.
-
-    Methods:
-        __post_init__: Initialize module and set module name.
-        __add__: Add IBM modification or AHN configuration to module.
-        __iadd__: In-place addition operator for fluent API.
-        prepare_calculation: Set up IBM geometry, integrate AHN data if configured, and apply modifications.
-        check_settings: --
-        write_files: Export IBM geometry to NetCDF file.
+    Add sources with ``add(source, priority=...)``. Higher priorities apply
+    later; equal priorities preserve insertion order. Terrain overlays replace
+    positive cells, while geometric sources can replace, add or subtract heights.
     """
 
-    ibm_modifications: list[IBMModification] = field(
-        default_factory=list, init=True, repr=False, metadata={"serialize": True}
+    sources: list[_PrioritizedIBMSource] = field(
+        default_factory=list, metadata={"serialize": True}
     )
-    ibm_generator: Any = field(
+    ibm_generator: IBMCreatorClass | None = field(
         default=None, init=False, repr=False, metadata={"serialize": False}
-    )
-    from_ahn: FromAHN | None = field(
-        default=None,
-        init=True,
-        repr=False,
-        metadata={"serialize": True},
-    )
-    from_global_dem: FromGlobalDEM | None = field(
-        default=None,
-        init=True,
-        repr=False,
-        metadata={"serialize": True},
-    )
-    ahn_zeroes_buffer: int = field(
-        default=5,
-        metadata={
-            "serialize": True,
-            "doc": "Padding in cells used when filling zero-elevation holes in terrain input.",
-        },
-        init=True,
-        repr=False,
-    )
-    subtract_ahn_mode: bool = field(
-        default=True,
-        metadata={
-            "serialize": True,
-            "doc": "When true, subtract terrain baseline before writing IBM heights.",
-        },
-        init=True,
-        repr=False,
     )
     apply_ibm: bool = nml_field(
         default=True,
@@ -304,141 +214,111 @@ class IBMModule(simulation_module):
         default="IBMModule", init=False, metadata={"serialize": False}
     )
 
-    def add(self, obj: IBMSourceLayer | IBMModification) -> Self:
-        """Add IBM modification to module.
+    def add(
+        self,
+        obj: IBMSourceSpec | list[IBMSourceSpec],
+        *,
+        priority: int,
+    ) -> None:
+        """Add sources at an explicit priority; higher priorities apply later."""
+        providers = obj if isinstance(obj, list) else [obj]
+        entries = [_PrioritizedIBMSource(source, priority) for source in providers]
+        self.sources.extend(entries)
 
-        Args:
-            obj: IBMSourceLayer or IBMModification to add
-
-        Returns:
-            self for chaining
-        """
-        if isinstance(obj, FromAHN):
-            self.from_ahn = obj
-        elif isinstance(obj, FromGlobalDEM):
-            self.from_global_dem = obj
-        elif isinstance(obj, IBMModification):
-            self.ibm_modifications.append(obj)
-        else:
-            raise TypeError(
-                f"Cannot add object of type {type(obj)} to IBMModule. Expected FromAHN, FromGlobalDEM or IBMModification."
-            )
-        return self
-
-    def __add__(self, obj: IBMSourceLayer | IBMModification) -> Self:
-        return self.add(obj)
-
-    def __iadd__(self, obj: IBMSourceLayer | IBMModification) -> Self:
-        """In-place addition."""
-        warnings.warn(
-            "Using '+=' to add IBM configuration is deprecated; use add() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.add(obj)
+    def _validate_sources(self) -> None:
+        """Require validated, explicitly prioritized source entries."""
+        for entry in self.sources:
+            if not isinstance(entry, _PrioritizedIBMSource):
+                raise TypeError(
+                    "Use IBMModule.add(source, priority=...) to add sources"
+                )
+            entry.validate()
 
     def has_terrain_source(self) -> bool:
         """Return whether any terrain source was configured."""
 
-        return self.from_ahn is not None or self.from_global_dem is not None
+        return any(
+            isinstance(entry.source, (FromAHN, FromGlobalDEM)) for entry in self.sources
+        )
 
-    def _terrain_layers(self) -> list[_TerrainLayer]:
-        """Load configured terrain sources in merge order.
-
-        The global DEM is treated as the coarse base terrain, while AHN acts as
-        a higher-quality refinement that overrides strictly positive cells.
-        This preserves the previous AHN-only behavior and keeps the combined
-        path deterministic.
-        """
-
-        layers: list[_TerrainLayer] = []
-
-        if self.from_global_dem is not None:
-            dem_path = Path(self.from_global_dem.dem_path).expanduser()
+    def _apply_terrain_source(self, source: FromAHN | FromGlobalDEM) -> None:
+        """Overlay positive terrain heights onto the current field."""
+        if self.ibm_generator is None:
+            raise RuntimeError("IBM generator has not been initialized")
+        if isinstance(source, FromGlobalDEM):
+            dem_path = Path(source.dem_path).expanduser()
             terrain = get_process_global_dem(
                 self.grid,
                 dem_path=dem_path,
-                zeroes_buffer=self.ahn_zeroes_buffer,
-                subtract_dem_mode=self.subtract_ahn_mode,
-                resampling_name=self.from_global_dem.resampling,
+                zeroes_buffer=source.zeroes_buffer,
+                subtract_dem_mode=source.subtract_dem_mode,
+                resampling_name=source.resampling,
             )
-            layers.append(
-                _TerrainLayer(
-                    name=f"global_dem:{dem_path}",
-                    values=np.asarray(terrain, dtype=float),
-                )
-            )
-
-        if self.from_ahn is not None:
+        else:
             terrain = get_process_ahn(
                 self.grid,
-                zeroes_buffer=self.ahn_zeroes_buffer,
-                subtract_ahn_mode=self.subtract_ahn_mode,
+                zeroes_buffer=source.zeroes_buffer,
+                subtract_ahn_mode=source.subtract_ahn_mode,
             )
-            layers.append(
-                _TerrainLayer(name="ahn", values=np.asarray(terrain, dtype=float))
+        values = np.asarray(terrain, dtype=float)
+        heights = self.ibm_generator.bc_height
+        if values.shape != heights.shape:
+            raise ValueError(
+                "IBM terrain source shape mismatch: "
+                f"{type(source).__name__} has shape {values.shape}, "
+                f"expected {heights.shape}"
             )
+        heights[:] = np.where(values > 0.0, values, heights)
 
-        return layers
-
-    def _merge_terrain_layers(self, layers: list[_TerrainLayer]) -> np.ndarray | None:
-        """Merge loaded terrain layers into a single IBM height field."""
-
-        if not layers:
-            return None
-
-        merged = np.array(layers[0].values, copy=True, dtype=float)
-
-        for layer in layers[1:]:
-            if layer.values.shape != merged.shape:
-                raise ValueError(
-                    "IBM terrain source shape mismatch: "
-                    f"{layer.name} has shape {layer.values.shape}, expected {merged.shape}"
+    def _apply_sources(self) -> None:
+        """Apply terrain and geometry from lowest to highest priority."""
+        if self.ibm_generator is None:
+            raise RuntimeError("IBM generator has not been initialized")
+        self._validate_sources()
+        for entry in sorted(self.sources, key=lambda source: source.priority):
+            source = entry.source
+            if isinstance(source, (FromAHN, FromGlobalDEM)):
+                self._apply_terrain_source(source)
+            else:
+                modifications = (
+                    source.modifications
+                    if isinstance(source, IBMModifications)
+                    else [source]
                 )
-            merged = np.where(layer.values > 0.0, layer.values, merged)
-
-        return merged
-
-    def _apply_terrain(self) -> None:
-        """Populate the IBM terrain field from configured terrain sources."""
-
-        terrain_layers = self._terrain_layers()
-        terrain = self._merge_terrain_layers(terrain_layers)
-        if terrain is None:
-            return
-
-        self.ibm_generator.bc_height[:, :] = terrain[:, :]
-        logger.info(
-            "IBMModule: applied terrain sources %s",
-            ", ".join(layer.name for layer in terrain_layers),
-        )
+                for modification in modifications:
+                    self.ibm_generator.apply_modification(modification)
 
     def prepare_calculation(self) -> None:
         """Set up IBM geometry and update namelist."""
 
         self.ibm_generator = IBMCreatorClass(self.grid)
-        self._apply_terrain()
-
-        # Apply IBM modifications
-        for modification in self.ibm_modifications:
-            self.ibm_generator.apply_modification(modification)
+        self._apply_sources()
 
         logger.info("IBMModule: IBM configured and namelist updated")
 
     def check_settings(self) -> None:
         """Check IBM settings validity."""
 
-        if self.from_global_dem is not None:
-            dem_path = Path(self.from_global_dem.dem_path).expanduser()
-            if not dem_path.exists():
-                raise FileNotFoundError(f"Global DEM file not found: {dem_path}")
-
-        for modification in self.ibm_modifications:
-            mode = str(modification.mode).strip().lower()
-            if mode not in {"replace", "add", "subtract"}:
-                raise ValueError(
-                    "IBMModification.mode must be one of: replace, add, subtract"
-                )
+        self._validate_sources()
+        for entry in self.sources:
+            source = entry.source
+            if isinstance(source, FromGlobalDEM):
+                dem_path = Path(source.dem_path).expanduser()
+                if not dem_path.exists():
+                    raise FileNotFoundError(f"Global DEM file not found: {dem_path}")
+            modifications = (
+                source.modifications
+                if isinstance(source, IBMModifications)
+                else [source]
+                if isinstance(source, IBMModification)
+                else []
+            )
+            for modification in modifications:
+                mode = str(modification.mode).strip().lower()
+                if mode not in {"replace", "add", "subtract"}:
+                    raise ValueError(
+                        "IBMModification.mode must be one of: replace, add, subtract"
+                    )
 
         if self.thlibm is None:
             raise ValueError("IBMModule.thlibm is mandatory and must be provided")
@@ -463,30 +343,3 @@ class IBMModule(simulation_module):
             self.ibm_generator.output_nc(
                 self.output_path / "input" / f"ibm.inp_{self.exp_id:03d}.nc"
             )
-
-
-@register_module
-@dataclass
-class IBMModifications:
-    """Collection of IBM modifications."""
-
-    modifications: list[IBMModification] = field(
-        default_factory=list, metadata={"serialize": True}
-    )
-
-    def add(self, modification: IBMModification) -> Self:
-        """Add a modification."""
-        self.modifications.append(modification)
-        return self
-
-    def __add__(self, modification: IBMModification) -> Self:
-        return self.add(modification)
-
-    def __iadd__(self, modification: IBMModification) -> Self:
-        """In-place addition."""
-        warnings.warn(
-            "Using '+=' to add IBM modifications is deprecated; use add() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.add(modification)

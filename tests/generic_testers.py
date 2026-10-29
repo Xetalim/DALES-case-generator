@@ -5,9 +5,9 @@ import traceback
 
 import pytest
 
-from MoDa.Configuration.output_modules import CheckSimulationModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.modular import dales_simulation
+from moda.Configuration.output_modules import CheckSimulationModule
+from moda.modular import dales_simulation
+from moda.modular.dales_simulation import TimeModule
 
 from .helpers import SimulationReport, assert_dirs_equal, run_command_with_report
 from .sim_builders.test_basic import _build_basic_sim

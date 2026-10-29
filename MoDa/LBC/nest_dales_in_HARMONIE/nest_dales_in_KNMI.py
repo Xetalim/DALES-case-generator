@@ -78,11 +78,11 @@ from pyproj import CRS, Transformer
 from rasterio.enums import Resampling
 from rasterio.transform import Affine
 
-from MoDa.Geometry.grids import GridDalesOpenBC
-from MoDa.IO_helpers.raster import fix_lambert_offsets
-from MoDa.LBC.nest_dales_in_HARMONIE import hybrid_levels, prep_harmonie
-from MoDa.LBC.nest_dales_in_HARMONIE.Transform import Transform
-from MoDa.logging_wrapper import logwrap
+from moda.Geometry.grids import GridDalesOpenBC
+from moda.IO_helpers.raster import fix_lambert_offsets
+from moda.LBC.nest_dales_in_HARMONIE import hybrid_levels, prep_harmonie
+from moda.LBC.nest_dales_in_HARMONIE.Transform import Transform
+from moda.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 

@@ -2,10 +2,10 @@
 
 from dataclasses import dataclass, field
 
-from MoDa.Configuration.output_modules import prepare_point_indices
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
+from moda.Configuration.output_modules import prepare_point_indices
+from moda.Core.namelist import nml_field
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
 
 
 @register_module

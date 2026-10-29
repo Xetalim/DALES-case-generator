@@ -18,8 +18,8 @@ from rasterio.profiles import Profile
 from rasterio.windows import from_bounds
 from shapely.geometry import box
 
-from MoDa.Geometry.grids import GridDales
-from MoDa.IO_helpers import (
+from moda.Geometry.grids import GridDales
+from moda.IO_helpers import (
     cache_root,
     ensure_sorted,
     get_reproject,

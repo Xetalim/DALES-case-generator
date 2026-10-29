@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
+from moda.Core.namelist import nml_field
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
 
 
 @register_module

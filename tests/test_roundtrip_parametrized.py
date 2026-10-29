@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 import pytest
 
-from MoDa.modular import dales_simulation
+from moda.modular import dales_simulation
 
 from .generic_testers import (
     assert_roundtrip_simulation_outputs_identical,

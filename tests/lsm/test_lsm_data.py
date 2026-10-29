@@ -4,27 +4,33 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from MoDa.Atmosphere.ls2d_atmosphere import FromLS2D
-from MoDa.Geometry.grids import GridDales
-from MoDa.Surface.LSM import lsm_netcdf, lsm_slurb, lsm_sources
-from MoDa.Surface.LSM.lsm_data import (
+import moda.Surface.LSM.lsm_output
+from moda.Atmosphere.ls2d_atmosphere import FromLS2D
+from moda.Geometry.grids import GridDales
+from moda.Geometry.masks import AllMask, ExplicitArrayMask
+from moda.Surface.LSM import lsm_output
+from moda.Surface.LSM.lsm_data import (
     LAND_USE_PARAMETERS,
     LandUseFields,
     SoilFields,
 )
-from MoDa.Surface.LSM.lsm_module import LSMModule
-from MoDa.Surface.LSM.lsm_output import LSM_output_dales
-from MoDa.Surface.LSM.lsm_sources import (
+from moda.Surface.LSM.lsm_module import LSMModule
+from moda.Surface.LSM.lsm_output import LSM_output_dales
+from moda.Surface.LSM.lsm_sources import lsm_sources
+from moda.Surface.LSM.lsm_sources import slurb_modifications as lsm_slurb
+from moda.Surface.LSM.lsm_sources.lsm_sources import (
     FromBofek,
     FromLCZ,
     FromNetCDF,
     FromTop10,
+    SlurbModification,
+    SlurbModifications,
 )
-from MoDa.Surface.LSM.lu_modifications import (
+from moda.Surface.LSM.lsm_sources.lu_modifications import (
     LandUseModification,
     LandUseModifications,
 )
-from MoDa.Surface.LSM.modular_temps_moisture import (
+from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
     SoilTemperatureMoistureFromHarmonie,
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -33,7 +39,8 @@ from MoDa.Surface.LSM.modular_temps_moisture import (
     VaryingSoilMoisture,
     VaryingSoilTemperature,
 )
-from MoDa.Surface.LSM.translation_tables.landuse_types import (
+from moda.Surface.LSM.lsm_sources.top10_bofek_ags import apply_top10_to_lsm_writer
+from moda.Surface.LSM.translation_tables.landuse_types import (
     LandUseSet,
     get_land_use_definitions,
 )
@@ -162,8 +169,12 @@ def test_lsm_rejects_unsupported_land_use_source_before_loading(grid):
         SoilTemperatureMoistureFromHarmonie(
             "soil.nc", [0.1, 0.2, 0.3, 0.4], "2023-01-01T12:00:00"
         ),
-        LandUseModification(type="grs"),
-        LandUseModifications([LandUseModification(type="grs")]),
+        LandUseModification(mask=AllMask(), type="grs"),
+        LandUseModifications([LandUseModification(mask=AllMask(), type="grs")]),
+        SlurbModification(mask=AllMask(), varname="h_bld", value=12.0),
+        SlurbModifications(
+            [SlurbModification(mask=AllMask(), varname="h_bld", value=12.0)]
+        ),
     ],
 )
 @pytest.mark.parametrize("as_list", [False, True])
@@ -242,7 +253,7 @@ def test_lsm_add_validates_batches_atomically(invalid_index, invalid_source):
 
 def test_lsm_configuration_uses_add_interface():
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
-    modification = LandUseModification(type="grs")
+    modification = LandUseModification(mask=AllMask(), type="grs")
     source = FromLCZ()
 
     module.add(modification, priority=200)
@@ -273,6 +284,55 @@ def test_lsm_sources_apply_in_priority_order():
     assert applied == ["lcz", "netcdf", "top10", "bofek"]
 
 
+@pytest.mark.parametrize("missing", [np.nan, 0, -9999, 999])
+@pytest.mark.parametrize("remap_lcz", [False, True])
+def test_top10_overlay_preserves_fractions_and_lcz_outside_coverage(
+    grid, tmp_path, missing, remap_lcz
+):
+    writer = LSM_output_dales(grid, LandUseSet.DEPAC)
+    writer.land_use["grs"].lu_frac[:] = 0.4
+    writer.land_use["urb"].lu_frac[:] = 0.6
+    writer.init_lutypes_ifs()
+    writer.recalculate_remaining_cover()
+    writer.LCZ_ds = xr.Dataset({"lcz": (("y", "x"), np.full((2, 2), 11))})
+    path = tmp_path / "top10.nc"
+    xr.Dataset(
+        {"land_use": (("y", "x"), [[10.0, missing], [missing, 20.0]])},
+        coords={"x": grid.xt, "y": grid.yt},
+    ).to_netcdf(path)
+
+    apply_top10_to_lsm_writer(
+        writer, path, fill_north_sea=False, urban_natural_lcz_to_10=remap_lcz
+    )
+
+    np.testing.assert_allclose(writer.land_use["grs"].lu_frac, [[1.0, 0.4], [0.4, 0.0]])
+    np.testing.assert_allclose(writer.land_use["urb"].lu_frac, [[0.0, 0.6], [0.6, 1.0]])
+    np.testing.assert_allclose(writer.cover_tot, 1.0)
+    np.testing.assert_array_equal(
+        writer.LCZ_ds["lcz"], [[11, 11], [11, 10 if remap_lcz else 11]]
+    )
+
+
+def test_top10_overlay_preserves_fractions_outside_raster_extent(grid, tmp_path):
+    writer = LSM_output_dales(grid, LandUseSet.DEPAC)
+    writer.land_use["urb"].lu_frac[:] = 1.0
+    writer.init_lutypes_ifs()
+    path = tmp_path / "top10.nc"
+    xr.Dataset(
+        {"land_use": (("y", "x"), np.full((2, 2), 10.0))},
+        coords={
+            "x": [grid.xt[0] - 1.0, grid.xt[0] + 1.0],
+            "y": [grid.yt[0] - 1.0, grid.yt[0] + 1.0],
+        },
+    ).to_netcdf(path)
+
+    apply_top10_to_lsm_writer(writer, path, fill_north_sea=False)
+
+    np.testing.assert_allclose(writer.land_use["grs"].lu_frac, [[1, 0], [0, 0]])
+    np.testing.assert_allclose(writer.land_use["urb"].lu_frac, [[0, 1], [1, 1]])
+    np.testing.assert_allclose(writer.cover_tot, 1.0)
+
+
 def test_lsm_adds_thermal_sources_without_reordering():
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
     skin = UniformSkinTemperature(290.0)
@@ -301,7 +361,7 @@ def test_lsm_adds_thermal_sources_without_reordering():
 
 @pytest.fixture
 def grid():
-    from MoDa.modular.dales_simulation import dales_simulation
+    from moda.modular.dales_simulation import dales_simulation
 
     sim = dales_simulation("test", {})
     grid = GridDales(
@@ -333,7 +393,7 @@ def lcz_loader(grid, monkeypatch):
         }
     )
     loader = Mock(return_value=dataset)
-    monkeypatch.setattr("MoDa.Surface.LSM.LCZ.get_from_lcz.do_everything", loader)
+    monkeypatch.setattr("moda.Surface.LSM.LCZ.get_from_lcz.do_everything", loader)
     return loader
 
 
@@ -371,7 +431,7 @@ def test_skin_temperature_priority_relative_to_lcz(
 def test_land_use_modifications_run_on_both_sides_of_lcz(
     grid, lcz_loader, priority, collection
 ):
-    modification = LandUseModification(type="grs")
+    modification = LandUseModification(mask=AllMask(), type="grs")
     source = LandUseModifications([modification]) if collection else modification
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module.add(source, priority=priority)
@@ -399,6 +459,177 @@ def test_land_use_modifications_run_on_both_sides_of_lcz(
         writer.land_use_fields["urb"].cover, 0.0 if priority > 100 else 1.0
     )
     np.testing.assert_allclose(writer.cover_tot, 1.0)
+
+
+@pytest.mark.parametrize("priority", [0, 200])
+@pytest.mark.parametrize("collection", [False, True])
+@pytest.mark.parametrize("dataset_source", ["lcz", "netcdf"])
+def test_slurb_modification_priority_relative_to_dataset(
+    grid,
+    lcz_loader,
+    monkeypatch,
+    priority,
+    collection,
+    dataset_source,
+):
+    dataset = lcz_loader.return_value
+    for name in (
+        "building_surface_fraction",
+        "aspect_ratio",
+        "height_roughness_element",
+        "roughness_length",
+    ):
+        dataset[name] = (("y", "x"), np.full((2, 2), 0.4))
+    for name, value in (
+        ("frac_water", 0.0),
+        ("frac_sea", 0.0),
+        ("frac_nature", 0.0),
+        ("frac_town", 1.0),
+        ("h_bld", 0.4),
+    ):
+        dataset[name] = (("y", "x"), np.full((2, 2), value))
+    monkeypatch.setattr(
+        "moda.Surface.LSM.LCZ.from_netcdf.load_from_netcdf",
+        Mock(return_value=dataset),
+    )
+    mask = [[True, False], [False, True]]
+    modification = SlurbModification(
+        mask=ExplicitArrayMask(mask), varname="h_bld", value=12.0
+    )
+    source = SlurbModifications([modification]) if collection else modification
+    module = LSMModule(land_use_set=LandUseSet.DEPAC, include_slurb=True)
+    # Insert the modification first even when it should apply after the dataset.
+    module.add(source, priority=priority)
+    module.add(
+        FromLCZ() if dataset_source == "lcz" else FromNetCDF(path="surface.nc"),
+        priority=100,
+    )
+    grid.sim.add(module)
+
+    module.ensure_prepared()
+    generator = module.slb_generator
+    assert generator is not None
+    expected = np.full((2, 2), 0.4)
+    if priority > 100:
+        expected[np.asarray(mask)] = 12.0
+    np.testing.assert_allclose(generator.h_bld, expected)
+
+    module.ensure_prepared()
+    assert module.slb_generator is generator
+    np.testing.assert_allclose(generator.h_bld, expected)
+
+
+@pytest.mark.parametrize("collection", [False, True])
+def test_slurb_modifications_require_explicit_enable(grid, collection):
+    modification = SlurbModification(mask=AllMask(), varname="h_bld", value=12.0)
+    source = SlurbModifications([modification]) if collection else modification
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    module.add(source, priority=100)
+    grid.sim.add(module)
+
+    with pytest.raises(ValueError, match="require include_slurb=True"):
+        module.prepare_calculation()
+    assert module.lsm_writer is None
+
+
+def test_equal_priority_slurb_sources_and_collections_preserve_order(grid, tmp_path):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC, include_slurb=True)
+    module.add(
+        SlurbModification(mask=AllMask(), varname="h_bld", value=4.0), priority=100
+    )
+    module.add(
+        SlurbModifications(
+            [
+                SlurbModification(mask=AllMask(), varname="h_bld", value=8.0),
+                SlurbModification(mask=AllMask(), varname="h_bld", value=12.0),
+                SlurbModification(
+                    mask=AllMask(), varname="material", value=2, dtype="int", n_layers=3
+                ),
+            ]
+        ),
+        priority=100,
+    )
+    grid.sim.add(module)
+
+    module.prepare_calculation()
+    generator = module.slb_generator
+    assert generator is not None
+    np.testing.assert_allclose(generator.h_bld, 12.0)
+    path = tmp_path / "inslurb.nc"
+    generator.output_nc(path)
+    with xr.open_dataset(path) as dataset:
+        np.testing.assert_allclose(dataset["h_bld"], 12.0)
+        assert dataset["material"].shape == (2, 2, 3)
+        assert dataset["material"].dtype.kind == "i"
+        np.testing.assert_array_equal(dataset["material"], 2)
+
+
+def test_lsm_owns_slurb_configuration():
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    assert module.include_slurb is False
+    assert module.slb_generator is None
+    for name in ("slurb_module", "slb_modifications", "__add__", "__iadd__"):
+        assert not hasattr(module, name)
+
+
+def test_disabled_slurb_preserves_existing_namelist_section(grid):
+    module = LSMModule(
+        land_use_set=LandUseSet.DEPAC,
+        ps=100000.0,
+        z0mav=0.1,
+        z0hav=0.01,
+        iinterp_t=1,
+        iinterp_theta=1,
+    )
+    grid.sim.add(module)
+    module.nml["NAMSLURB"] = {"deep_soil_temperature": 300.0}
+
+    module.apply_namelist_from_fields()
+
+    assert module.nml["NAMSLURB"] == {"deep_soil_temperature": 300.0}
+
+
+@pytest.mark.parametrize(
+    "setting",
+    ["urban_fraction", "deep_soil_temperature", "building_indoor_temperature"],
+)
+def test_disabled_slurb_rejects_explicit_namelist_settings(grid, setting):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC)
+    setattr(module, setting, 0.5)
+    grid.sim.add(module)
+
+    with pytest.raises(ValueError, match=f"{setting} requires include_slurb=True"):
+        module.prepare_calculation()
+    assert module.lsm_writer is None
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_lsm_writes_slurb_file_only_when_enabled(grid, tmp_path, monkeypatch, enabled):
+    module = LSMModule(land_use_set=LandUseSet.DEPAC, include_slurb=enabled)
+    if enabled:
+        module.add(
+            SlurbModification(mask=AllMask(), varname="h_bld", value=12.0), priority=100
+        )
+    grid.sim.add(module)
+    grid.sim.output_path_ = tmp_path
+    grid.sim.exp_id = 1
+    (tmp_path / "input").mkdir()
+    module.prepare_calculation()
+    monkeypatch.setattr(module, "apply_namelist_from_fields", Mock())
+    save_lsm = Mock()
+    monkeypatch.setattr(lsm_output, "save_netcdf", save_lsm)
+    monkeypatch.setattr("moda.Surface.LSM.plot_lsm.plot_lsm_cover", Mock())
+
+    module.write_files()
+
+    save_lsm.assert_called_once()
+    path = tmp_path / "input" / "inslurb.001.nc"
+    assert path.exists() is enabled
+    if enabled:
+        with xr.open_dataset(path) as dataset:
+            np.testing.assert_allclose(dataset["h_bld"], 12.0)
+    else:
+        assert module.slb_generator is None
 
 
 @pytest.mark.parametrize("varying", [False, True])
@@ -554,7 +785,7 @@ def test_from_lcz_supports_depac_with_slurb(grid, monkeypatch, include_slurb):
     )
     loader = Mock(return_value=dataset)
     monkeypatch.setattr(
-        "MoDa.Surface.LSM.LCZ.get_from_lcz.do_everything",
+        "moda.Surface.LSM.LCZ.get_from_lcz.do_everything",
         loader,
     )
     writer = LSM_output_dales(grid, LandUseSet.DEPAC, include_slurb=include_slurb)
@@ -588,7 +819,7 @@ def test_from_lcz_supports_depac_with_slurb(grid, monkeypatch, include_slurb):
 def test_lcz_source_requires_projection_before_loading(grid, monkeypatch):
     monkeypatch.setattr(grid, "crs", None)
     loader = Mock()
-    monkeypatch.setattr("MoDa.Surface.LSM.LCZ.get_from_lcz.do_everything", loader)
+    monkeypatch.setattr("moda.Surface.LSM.LCZ.get_from_lcz.do_everything", loader)
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(grid.sim)
     with pytest.raises(ValueError, match="valid projection"):
@@ -611,7 +842,7 @@ def test_netcdf_source_finalizes_depac_and_optional_slurb(
         }
     )
     loader = Mock(return_value=dataset)
-    monkeypatch.setattr("MoDa.Surface.LSM.LCZ.from_netcdf.load_from_netcdf", loader)
+    monkeypatch.setattr("moda.Surface.LSM.LCZ.from_netcdf.load_from_netcdf", loader)
     apply_slurb = Mock()
     monkeypatch.setattr(lsm_slurb, "apply_from_netcdf", apply_slurb)
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
@@ -637,7 +868,7 @@ def test_netcdf_source_finalizes_depac_and_optional_slurb(
 
 def test_debug_initializes_arrays_without_serialization(grid, monkeypatch):
     monkeypatch.setattr(
-        lsm_netcdf,
+        lsm_output,
         "iter_output_fields",
         Mock(side_effect=AssertionError("serialization used")),
     )
@@ -653,7 +884,7 @@ def test_debug_initializes_arrays_without_serialization(grid, monkeypatch):
 
 
 def test_preparation_preserves_stage_order():
-    from MoDa.modular.dales_simulation import dales_simulation
+    from moda.modular.dales_simulation import dales_simulation
 
     module = LSMModule(land_use_set=LandUseSet.DEPAC)
     module._attach_to_sim(dales_simulation("test", {}))
@@ -683,7 +914,7 @@ def test_netcdf_output_uses_typed_fields(grid, tmp_path):
     writer.init_lutypes_ifs()
     writer.recalculate_remaining_cover()
     writer.trim_landuse()
-    lsm_netcdf.save_netcdf(writer, tmp_path, 1)
+    moda.Surface.LSM.lsm_output.save_netcdf(writer, tmp_path, 1)
     with xr.open_dataset(tmp_path / "lsm.inp_001.nc") as dataset:
         assert dataset.sizes["nlu"] == 2
         assert "cover_slb" not in dataset

@@ -1,4 +1,4 @@
-"""Shared helpers for MoDa."""
+"""Shared helpers for moda."""
 
 from __future__ import annotations
 
@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from MoDa.modular.dales_simulation import dales_simulation
+    from moda import dales_simulation
 
 
 @contextmanager
 def package_resource_path(*parts: str) -> Iterator[Path]:
-    """Yield a filesystem path for a resource bundled with MoDa."""
-    resource = resources.files("MoDa").joinpath("resources", *parts)
+    """Yield a filesystem path for a resource bundled with moda."""
+    resource = resources.files("moda").joinpath("resources", *parts)
     with resources.as_file(resource) as path:
         yield path
 

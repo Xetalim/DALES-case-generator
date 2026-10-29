@@ -7,9 +7,12 @@ import pathlib
 import shutil
 import subprocess
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from MoDa.IO_helpers.external_data_cache import cache_root
-from MoDa.modular.dales_simulation import dales_simulation
+from moda.IO_helpers.external_data_cache import cache_root
+
+if TYPE_CHECKING:
+    from moda.modular.dales_simulation import dales_simulation
 
 logger = logging.getLogger(__name__)
 

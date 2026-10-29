@@ -6,9 +6,9 @@ from pathlib import Path
 from types import UnionType
 from typing import Any, Union, get_args, get_origin
 
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import module_registry
-from MoDa.vars import VariableDefinition, get_var_by_name
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import module_registry
+from moda.vars import VariableDefinition, get_var_by_name
 
 
 def asdict_user_set(value: Any) -> Any:

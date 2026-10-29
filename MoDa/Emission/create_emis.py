@@ -9,8 +9,8 @@ from typing import Any
 import netCDF4 as nc
 import numpy as np
 
-from MoDa.Geometry.grids import GridDales
-from MoDa.logging_wrapper import logwrap
+from moda.Geometry.grids import GridDales
+from moda.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

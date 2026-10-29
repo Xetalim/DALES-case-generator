@@ -1,11 +1,12 @@
 """Public API for immersed boundary (IBM) modules."""
 
-from .ibm import (
+from .ibm import IBMModule
+from .ibm_data_sources import (
     FromAHN,
     FromGlobalDEM,
     IBMModification,
     IBMModifications,
-    IBMModule,
+    IBMSourceSpec,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "IBMModification",
     "IBMModifications",
     "IBMModule",
+    "IBMSourceSpec",
 ]

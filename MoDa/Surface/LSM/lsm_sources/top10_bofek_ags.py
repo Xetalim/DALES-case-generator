@@ -9,18 +9,18 @@ from typing import TYPE_CHECKING
 import numpy as np
 import xarray as xr
 
-from MoDa.Geometry.grids import GridDales
-from MoDa.Surface.LSM.LCZ.get_from_lcz import (
+from moda.Geometry.grids import GridDales
+from moda.Surface.LSM.LCZ.get_from_lcz import (
     LCZ_URBAN_NATURAL_TO_IFS,
     lcz_dict,
 )
-from MoDa.Surface.LSM.lsm_data import AGSFields
-from MoDa.Surface.LSM.translation_tables.vegetation_properties import (
+from moda.Surface.LSM.lsm_data import AGSFields
+from moda.Surface.LSM.translation_tables.vegetation_properties import (
     top10_to_ifs,
 )
 
 if TYPE_CHECKING:
-    from MoDa.Surface.LSM.lsm_output import LSM_output_dales
+    from moda.Surface.LSM.lsm_output import LSM_output_dales
 
 logger = logging.getLogger(__name__)
 
@@ -125,10 +125,11 @@ def _sample_on_grid(da: xr.DataArray, grid: GridDales) -> np.ndarray:
 def _apply_lcz_urban_natural_overrides_after_top10(
     lsm_writer: LSM_output_dales,
     *,
+    coverage_mask: np.ndarray,
     urban_natural_lcz_to_10: bool,
     urban_natural_lcz_to_natural_lsm: bool,
 ) -> None:
-    """Re-apply LCZ urban-natural overrides after Top10 reset/reassignment.
+    """Re-apply LCZ urban-natural overrides within the Top10 overlay.
 
     This keeps behavior consistent when Top10 is used as an overlay on top of
     LCZ-derived fields.
@@ -167,7 +168,11 @@ def _apply_lcz_urban_natural_overrides_after_top10(
 
     urban_mask = urban_cover > 0
     natural_lcz_mask = (
-        urban_mask & np.isfinite(lcz_values) & (lcz_values >= 11) & (lcz_values <= 17)
+        coverage_mask
+        & urban_mask
+        & np.isfinite(lcz_values)
+        & (lcz_values >= 11)
+        & (lcz_values <= 17)
     )
 
     if urban_natural_lcz_to_10:
@@ -230,29 +235,32 @@ def apply_top10_to_lsm_writer(
     urban_natural_lcz_to_10: bool = False,
     urban_natural_lcz_to_natural_lsm: bool = False,
 ) -> None:
-    ds_lu = xr.open_dataset(top10_path)
-    da_lu = _sorted_on_xy(ds_lu, "land_use")
-    top10_codes = _sample_on_grid(da_lu, lsm_writer.grid)
-    top10_codes_int = np.where(np.isfinite(top10_codes), top10_codes, -9999).astype(int)
+    """Overlay mapped Top10 cells, retaining earlier fractions outside coverage."""
+    with xr.open_dataset(top10_path) as ds_lu:
+        da_lu = _sorted_on_xy(ds_lu, "land_use")
+        top10_codes = _sample_on_grid(da_lu, lsm_writer.grid)
+    ifs_map = np.full(top10_codes.shape, -999, dtype=int)
+    for code, ifs_id in top10_to_ifs.items():
+        ifs_map[top10_codes == code] = ifs_id
 
-    # Reset fractions before re-assigning from the raster map.
-    for state in lsm_writer.land_use.values():
-        state.lu_frac[:, :] = 0.0
-
-    for state in lsm_writer.land_use.values():
+    masks: dict[str, np.ndarray] = {}
+    coverage_mask = np.zeros_like(top10_codes, dtype=bool)
+    for name, state in lsm_writer.land_use.items():
         definition = state.definition
         if definition.lu_ids:
             lu_ids = np.asarray(definition.lu_ids, dtype=int)
-            mask = np.isin(top10_codes_int, lu_ids)
+            mask = np.isin(top10_codes, lu_ids)
         elif definition.ifs_id is not None:
-            ifs_map = np.vectorize(lambda x: top10_to_ifs.get(int(x), -999))(
-                top10_codes_int
-            )
             mask = ifs_map == definition.ifs_id
         else:
             mask = np.zeros_like(top10_codes, dtype=bool)
 
-        state.lu_frac[mask] = 1.0
+        masks[name] = mask
+        coverage_mask |= mask
+
+    for name, state in lsm_writer.land_use.items():
+        state.lu_frac[coverage_mask] = 0.0
+        state.lu_frac[masks[name]] = 1.0
 
     lat = getattr(lsm_writer, "lat", None)
     lon = getattr(lsm_writer, "lon", None)
@@ -269,9 +277,11 @@ def apply_top10_to_lsm_writer(
             for state in lsm_writer.land_use.values():
                 state.lu_frac[sea_mask] = 0.0
             lsm_writer.land_use["aqu"].lu_frac[sea_mask] = 1.0
+            coverage_mask |= sea_mask
 
     _apply_lcz_urban_natural_overrides_after_top10(
         lsm_writer,
+        coverage_mask=coverage_mask,
         urban_natural_lcz_to_10=urban_natural_lcz_to_10,
         urban_natural_lcz_to_natural_lsm=urban_natural_lcz_to_natural_lsm,
     )

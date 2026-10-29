@@ -2,26 +2,21 @@ from __future__ import annotations
 
 import netCDF4
 
-from MoDa import dales_simulation
-from MoDa.Atmosphere import (
+from moda import DefaultNamelistModule, TimeModule, dales_simulation
+from moda.Atmosphere import (
     AtmosphereModule,
     lin,
 )
-from MoDa.Atmosphere.Profile import (
+from moda.Atmosphere.Profile import (
     AtmosphericProfile,
     InterpolatedProfile,
     TimedAtmosphereProfile,
 )
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Geometry.grids import GridDales
-from MoDa.modular.time_dependent import (
-    TimedependentModule,
-)
-from MoDa.modular.time_dependent_scalars import TimeDependentScalar
-from MoDa.Surface.surface import ConstantSurfaceTemperatureModule
-from MoDa.vars import *
+from moda.Configuration.output_modules import EasyOutputModule
+from moda.Geometry.grids import GridDales
+from moda.modular.time_dependent_scalars import TimeDependentScalar
+from moda.Surface.surfacemodules import ConstantSurfaceTemperatureModule
+from moda.vars import *
 
 
 def timedep_atmosphere_case(machine_conf: dict) -> dales_simulation:
@@ -81,7 +76,6 @@ def timedep_atmosphere_case(machine_conf: dict) -> dales_simulation:
         ]
     )
 
-    sim.add(TimedependentModule(timesteps=[0.0, 30.0, 60.0]))
     sim.add(
         ConstantSurfaceTemperatureModule(
             thls=TimeDependentScalar(
@@ -120,3 +114,7 @@ def assert_timedep_atmosphere_files_written(machine_conf) -> None:
         assert "thlsurf_timedep" in ds.variables
         assert ds.variables["dpdx_ls_timedep"].dimensions == ("zh", "time")
         assert ds.variables["thlsurf_timedep"].dimensions == ("time",)
+
+
+def test_timedep_atmosphere_files_written(machine_conf) -> None:
+    assert_timedep_atmosphere_files_written(machine_conf)

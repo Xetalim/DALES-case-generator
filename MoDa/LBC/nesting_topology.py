@@ -3,12 +3,12 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Self
 
-from MoDa.Geometry import GridDales, GridDalesOpenBC
-from MoDa.LBC.nesting_idx import NestingIndices
-from MoDa.LBC.openbc import OpenBoundaryModule
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
+from moda.Core.namelist import nml_field
+from moda.Geometry import GridDales, GridDalesOpenBC
+from moda.LBC.nesting_idx import NestingIndices
+from moda.LBC.openbc import OpenBoundaryModule
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 

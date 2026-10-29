@@ -4,8 +4,8 @@ from typing import Any, Self, cast
 import numpy as np
 import numpy.typing as npt
 
-from MoDa.modular.time_dependent_scalars import TimeDependentScalar
-from MoDa.module_registry import register_module
+from moda.modular.time_dependent_scalars import TimeDependentScalar
+from moda.module_registry import register_module
 
 
 @dataclass

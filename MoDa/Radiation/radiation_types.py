@@ -4,15 +4,15 @@ import pathlib
 from dataclasses import dataclass, field
 from typing import Optional
 
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
-from MoDa.Radiation.backrad_profile import (
+from moda.Core.namelist import nml_field
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
+from moda.Radiation.backrad_profile import (
     BackradInterpolatedProfile,
     BackradPressureProfile,
     register_radiation_files,
 )
-from MoDa.Surface.surface import SurfaceModule
+from moda.Surface.surfacemodules import SurfaceModule
 
 
 @dataclass

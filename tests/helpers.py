@@ -41,8 +41,14 @@ def assert_dirs_equal(left: Path, right: Path) -> None:
     problems = []
 
     def compare_dirs(left_dir: Path, right_dir: Path) -> None:
-        left_entries = {entry.name: entry for entry in left_dir.iterdir()}
-        right_entries = {entry.name: entry for entry in right_dir.iterdir()}
+        left_entries = {
+            entry.name: entry for entry in left_dir.iterdir() if entry.name != "app.log"
+        }
+        right_entries = {
+            entry.name: entry
+            for entry in right_dir.iterdir()
+            if entry.name != "app.log"
+        }
 
         left_only = sorted(set(left_entries) - set(right_entries))
         right_only = sorted(set(right_entries) - set(left_entries))

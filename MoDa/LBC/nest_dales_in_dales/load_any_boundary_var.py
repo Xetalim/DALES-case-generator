@@ -4,9 +4,9 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
-from MoDa.Geometry import GridDalesOpenBC
-from MoDa.LBC.nesting_idx import NestingIndices
-from MoDa.logging_wrapper import logwrap
+from moda.Geometry import GridDalesOpenBC
+from moda.LBC.nesting_idx import NestingIndices
+from moda.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

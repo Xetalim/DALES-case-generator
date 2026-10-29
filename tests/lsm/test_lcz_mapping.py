@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 
-from MoDa.Surface.LSM.LCZ.get_from_lcz import (
+from moda.Surface.LSM.LCZ.get_from_lcz import (
     LCZ_URBAN_NATURAL_TO_IFS,
     apply_urban_natural_lcz_overrides,
     lcz_dict,

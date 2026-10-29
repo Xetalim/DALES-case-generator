@@ -1,22 +1,19 @@
 from collections.abc import Iterable
+from dataclasses import dataclass
 
-from MoDa.Atmosphere.shapes import ShapeFunction, ShapeSpec
-from MoDa.modular.forcing import ForcingSet, var_attrs
-from MoDa.modular.time_dependent_scalars import (
+import numpy as np
+import xarray as xr
+
+from moda.Atmosphere.shapes import ShapeFunction, ShapeSpec
+from moda.modular.forcing import ForcingSet, var_attrs
+from moda.modular.time_dependent_scalars import (
     Z_DIM,
     TimeDependentScalar,
     profile,
     stack_in_time,
 )
-from MoDa.module_registry import register_module
-from MoDa.vars import ProfileVariable, VariableDefinition, get_all_vars
-
-
-import numpy as np
-import xarray as xr
-
-
-from dataclasses import dataclass
+from moda.module_registry import register_module
+from moda.vars import ProfileVariable, VariableDefinition, get_all_vars
 
 
 @register_module
@@ -48,7 +45,7 @@ class Profile:
     """Base class for atmospheric profiles."""
 
     variable: ProfileVariable
-    """Variable definition (see MoDa.Atmosphere.vars)."""
+    """Variable definition (see moda.Atmosphere.vars)."""
 
     def __post_init__(self) -> None:
         if not isinstance(self.variable, ProfileVariable):

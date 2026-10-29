@@ -5,14 +5,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from MoDa.IO_helpers.external_data_cache import cache_root
-from MoDa.LBC.nest_dales_in_HARMONIE.knmi_api import (
+from moda.IO_helpers.external_data_cache import cache_root
+from moda.LBC.nest_dales_in_HARMONIE.knmi_api import (
     ForecastDownloadResult,
     download_harmonie_forecast_pair,
 )
-from MoDa.modular import dales_simulation
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
+from moda.modular import dales_simulation
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 

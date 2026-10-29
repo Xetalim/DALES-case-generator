@@ -11,11 +11,11 @@ import numpy as np
 import xarray as xr
 from scipy.interpolate import interp1d
 
-from MoDa.IO_helpers.dales_external_data import resolve_rrtmg_data_paths
-from MoDa.IO_helpers.external_data_cache import cache_root
+from moda.IO_helpers.dales_external_data import resolve_rrtmg_data_paths
+from moda.IO_helpers.external_data_cache import cache_root
 
 if TYPE_CHECKING:
-    from MoDa.modular.dales_simulation import dales_simulation
+    from moda.modular.dales_simulation import dales_simulation
 
 
 class _RadiationModuleLike(Protocol):

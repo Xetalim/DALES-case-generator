@@ -5,9 +5,12 @@ from __future__ import annotations
 import logging
 import pathlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from MoDa.helpers import _machine_conf_value
-from MoDa.modular.dales_simulation import dales_simulation
+from moda.helpers import _machine_conf_value
+
+if TYPE_CHECKING:
+    from moda.modular.dales_simulation import dales_simulation
 
 logger = logging.getLogger(__name__)
 

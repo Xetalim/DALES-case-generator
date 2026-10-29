@@ -1,6 +1,6 @@
 import logging
 
-from MoDa.Geometry.grids import GridDales
+from moda.Geometry.grids import GridDales
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

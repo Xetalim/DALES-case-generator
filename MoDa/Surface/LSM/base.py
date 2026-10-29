@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from MoDa.IO_helpers.dales_external_data import resolve_van_genuchten_path
-from MoDa.modular.namelist import nml_field
-from MoDa.Surface.surface import SurfaceModule
+from moda.Core.namelist import nml_field
+from moda.IO_helpers.dales_external_data import resolve_van_genuchten_path
+from moda.Surface.surfacemodules import SurfaceModule
 
 logger = logging.getLogger(__name__)
 

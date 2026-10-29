@@ -2,46 +2,42 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import cast
-import pytest
 
 import numpy as np
 import xarray as xr
 
-from MoDa import dales_simulation
-from MoDa.Atmosphere import (
+from moda import DefaultNamelistModule, TimeModule, dales_simulation
+from moda.Atmosphere import (
     AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
     exp,
     expsinw,
     lin,
     linmlsurf,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Geometry.geometry_modification import AllGeometry
-from MoDa.Geometry.grids import GridDales
-from MoDa.Radiation.radiation import RadiationModule
-from MoDa.Surface.LSM import (
+from moda.Configuration.output_modules import EasyOutputModule
+from moda.Geometry.grids import GridDales
+from moda.Geometry.masks import AllMask
+from moda.Radiation.radiation import RadiationModule
+from moda.Surface.LSM import (
     LandUseSet,
     LSMModule,
 )
-from MoDa.Surface.LSM.lsm_sources import FromLCZ
-from MoDa.Surface.LSM.lu_modifications import LandUseModification
-from MoDa.Surface.LSM.modular_temps_moisture import (
+from moda.Surface.LSM.lsm_sources.lsm_sources import (
+    FromLCZ,
+    SlurbModification,
+)
+from moda.Surface.LSM.lsm_sources.lu_modifications import LandUseModification
+from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from MoDa.Surface.LSM.SLuRB.slurb import (
-    SLURBModification,
-    SLURBModule,
-    SLURBVariableModification,
-)
-from MoDa.Surface.LSM.translation_tables.landuse_types import (
+from moda.Surface.LSM.translation_tables.landuse_types import (
     get_land_use_definitions,
 )
-from MoDa.vars import *
+from moda.vars import *
 
 
 def SLURB_LCZ_case(machine_conf: dict, tileset="IFS") -> dales_simulation:
@@ -97,6 +93,9 @@ def SLURB_LCZ_case(machine_conf: dict, tileset="IFS") -> dales_simulation:
 
     sim.add(atmo)
     lsm = LSMModule(
+        include_slurb=True,
+        deep_soil_temperature=293,
+        building_indoor_temperature=293.15,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -120,20 +119,20 @@ def SLURB_LCZ_case(machine_conf: dict, tileset="IFS") -> dales_simulation:
         priority=600,
     )
     if tileset == "DEPAC":
-        lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+        lsm.add(LandUseModification(mask=AllMask(), type="grs"), priority=0)
     elif tileset == "IFS":
-        lsm.add(LandUseModification(geometry=AllGeometry(), type="sg"), priority=0)
+        lsm.add(LandUseModification(mask=AllMask(), type="sg"), priority=0)
     lsm.add(FromLCZ(), priority=100)
     sim.add(lsm)
 
-    slurb = SLURBModule(deep_soil_temperature=293)
-    slurb.add(
-        SLURBModification(
-            geometry=AllGeometry(),
-            vars=[SLURBVariableModification(varname="albedo_av", value=10)],
-        )
+    lsm.add(
+        SlurbModification(
+            mask=AllMask(),
+            varname="albedo_av",
+            value=10,
+        ),
+        priority=200,
     )
-    sim.add(slurb)
 
     sim.add(
         RadiationModule(

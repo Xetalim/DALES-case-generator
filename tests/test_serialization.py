@@ -3,17 +3,15 @@ from pathlib import Path
 
 import pytest
 
-from MoDa.Atmosphere.ls2d_atmosphere import FromLS2D
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.modular.dales_simulation import dales_simulation
-from MoDa.modular.serialize_deserialize import (
+from moda.modular.dales_simulation import DefaultNamelistModule, dales_simulation
+from moda.modular.serialize_deserialize import (
     _deserialize_dataclass,
     _deserialize_value,
     asdict_user_set,
 )
-from MoDa.modular.time_dependent_scalars import TimeDependentScalar
-from MoDa.Surface.surface import ConstantFluxesModule
-from MoDa.vars import ua
+from moda.modular.time_dependent_scalars import TimeDependentScalar
+from moda.Surface.surfacemodules import ConstantFluxesModule
+from moda.vars import ua
 
 
 def test_ordinary_dataclass_filters_defaults_and_runtime_fields():

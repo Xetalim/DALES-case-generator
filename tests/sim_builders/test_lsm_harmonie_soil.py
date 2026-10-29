@@ -1,28 +1,27 @@
 from __future__ import annotations
 
-from MoDa import dales_simulation
-from MoDa.Atmosphere import (
+from moda import DefaultNamelistModule, TimeModule, dales_simulation
+from moda.Atmosphere import (
     AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
     lin,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.output_modules import (
+from moda.Configuration.output_modules import (
     CheckSimulationModule,
     EasyOutputModule,
 )
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Geometry.geometry_modification import AllGeometry
-from MoDa.Geometry.grids import GridDales
-from MoDa.Radiation.radiation import RadiationModule
-from MoDa.Surface.LSM import LandUseSet
-from MoDa.Surface.LSM.lsm_module import LSMModule
-from MoDa.Surface.LSM.lu_modifications import LandUseModification
-from MoDa.Surface.LSM.modular_temps_moisture import (
+from moda.Geometry.grids import GridDales
+from moda.Geometry.masks import AllMask
+from moda.Radiation.radiation import RadiationModule
+from moda.Surface.LSM import LandUseSet
+from moda.Surface.LSM.lsm_module import LSMModule
+from moda.Surface.LSM.lsm_sources.lu_modifications import LandUseModification
+from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
     SoilTemperatureMoistureFromHarmonie,
     UniformSkinTemperature,
 )
-from MoDa.vars import *
+from moda.vars import *
 
 
 def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
@@ -85,7 +84,7 @@ def LSM_with_HARM_soil(machine_conf: dict) -> dales_simulation:
         ),
         priority=600,
     )
-    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    lsm.add(LandUseModification(mask=AllMask(), type="grs"), priority=0)
     sim.add(lsm)
 
     sim.add(

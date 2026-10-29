@@ -6,17 +6,17 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import xarray as xr
 
-from MoDa.Geometry import GridDalesOpenBC
-from MoDa.LBC.nest_dales_in_dales.load_any_boundary_var import (
+from moda.Geometry import GridDalesOpenBC
+from moda.LBC.nest_dales_in_dales.load_any_boundary_var import (
     get_boundary_dict,
     load_any_boundary_var,
 )
-from MoDa.LBC.nest_dales_in_dales.timestep0 import boundaries_timestep0
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.logging_wrapper import logwrap
+from moda.LBC.nest_dales_in_dales.timestep0 import boundaries_timestep0
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.logging_wrapper import logwrap
 
 if TYPE_CHECKING:
-    from MoDa.LBC.nesting_idx import NestingIndices
+    from moda.LBC.nesting_idx import NestingIndices
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

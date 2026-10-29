@@ -2,28 +2,30 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
-import xarray as xr
-
-from MoDa import (
-    AtmosphereModule,
-    BackradInterpolatedProfile,
-    BackradPressureProfile,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
-    EasyOutputModule,
     GridDales,
-    LSMHomogeneousModule,
-    RadiationModule,
-    RRTMGRadiationModule,
-    SprayingModule,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.vars import *
-
+from moda.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
+    lin,
+)
+from moda.Configuration import (
+    EasyOutputModule,
+    SprayingModule,
+)
+from moda.Radiation import (
+    BackradInterpolatedProfile,
+    BackradPressureProfile,
+    RadiationModule,
+    RRTMGRadiationModule,
+)
+from moda.Surface import LSM, ConstantSurfaceTemperatureModule
+from moda.vars import *
 from tests.helpers import open_dataset
 
 
@@ -163,7 +165,7 @@ def radiation_backrad_interpolated_case(machine_conf: dict) -> dales_simulation:
 def lsm_homogeneous_runtime_case(machine_conf: dict) -> dales_simulation:
     sim = _base_runtime_case(machine_conf, "lsm_homogeneous_runtime_case")
     sim.add(
-        LSMHomogeneousModule(
+        LSM.LSMHomogeneousModule(
             ps=100000.0,
             z0mav=1.0e-4,
             z0hav=1.0e-4,

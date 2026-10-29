@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from MoDa import dales_simulation
-from MoDa.Atmosphere import AtmosphereModule, lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Emission.emission import (
+from moda import DefaultNamelistModule, TimeModule, dales_simulation
+from moda.Atmosphere import AtmosphereModule, lin
+from moda.Atmosphere.Profile import AtmosphericProfile
+from moda.Configuration.output_modules import EasyOutputModule
+from moda.Emission.emission import (
     EmissionModule,
     EmissionPointSource,
     EmissionTracer,
 )
-from MoDa.Geometry.grids import GridDales
-from MoDa.Surface.surface import ConstantSurfaceTemperatureModule
-from MoDa.vars import *
+from moda.Geometry.grids import GridDales
+from moda.Surface.surfacemodules import ConstantSurfaceTemperatureModule
+from moda.vars import *
 
 
 def emission_case(machine_conf: dict) -> dales_simulation:

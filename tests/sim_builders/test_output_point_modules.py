@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from MoDa.Configuration import (
+from moda.Configuration import (
     ColumnStatisticsOutputModule,
     SprayingModule,
     VirtualMeasurementOutputModule,

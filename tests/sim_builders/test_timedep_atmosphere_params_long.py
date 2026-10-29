@@ -1,21 +1,17 @@
 from __future__ import annotations
 
-from MoDa import dales_simulation
-from MoDa.Atmosphere import (
+from moda import DefaultNamelistModule, TimeModule, dales_simulation
+from moda.Atmosphere import (
     AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
     lin,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Geometry.grids import GridDales
-from MoDa.modular.time_dependent import (
-    TimedependentModule,
-)
-from MoDa.modular.time_dependent_scalars import TimeDependentScalar
-from MoDa.Surface.surface import ConstantSurfaceTemperatureModule
-from MoDa.vars import *
+from moda.Configuration.output_modules import EasyOutputModule
+from moda.Geometry.grids import GridDales
+from moda.modular.time_dependent_scalars import TimeDependentScalar
+from moda.Surface.surfacemodules import ConstantSurfaceTemperatureModule
+from moda.vars import *
 
 
 def timedep_atmosphere_with_params_case_long(machine_conf: dict) -> dales_simulation:
@@ -70,7 +66,6 @@ def timedep_atmosphere_with_params_case_long(machine_conf: dict) -> dales_simula
         )
     )
 
-    sim.add(TimedependentModule(timesteps=[0.0, 60.0]))
     sim.add(
         ConstantSurfaceTemperatureModule(
             thls=TimeDependentScalar(times=[0.0, 60.0], values=[293.15, 294.15]),

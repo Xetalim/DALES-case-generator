@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import xarray as xr
 
-from MoDa.Geometry import GridDalesOpenBC
-from MoDa.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
+from moda.Geometry import GridDalesOpenBC
+from moda.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
     get_all_dales_boundaries,
 )
-from MoDa.LBC.nest_dales_in_dales.synturb import add_synthetic_turbulence
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.logging_wrapper import logwrap
+from moda.LBC.nest_dales_in_dales.synturb import add_synthetic_turbulence
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.logging_wrapper import logwrap
 
 if TYPE_CHECKING:
     from ..nesting_idx import NestingIndices

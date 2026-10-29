@@ -8,24 +8,24 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from MoDa.Atmosphere.les_input import LESInput, validate_les_input
-from MoDa.modular.forcing import (
+from moda.Atmosphere.les_input import LESInput, validate_les_input
+from moda.Core.namelist import nml_field
+from moda.modular.forcing import (
     EXTERNAL_FORCING_PRIORITY,
     ForcingSet,
     named,
     sounding_forcings,
     var_attrs,
 )
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.modular.time_dependent_scalars import (
+from moda.modular.simulation_module import simulation_module
+from moda.modular.time_dependent_scalars import (
     SOIL_DIM,
     TIME_DIM,
     Z_DIM,
     check_time_series,
     profile,
 )
-from MoDa.vars import (
+from moda.vars import (
     NudgingVariable,
     ProfileVariable,
     VariableDefinition,
@@ -100,7 +100,7 @@ class ExternalForcingModule(simulation_module):
     ug, vg, wls, dt*_advec, ps, ts`` (and optionally ``wth, wq, z0m, z0h``,
     soil fields and ``p_lay, t_lay, h2o_lay``) on the DALES heights. This base
     converts it into a :class:`ForcingSet`: initial profiles and nudging for
-    :class:`AtmosphereModule`, forcings for :class:`TimedependentModule`, soil
+    :class:`AtmosphereModule`, time-dependent forcings for the simulation, soil
     state for the LSM and a background sounding for radiation. User-configured
     values in other modules take precedence.
     """

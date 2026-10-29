@@ -1,4 +1,4 @@
-"""Map LCZ and fractional NetCDF sources onto typed land-use state."""
+"""Define prioritized LSM sources and map datasets onto typed land-use state."""
 
 import pathlib
 from dataclasses import dataclass, field
@@ -7,19 +7,25 @@ from typing import ClassVar
 import numpy as np
 import xarray as xr
 
-from MoDa.Atmosphere.ls2d_atmosphere import FromLS2D
-from MoDa.module_registry import register_module
-from MoDa.Surface.LSM.lsm_data import (
+from moda.Atmosphere.ls2d_atmosphere import FromLS2D
+from moda.module_registry import register_module
+from moda.Surface.LSM.lsm_data import (
     FloatArray,
     LandUseName,
     LandUseState,
     SoilFields,
 )
-from MoDa.Surface.LSM.lu_modifications import (
+from moda.Surface.LSM.lsm_sources.lu_modifications import (
     LandUseModification,
     LandUseModifications,
 )
-from MoDa.Surface.LSM.modular_temps_moisture import LSMProfileSpec
+from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
+    LSMProfileSpec,
+)
+from moda.Surface.LSM.lsm_sources.slurb_modifications import (
+    SlurbModification,
+    SlurbModifications,
+)
 
 
 def distribute_fraction(
@@ -184,6 +190,8 @@ LSMSourceSpec = (
     | LSMProfileSpec
     | LandUseModification
     | LandUseModifications
+    | SlurbModification
+    | SlurbModifications
 )
 
 

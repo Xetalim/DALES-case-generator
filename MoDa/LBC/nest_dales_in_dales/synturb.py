@@ -3,8 +3,8 @@ from typing import cast
 import numpy as np
 import xarray as xr
 
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.logging_wrapper import logwrap
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.logging_wrapper import logwrap
 
 
 def _project_zero_into_interval(

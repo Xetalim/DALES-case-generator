@@ -1,9 +1,3 @@
-from .Profile import (
-    AtmosphericProfile,
-    InterpolatedProfile,
-    TimedAtmosphereProfile,
-    profiles_to_forcings,
-)
 from .atmosphere import (
     AtmosphereModule,
 )
@@ -11,6 +5,12 @@ from .external_forcing import ExternalForcingModule
 from .harmonie_atmosphere import HarmonieAtmosphereModule
 from .les_input import LES_INPUT_SCHEMA, FieldSpec, LESInput, validate_les_input
 from .ls2d_atmosphere import FromLS2D, LS2DAtmosphereModule
+from .Profile import (
+    AtmosphericProfile,
+    InterpolatedProfile,
+    TimedAtmosphereProfile,
+    profiles_to_forcings,
+)
 from .shapes import (
     SHAPE_FUNCTIONS,
     exp,

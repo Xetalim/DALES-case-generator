@@ -5,23 +5,20 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from MoDa import (
-    AtmosphereModule,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.LBC import NestingTopology
-from MoDa.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
+from moda.Atmosphere import AtmosphereModule, AtmosphericProfile, lin
+from moda.Configuration import EasyOutputModule
+from moda.LBC import NestingTopology
+from moda.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
     _promote_boundary_stagger_dims,
 )
-from MoDa.modular.simulation_module import set_nml_section
-from MoDa.vars import *
+from moda.modular.simulation_module import set_nml_section
+from moda.vars import *
 from tests.helpers import run_command_with_report
 
 

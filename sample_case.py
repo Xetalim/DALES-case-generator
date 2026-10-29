@@ -17,12 +17,12 @@ from typing import Any
 import numpy as np
 import yaml
 
-import MoDa
-from MoDa import LBC, Atmosphere, Configuration, Geometry, Surface
-import MoDa.Atmosphere.Profile
-from MoDa.Surface import LSM
+import moda
+import moda.Atmosphere.Profile
+from moda import LBC, Atmosphere, Configuration, Geometry
+from moda.Surface import LSM
 
-MoDa.setup_logging("logging.yaml")
+moda.setup_logging("logging.yaml")
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
@@ -109,8 +109,8 @@ def _may_start_end(start_day: int) -> tuple[datetime.datetime, datetime.datetime
     return start, end
 
 
-def _new_grid(spec: dict) -> MoDa.GridDales:
-    grid = MoDa.GridDales(**spec)
+def _new_grid(spec: dict) -> moda.GridDales:
+    grid = moda.GridDales(**spec)
     zt, zm, dz = make_integer_stretched_grid(grid.kmax, grid.dz0, grid.alpha)
     grid.zt = zt
     grid.zm = zm
@@ -152,7 +152,7 @@ def make_integer_stretched_grid(kmax, dz0, alpha):
 
 
 def _copy_vertical_grid(
-    source_grid: MoDa.GridDales, target_grid: MoDa.GridDales
+    source_grid: moda.GridDales, target_grid: moda.GridDales
 ) -> None:
     """Copy exact vertical coordinates from source grid to target grid."""
     if len(source_grid.zt) != target_grid.kmax:
@@ -173,7 +173,7 @@ def _copy_vertical_grid(
 
 
 def _set_child_vertical_grid(
-    parent_grid: MoDa.GridDales, child_grid: MoDa.GridDales
+    parent_grid: moda.GridDales, child_grid: moda.GridDales
 ) -> None:
     child_grid.inherit_vertical_grid(parent_grid)
 
@@ -269,9 +269,9 @@ if __name__ == "__main__":
         yaml.safe_dump(nml_overrides, sort_keys=False), encoding="utf-8"
     )
 
-    sim = MoDa.dales_simulation("openbc_triple64_parent_l1", machine_conf)
+    sim = moda.dales_simulation("openbc_triple64_parent_l1", machine_conf)
     sim.init_output_folder()
-    sim.add(MoDa.DefaultNamelistModule())
+    sim.add(moda.DefaultNamelistModule())
 
     supergrid = _new_grid(_GRID64_SUPER)
     midgrid = _new_grid(_GRID64_MID)
@@ -291,8 +291,6 @@ if __name__ == "__main__":
     )
 
     if use_ls2d:
-        sim.add(MoDa.TimedependentModule())
-    if use_ls2d:
         atmo_ls2d = Atmosphere.LS2DAtmosphereModule(
             era5_path=sim.machine_conf.get("ls2d_conf", {}).get(
                 "era5_path",
@@ -302,23 +300,23 @@ if __name__ == "__main__":
             start_date=start_ts,
             end_date=end_ts,
             write_log=False,
-            data_source=sim.machine_conf.get("ls2d_conf", {}).get("data_source", "CDS"),
+            data_source="CDS",
             n_av=0,
             method="2nd",
             do_nudging=True,
             smooth_initial_uv_to_geostrophic=True,
         )
         sim.add(atmo_ls2d)
-    atmo = MoDa.AtmosphereModule()
+    atmo = moda.AtmosphereModule()
     atmo.add(
-        MoDa.Atmosphere.Profile.AtmosphericProfile(
-            variable=MoDa.vars.tke, shape=Atmosphere.lin(surf_val=1, ddz=0)
+        moda.Atmosphere.Profile.AtmosphericProfile(
+            variable=moda.vars.tke, shape=Atmosphere.lin(surf_val=1, ddz=0)
         )
     )
     sim.add(atmo)
 
     sim.add(
-        MoDa.TimeModule(
+        moda.TimeModule(
             xtime=12.0,
             xyear=2026,
             runtime=(end_ts - start_ts).total_seconds(),
@@ -329,7 +327,10 @@ if __name__ == "__main__":
         )
     )
 
-    lsm = Surface.LSMModule(
+    lsm = LSM.LSMModule(
+        include_slurb=True,
+        deep_soil_temperature=273.15 + 15,
+        building_indoor_temperature=273.15 + 21,
         land_use_set=LSM.LandUseSet.IFS,
         ps=100000,
         z0mav=0.0001,
@@ -343,9 +344,9 @@ if __name__ == "__main__":
     if not is_nested:
         lsm.add(
             [
-                LSM.UniformSkinTemperature(294),
-                LSM.UniformSoilTemperature([294, 294, 294, 294]),
-                LSM.UniformSoilMoisture(
+                LSM.lsm_sources.UniformSkinTemperature(294),
+                LSM.lsm_sources.UniformSoilTemperature([294, 294, 294, 294]),
+                LSM.lsm_sources.UniformSoilMoisture(
                     [
                         0.36867549,
                         0.25300502,
@@ -357,27 +358,27 @@ if __name__ == "__main__":
             priority=600,
         )
     lsm.add(
-        LSM.LandUseModification(geometry=Geometry.AllGeometry(), type="grs"), priority=0
+        LSM.lsm_sources.LandUseModification(mask=Geometry.AllMask(), type="grs"),
+        priority=0,
     )
-    lsm.add(LSM.FromLCZ(urban_natural_lcz_to_natural_lsm=True), priority=100)
-    if use_ls2d:
-        lsm.add(LSM.FromLS2D(), priority=500)
-    lsm.add(LSM.FromBofek(spatial_data_path=spatial_data_path), priority=400)
     lsm.add(
-        LSM.FromTop10(
+        LSM.lsm_sources.FromLCZ(urban_natural_lcz_to_natural_lsm=True), priority=100
+    )
+    if use_ls2d:
+        lsm.add(LSM.lsm_sources.FromLS2D(), priority=500)
+    lsm.add(
+        LSM.lsm_sources.FromBofek(spatial_data_path=spatial_data_path), priority=400
+    )
+    lsm.add(
+        LSM.lsm_sources.FromTop10(
             urban_natural_lcz_to_natural_lsm=True,
             spatial_data_path=spatial_data_path,
         ),
         priority=300,
     )
     sim.add(lsm)
-    slurb = Surface.SlurbModule(
-        deep_soil_temperature=273.15 + 15,
-        building_indoor_temperature=273.15 + 21,
-    )
-    sim.add(slurb)
 
-    sim.add(MoDa.RadiationModule(iradiation=4))
+    sim.add(moda.Radiation.RRTMGRadiationModule())
 
     sim.add(Configuration.LSMCrossModule(enabled=True, dtav=60))
     sim.add(Configuration.CapeModule(enabled=True, dtav=120))
@@ -426,25 +427,25 @@ if __name__ == "__main__":
         sim.nml["namnetcdfstats"] = {}
     sim.nml["namnetcdfstats"]["deflate"] = 0
     if use_ls2d:
-        MoDa.set_nml_section(
+        moda.set_nml_section(
             sim.nml, sim.nml_docs, "user_defined", "PHYSICS", "ltimedep", True
         )
-        MoDa.set_nml_section(
+        moda.set_nml_section(
             sim.nml, sim.nml_docs, "user_defined", "NAMNUDGE", "lnudge", True
         )
-    MoDa.set_nml_section(
+    moda.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "namsubgrid", "sgs_surface_fix", False
     )
-    MoDa.set_nml_section(
+    moda.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "timer", "ltimer", True
     )  #     namelist /TIMER/ ltimer, ltimer_print, ltimer_write
-    MoDa.set_nml_section(
+    moda.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "timer", "ltimer_write", True
     )  #     namelist /TIMER/ ltimer, ltimer_print, ltimer_write
-    MoDa.set_nml_section(
+    moda.set_nml_section(
         sim.nml, sim.nml_docs, "user_defined", "namnetcdfstats", "lnofill", True
     )
-    MoDa.set_nml_section(
+    moda.set_nml_section(
         sim.nml,
         sim.nml_docs,
         "user_defined",
@@ -458,7 +459,7 @@ if __name__ == "__main__":
             if not isinstance(values, dict):
                 continue
             for key, value in values.items():
-                MoDa.set_nml_section(
+                moda.set_nml_section(
                     sim.nml,
                     sim.nml_docs,
                     "user_defined",

@@ -4,9 +4,9 @@ import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
 
-from MoDa.Geometry import GridDales
-from MoDa.IO_helpers.raster import fix_lambert_offsets
-from MoDa.module_registry import register_module
+from moda.Geometry import GridDales
+from moda.IO_helpers.raster import fix_lambert_offsets
+from moda.module_registry import register_module
 
 
 @register_module

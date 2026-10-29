@@ -11,11 +11,11 @@ import sys
 from dataclasses import fields, is_dataclass
 from datetime import UTC, datetime
 
-# Ensure the project root is on sys.path so `MoDa` can be imported
+# Ensure the project root is on sys.path so `moda` can be imported
 sys.path.insert(0, os.path.abspath(".."))
 
-from MoDa.modular.namelist import get_namelist_spec
-from MoDa.modular.simulation_module import simulation_module
+from moda.Core.namelist import get_namelist_spec
+from moda.modular.simulation_module import simulation_module
 
 project = "DALES Case Generator"  # pylint: disable=C0103
 author = "Project contributors"  # pylint: disable=C0103

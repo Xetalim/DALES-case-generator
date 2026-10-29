@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import xarray as xr
 
-from MoDa.module_registry import register_module
+from moda.module_registry import register_module
 
 TIME_DIM = "time"
 """Time dimension of all forcing series, in seconds since the start of the run."""

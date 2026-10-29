@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, call
 import pytest
 import requests
 
-from MoDa.LBC.nest_dales_in_HARMONIE import knmi_api
+from moda.LBC.nest_dales_in_HARMONIE import knmi_api
 
 
 def _response(

@@ -5,21 +5,21 @@ from pathlib import Path
 
 import pytest
 
-from MoDa import (
-    AtmosphereModule,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
-    HarmonieAtmosphereModule,
-    KNMIHarmonieForecastDownloadModule,
-    Nest_in_KNMI,
-    TimedependentModule,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile
-from MoDa.vars import qt, thetal, tke, ua, va, w
+from moda.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    HarmonieAtmosphereModule,
+    lin,
+)
+from moda.LBC import KNMIHarmonieForecastDownloadModule, Nest_in_KNMI
+from moda.Surface import ConstantSurfaceTemperatureModule
+from moda.vars import qt, thetal, tke, ua, va, w
 
 DATA_PATH = Path("HARM_TEST_DATA")
 
@@ -146,7 +146,6 @@ def openbc_harmonie_cached_case_timedep(machine_conf: dict) -> dales_simulation:
         )
     )
 
-    sim.add(TimedependentModule())
     sim.add(
         ConstantSurfaceTemperatureModule(
             thls=293.15, ps=100000.0, z0mav=0.0001, z0hav=0.0001, albedoav=0.22

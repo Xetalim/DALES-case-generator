@@ -1,43 +1,33 @@
 import logging
-from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 
 import numpy as np
 import xarray as xr
 
-from MoDa.Atmosphere.Profile import (
+from moda.Atmosphere.Profile import (
     AtmosphericProfile,
     InterpolatedProfile,
-    Profile,
     TimedAtmosphereProfile,
-    _require_time_dependent,
-    _validate_profile_variable,
     profiles_to_forcings,
 )
-from MoDa.Atmosphere.shapes import ShapeFunction, ShapeSpec
-from MoDa.IO_helpers import AtmosphereProfileWriter
-from MoDa.modular.dales_simulation import dales_simulation
-from MoDa.modular.forcing import (
+from moda.IO_helpers import AtmosphereProfileWriter
+from moda.modular.dales_simulation import dales_simulation
+from moda.modular.forcing import (
     ForcingSet,
     collect_forcings,
     to_dataset,
     var_attrs,
 )
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.modular.time_dependent_scalars import (
+from moda.modular.simulation_module import simulation_module
+from moda.modular.time_dependent_scalars import (
     TIME_DIM,
     Z_DIM,
-    TimeDependentScalar,
-    profile,
     resample_time,
     resolve_time_axis,
-    stack_in_time,
 )
-from MoDa.module_registry import register_module
-from MoDa.vars import (
+from moda.module_registry import register_module
+from moda.vars import (
     ProfileVariable,
-    VariableDefinition,
-    get_all_vars,
     get_var_by_name,
 )
 

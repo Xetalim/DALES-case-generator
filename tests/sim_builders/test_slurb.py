@@ -1,30 +1,27 @@
 from __future__ import annotations
 
-from MoDa import dales_simulation
-from MoDa.Atmosphere import (
+from moda import DefaultNamelistModule, TimeModule, dales_simulation
+from moda.Atmosphere import (
     AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
     lin,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Geometry.geometry_modification import AllGeometry, CircleRealGeometry
-from MoDa.Geometry.grids import GridDales
-from MoDa.Radiation.radiation import RadiationModule
-from MoDa.Surface.LSM import LandUseSet
-from MoDa.Surface.LSM.lsm_module import LSMModule
-from MoDa.Surface.LSM.lu_modifications import LandUseModification
-from MoDa.Surface.LSM.modular_temps_moisture import (
+from moda.Geometry.grids import GridDales
+from moda.Geometry.masks import AllMask, CircleRealMask
+from moda.Radiation.radiation import RadiationModule
+from moda.Surface.LSM import LandUseSet
+from moda.Surface.LSM.lsm_module import LSMModule
+from moda.Surface.LSM.lsm_sources.lsm_sources import (
+    SlurbModification,
+)
+from moda.Surface.LSM.lsm_sources.lu_modifications import LandUseModification
+from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from MoDa.Surface.LSM.SLuRB.slurb import (
-    SLURBModification,
-    SLURBModule,
-    SLURBVariableModification,
-)
-from MoDa.vars import *
+from moda.vars import *
 
 
 def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
@@ -65,6 +62,9 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
 
     sim.add(atmo)
     lsm = LSMModule(
+        include_slurb=True,
+        deep_soil_temperature=293,
+        building_indoor_temperature=293.15,
         land_use_set=LandUseSet.DEPAC,
         ps=100000,
         z0mav=0.0001,
@@ -77,23 +77,21 @@ def simple_SLURB_case(machine_conf: dict) -> dales_simulation:
     lsm.add(UniformSkinTemperature(293), priority=600)
     lsm.add(UniformSoilTemperature([293, 293, 293, 293]), priority=600)
     lsm.add(UniformSoilMoisture([0.3, 0.3, 0.3, 0.3]), priority=600)
-    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
+    lsm.add(LandUseModification(mask=AllMask(), type="grs"), priority=0)
     lsm.add(
-        LandUseModification(
-            geometry=CircleRealGeometry(x0=0, y0=0, size=50), type="urb"
-        ),
+        LandUseModification(mask=CircleRealMask(x0=0, y0=0, size=50), type="urb"),
         priority=0,
     )
     sim.add(lsm)
 
-    slurb = SLURBModule(deep_soil_temperature=293)
-    slurb.add(
-        SLURBModification(
-            geometry=AllGeometry(),
-            vars=[SLURBVariableModification(varname="albedo_av", value=10)],
-        )
+    lsm.add(
+        SlurbModification(
+            mask=AllMask(),
+            varname="albedo_av",
+            value=10,
+        ),
+        priority=200,
     )
-    sim.add(slurb)
 
     sim.add(
         RadiationModule(

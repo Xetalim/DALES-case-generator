@@ -19,9 +19,9 @@ from rasterio.vrt import WarpedVRT
 from rasterio.windows import Window, from_bounds
 from shapely.geometry import box
 
-from MoDa.Geometry.grids import GridDales
-from MoDa.IO_helpers import get_reproject
-from MoDa.IO_helpers.external_data_cache import cache_root
+from moda.Geometry.grids import GridDales
+from moda.IO_helpers import get_reproject
+from moda.IO_helpers.external_data_cache import cache_root
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

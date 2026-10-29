@@ -14,15 +14,15 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any, Self
 
-from MoDa.Emission.create_emis import (
+from moda.Core.namelist import nml_field
+from moda.Emission.create_emis import (
     PointSource,
     TracerInfo,
     emissions,
     get_emis_sim_hours,
 )
-from MoDa.modular import simulation_module
-from MoDa.modular.namelist import nml_field
-from MoDa.module_registry import register_module
+from moda.modular import simulation_module
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 

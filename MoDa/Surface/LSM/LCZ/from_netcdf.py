@@ -39,11 +39,11 @@ from rasterio.enums import Resampling
 from rasterio.profiles import Profile
 from rasterio.transform import from_bounds
 
-from MoDa.Geometry.grids import GridDales
-from MoDa.IO_helpers import raster_to_xarray
-from MoDa.IO_helpers.raster import fix_lambert_offsets, get_reproject
-from MoDa.Surface.LSM.LCZ.downloaders import get_esa
-from MoDa.Surface.LSM.LCZ.get_from_lcz import (
+from moda.Geometry.grids import GridDales
+from moda.IO_helpers import raster_to_xarray
+from moda.IO_helpers.raster import fix_lambert_offsets, get_reproject
+from moda.Surface.LSM.LCZ.downloaders import get_esa
+from moda.Surface.LSM.LCZ.get_from_lcz import (
     map_esa_to_ifs,
     map_soil_type,
 )

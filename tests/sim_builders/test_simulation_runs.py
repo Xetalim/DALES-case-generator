@@ -2,20 +2,22 @@ import subprocess
 
 import pytest
 
-from MoDa import (
-    AtmosphereModule,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
-    Nest_in_Dales,
-    NestingTopology,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.vars import *
+from moda.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
+    lin,
+)
+from moda.Configuration import EasyOutputModule
+from moda.LBC import Nest_in_Dales, NestingTopology
+from moda.Surface import ConstantSurfaceTemperatureModule
+from moda.vars import *
 
 
 @pytest.mark.slow

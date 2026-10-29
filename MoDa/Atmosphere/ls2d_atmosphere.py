@@ -3,13 +3,13 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import cast, Literal
+from typing import Literal, cast
 
 import ls2d
 
-from MoDa.Atmosphere.external_forcing import ExternalForcingModule
-from MoDa.Atmosphere.les_input import LESInput
-from MoDa.module_registry import register_module
+from moda.Atmosphere.external_forcing import ExternalForcingModule
+from moda.Atmosphere.les_input import LESInput
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +89,8 @@ class LS2DAtmosphereModule(ExternalForcingModule):
 
     Downloads ERA5 data, runs ``era.calculate_forcings`` and interpolates the
     result onto ``grid.zt``. Initial profiles, nudging targets and large-scale
-    forcings are provided to :class:`AtmosphereModule` and
-    :class:`TimedependentModule`; see :class:`ExternalForcingModule`.
+    forcings are provided to :class:`AtmosphereModule` and collected by the
+    simulation for time-dependent output; see :class:`ExternalForcingModule`.
     """
 
     module_name: str = field(

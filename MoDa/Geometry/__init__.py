@@ -1,32 +1,21 @@
 """Public API for geometry and grid helpers."""
 
-from .geometry_modification import (
-    AllGeometry,
-    CheckerboardIdxGeometry,
-    CircleIdxGeometry,
-    CircleRealGeometry,
-    FuncGeometry,
-    GeometricModification,
-    GeometrySpec,
-    MaskGeometry,
-    ModifierClass,
-    RectangleIdxGeometry,
-    RectangleRealGeometry,
-)
+from . import masks
 from .grids import GridDales, GridDalesOpenBC
+from .ModifierClass import GeometricModification, ModifierClass
 
 __all__ = [
-    "AllGeometry",
-    "CheckerboardIdxGeometry",
-    "CircleIdxGeometry",
-    "CircleRealGeometry",
-    "FuncGeometry",
     "GeometricModification",
-    "GeometrySpec",
     "GridDales",
     "GridDalesOpenBC",
-    "MaskGeometry",
     "ModifierClass",
-    "RectangleIdxGeometry",
-    "RectangleRealGeometry",
+    "masks.AllMask",
+    "masks.CheckerboardIdxMask",
+    "masks.CircleIdxMask",
+    "masks.CircleRealMask",
+    "masks.ExplicitArrayMask",
+    "masks.FuncMask",
+    "masks.MaskSpec",
+    "masks.RectangleIdxMask",
+    "masks.RectangleRealMask",
 ]

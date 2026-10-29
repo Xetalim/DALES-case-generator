@@ -16,7 +16,7 @@ from rasterio.transform import from_origin
 from rasterio.warp import reproject
 
 if TYPE_CHECKING:
-    from MoDa.Geometry import GridDales
+    from moda.Geometry import GridDales
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

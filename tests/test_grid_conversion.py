@@ -3,7 +3,7 @@ from dataclasses import fields, replace
 import numpy as np
 import pytest
 
-from MoDa.Geometry.grids import GridDales, GridDalesOpenBC
+from moda.Geometry.grids import GridDales, GridDalesOpenBC
 
 
 @pytest.fixture

@@ -3,19 +3,22 @@ from pathlib import Path
 import pytest
 import yaml
 
-from MoDa.Geometry.geometry_modification import MaskGeometry
-from MoDa.modular.serialize_deserialize import (
+from moda.Geometry.masks import AllMask, ExplicitArrayMask
+from moda.modular.serialize_deserialize import (
     _deserialize_dataclass,
     asdict_user_set,
 )
-from MoDa.Surface.LSM import (
+from moda.Surface.LSM import LandUseSet, LSMModule
+from moda.Surface.LSM.lsm_sources import (
     FromBofek,
     FromLCZ,
     FromLS2D,
     FromNetCDF,
     FromTop10,
-    LandUseSet,
-    LSMModule,
+    LandUseModification,
+    LandUseModifications,
+    SlurbModification,
+    SlurbModifications,
     SoilTemperatureMoistureFromHarmonie,
     UniformSkinTemperature,
     UniformSoilMoisture,
@@ -23,10 +26,6 @@ from MoDa.Surface.LSM import (
     VaryingSkinTemperature,
     VaryingSoilMoisture,
     VaryingSoilTemperature,
-)
-from MoDa.Surface.LSM.lu_modifications import (
-    LandUseModification,
-    LandUseModifications,
 )
 
 
@@ -83,16 +82,33 @@ def test_explicit_land_use_set_roundtrips_through_yaml():
         FromBofek(bofek_filename="custom.nc"),
         FromNetCDF(path="surface.nc", esa_cache_dir="cache"),
         FromLS2D(),
+        SlurbModification(
+            mask=ExplicitArrayMask([[True, False], [False, True]]),
+            varname="h_bld",
+            value=12.0,
+        ),
+        SlurbModifications(
+            [
+                SlurbModification(mask=AllMask(), varname="h_bld", value=12.0),
+                SlurbModification(
+                    mask=AllMask(),
+                    varname="albedo_roof",
+                    value=0.2,
+                    n_layers=3,
+                    dtype="real",
+                ),
+            ]
+        ),
         LandUseModification(
-            geometry=MaskGeometry([[True, False], [False, True]]),
+            mask=ExplicitArrayMask([[True, False], [False, True]]),
             type="grs",
             frac=0.4,
             mode="add",
         ),
         LandUseModifications(
             [
-                LandUseModification(type="grs", frac=0.4),
-                LandUseModification(type="urb", frac=0.2, mode="add"),
+                LandUseModification(mask=AllMask(), type="grs", frac=0.4),
+                LandUseModification(mask=AllMask(), type="urb", frac=0.2, mode="add"),
             ]
         ),
     ],
@@ -120,13 +136,21 @@ def test_mixed_lsm_sources_preserve_priorities_and_insertion_order_through_yaml(
     original = LSMModule(land_use_set=LandUseSet.DEPAC)
     original.add(UniformSkinTemperature(295.0), priority=200)
     original.add(FromLCZ(), priority=100)
-    original.add(LandUseModification(type="grs", frac=0.4), priority=150)
+    original.add(
+        LandUseModification(mask=AllMask(), type="grs", frac=0.4), priority=150
+    )
+    original.add(
+        SlurbModification(mask=AllMask(), varname="h_bld", value=12.0),
+        priority=150,
+    )
     original.add(
         [UniformSoilTemperature([281.0] * 4), UniformSoilMoisture([0.2] * 4)],
         priority=50,
     )
     original.add(
-        LandUseModifications([LandUseModification(type="urb", frac=0.2)]),
+        LandUseModifications(
+            [LandUseModification(mask=AllMask(), type="urb", frac=0.2)]
+        ),
         priority=0,
     )
 
@@ -138,5 +162,52 @@ def test_mixed_lsm_sources_preserve_priorities_and_insertion_order_through_yaml(
     assert "profiles" not in serialized
     assert "land_use_modifications" not in serialized
     assert restored.sources == original.sources
-    assert [entry.priority for entry in restored.sources] == [200, 100, 150, 50, 50, 0]
+    assert [entry.priority for entry in restored.sources] == [
+        200,
+        100,
+        150,
+        150,
+        50,
+        50,
+        0,
+    ]
+    assert asdict_user_set(restored) == serialized
+
+
+def test_integrated_slurb_settings_roundtrip_through_yaml():
+    original = LSMModule(
+        land_use_set=LandUseSet.DEPAC,
+        include_slurb=True,
+        urban_fraction=0.4,
+        urban_roughness_length=0.5,
+        building_plan_area_fraction=0.3,
+        building_frontal_area_fraction=0.2,
+        building_height=12.0,
+        window_fraction=0.25,
+        street_canyon_aspect_ratio=1.5,
+        building_type=2,
+        pavement_type=3,
+        anisotropic_street_canyons=True,
+        street_canyon_orientation=45.0,
+        deep_soil_temperature=290.0,
+        building_indoor_temperature=295.0,
+        shf_external=10.0,
+        qsws_external=0.01,
+    )
+    original.add(FromLCZ(), priority=100)
+    original.add(
+        SlurbModification(mask=AllMask(), varname="h_bld", value=12.0), priority=200
+    )
+
+    serialized = asdict_user_set(original)
+    restored = _deserialize_dataclass(
+        LSMModule, yaml.safe_load(yaml.safe_dump(serialized))
+    )
+
+    assert restored.include_slurb is True
+    assert restored.deep_soil_temperature == 290.0
+    assert restored.building_indoor_temperature == 295.0
+    assert restored.slb_generator is None
+    assert "slb_generator" not in serialized
+    assert "slurb_module" not in serialized
     assert asdict_user_set(restored) == serialized

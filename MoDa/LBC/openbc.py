@@ -6,28 +6,28 @@ from dataclasses import dataclass, field
 import dask
 import xarray as xr
 
-from MoDa.Geometry import GridDalesOpenBC
-from MoDa.LBC.nest_dales_in_dales import (
+from moda.Core.namelist import nml_field
+from moda.Geometry import GridDalesOpenBC
+from moda.LBC.nest_dales_in_dales import (
     boundary_fields_fine,
     initial_fields_fine,
 )
-from MoDa.LBC.nest_dales_in_HARMONIE import (
+from moda.LBC.nest_dales_in_HARMONIE import (
     boundary as harmonie_boundary,
 )
-from MoDa.LBC.nest_dales_in_HARMONIE import (
+from moda.LBC.nest_dales_in_HARMONIE import (
     initfields,
     prep_harmonie,
 )
-from MoDa.LBC.nesting_idx import NestingIndices
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.modular.forcing import (
+from moda.LBC.nesting_idx import NestingIndices
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.modular.forcing import (
     EXTERNAL_FORCING_PRIORITY,
     ForcingSet,
     sounding_forcings,
 )
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

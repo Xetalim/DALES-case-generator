@@ -9,9 +9,9 @@ import numpy as np
 import rasterio
 import xarray as xr
 
-from MoDa.Geometry import GridDales
-from MoDa.IO_helpers import ensure_sorted, raster_to_xarray
-from MoDa.Surface.LSM.LCZ.downloaders import get_cog, get_esa
+from moda.Geometry import GridDales
+from moda.IO_helpers import ensure_sorted, raster_to_xarray
+from moda.Surface.LSM.LCZ.downloaders import get_cog, get_esa
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

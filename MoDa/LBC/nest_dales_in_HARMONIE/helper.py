@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
 
-from MoDa.logging_wrapper import logwrap
+from moda.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

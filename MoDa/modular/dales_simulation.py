@@ -5,23 +5,31 @@ import os
 import pathlib
 import subprocess
 import warnings
-from dataclasses import is_dataclass
+from dataclasses import dataclass, field, is_dataclass
+from datetime import date
 from pathlib import Path, PosixPath
-from typing import Any, Self, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import f90nml
+import numpy as np
+import xarray as xr
 import yaml
 
-from MoDa.Configuration import DefaultNamelistModule
-from MoDa.Geometry.grids import GridDales
-from MoDa.helpers import package_resource_path
-from MoDa.logging_wrapper import case_logging
-from MoDa.modular.forcing import ForcingSet, collect_forcings
-from MoDa.modular.simulation_module import set_nml_section, simulation_module
-from MoDa.module_registry import module_registry
+from moda.Configuration.run_and_time import logger
+from moda.Core.namelist import Namelist, NamelistDoc, nml_field
+from moda.helpers import package_resource_path
+from moda.IO_helpers.atmosphere_writer import AtmosphereProfileWriter
+from moda.logging_wrapper import case_logging
+from moda.modular.forcing import ForcingSet, collect_forcings, var_attrs
+from moda.modular.simulation_module import set_nml_section, simulation_module
+from moda.modular.time_dependent_scalars import TIME_DIM, Z_DIM, resolve_time_axis
+from moda.module_registry import module_registry, register_module
+from moda.vars import get_var_by_name
 
-from .namelist import Namelist, NamelistDoc
 from .serialize_deserialize import _deserialize_dataclass, asdict_user_set
+
+if TYPE_CHECKING:
+    from moda.Geometry.grids import GridDales
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -174,6 +182,194 @@ def check_core_amounts(machine_conf: Any, nml: Namelist) -> tuple[int, int, int]
     return ncores_final, nprocx, nprocy
 
 
+@register_module
+@dataclass
+class DefaultNamelistModule(simulation_module):
+    """Module that configures default RUN section.
+
+    This module sets up default values for the RUN section.
+
+    Args:
+        sim: Parent dales_simulation instance
+    """
+
+    iexpnr: int = nml_field(
+        default=1,
+        init=True,
+        repr=False,
+        section="RUN",
+        key="iexpnr",
+        required=True,
+        metadata={"serialize": True},
+    )
+    iinput: int = nml_field(
+        default=2,
+        init=True,
+        repr=False,
+        section="RUN",
+        key="iinput",
+        required=True,
+        metadata={"serialize": True},
+    )
+    lwarmstart: bool = nml_field(
+        default=False,
+        init=True,
+        repr=False,
+        section="RUN",
+        key="lwarmstart",
+        required=True,
+        metadata={"serialize": True},
+    )
+    trestart: int = nml_field(
+        default=3600,
+        init=True,
+        repr=False,
+        section="RUN",
+        key="trestart",
+        required=True,
+        metadata={"serialize": True},
+    )
+    startfile: str = nml_field(
+        default="initd_latest_x000y000.001",
+        init=True,
+        repr=False,
+        section="RUN",
+        key="startfile",
+        required=True,
+        metadata={"serialize": True},
+    )
+    ladaptive: bool = nml_field(
+        default=True,
+        init=True,
+        repr=False,
+        section="RUN",
+        key="ladaptive",
+        required=True,
+        metadata={"serialize": True},
+    )
+
+    module_name: str = field(
+        default="DefaultNamelistModule", init=False, metadata={"serialize": False}
+    )
+
+
+@register_module
+@dataclass
+class TimeModule(simulation_module):
+    """Simulation time configuration module.
+
+    Handles time-related parameters in the RUN and DOMAIN sections.
+
+    Args:
+        sim: Parent dales_simulation instance
+        xtime: Time within the day in seconds (0-86400)
+        xday: Day of year (1-365/366)
+        xyear: Year
+        runtime: Total runtime in seconds
+        trestart: Restart file write interval in seconds
+    """
+
+    xtime: float = nml_field(
+        default=0.0,
+        section="DOMAIN",
+        key="xtime",
+        required=True,
+        description="UTC start time in hours within the day for DOMAIN:xtime.",
+    )
+    xday: int = nml_field(
+        default=265,
+        section="DOMAIN",
+        key="xday",
+        required=True,
+        description="Day of year (1-365/366) used by DOMAIN:xday.",
+    )
+    xyear: int = nml_field(
+        default=2025,
+        section="DOMAIN",
+        key="xyear",
+        required=True,
+        description="Simulation year used by DOMAIN:xyear.",
+    )
+    enable_datetime: bool = nml_field(
+        default=True,
+        section="namdatetime",
+        key="l_datetime",
+        required=True,
+        description="Enable NAMDATETIME-based calendar interpretation.",
+    )
+    timezone: int = nml_field(
+        default=0,
+        section="namdatetime",
+        key="timezone",
+        description="Timezone offset in hours for NAMDATETIME.",
+    )
+    startyear: int = nml_field(
+        default=2025,
+        section="namdatetime",
+        key="startyear",
+        required=True,
+        description="Calendar start year for NAMDATETIME.",
+    )
+    startmonth: int = nml_field(
+        default=1,
+        section="namdatetime",
+        key="startmonth",
+        required=True,
+        description="Calendar start month for NAMDATETIME.",
+    )
+    startday: int = nml_field(
+        default=1,
+        section="namdatetime",
+        key="startday",
+        required=True,
+        description="Calendar start day for NAMDATETIME.",
+    )
+    inferfromdatetime: bool = field(
+        default=False,
+        metadata={
+            "serialize": True,
+            "doc": "If true, infer DOMAIN:xday and DOMAIN:xyear from NAMDATETIME start date.",
+        },
+    )
+
+    runtime: float | None = nml_field(
+        default=None,
+        section="RUN",
+        key="runtime",
+        required=True,
+        description="Total runtime in seconds for RUN:runtime.",
+    )
+    trestart: float | None = nml_field(
+        default=None,
+        section="RUN",
+        key="trestart",
+        description="Restart write interval in seconds for RUN:trestart.",
+    )
+
+    module_name: str = field(
+        default="TimeModule", init=False, metadata={"serialize": False}
+    )
+
+    def _apply_datetime_inference(self) -> None:
+        """Infer DOMAIN xyear/xday from NAMDATETIME start date when enabled."""
+        if not self.inferfromdatetime:
+            return
+
+        start_dt = date(self.startyear, self.startmonth, self.startday)
+        self.xyear = int(start_dt.year)
+        self.xday = int(start_dt.timetuple().tm_yday)
+
+    def check_settings(self) -> None:
+        """Check time settings validity."""
+        self._apply_datetime_inference()
+        if self.xyear != self.startyear:
+            logger.warning(
+                "TimeModule: xyear (%d) does not match startyear (%d)",
+                self.xyear,
+                self.startyear,
+            )
+
+
 class dales_simulation:
     """Main simulation class that manages multiple simulation modules.
 
@@ -181,7 +377,7 @@ class dales_simulation:
         sim = dales_simulation(case_name, machine_conf)
         sim.add(DefaultNamelistModule())
         sim.add(GridModule())
-        sim.add(LSMModule())
+        sim.add(LSM.LSMModule())
         # ... add other modules ...
         sim._initialize_modules()  # Initialize grid and validation
         sim.do_config()             # Configure namelist
@@ -190,7 +386,13 @@ class dales_simulation:
         sim.write_module_files()       # Write output files
     """
 
-    def __init__(self, case_name: str, machine_conf: Any):
+    def __init__(
+        self,
+        case_name: str,
+        machine_conf: Any,
+        *,
+        timesteps: list[float] | np.ndarray | None = None,
+    ):
         """Initialize DALES simulation with case name and machine settings.
 
         Only reads configuration at this stage. All work is deferred to
@@ -221,6 +423,60 @@ class dales_simulation:
         self._initialized = False
         self._forcings: ForcingSet | None = None
         self._forcings_in_progress = False
+        self.timesteps = list(timesteps) if timesteps is not None else []
+        self.timedep = xr.Dataset()
+
+    def prepare_time_dependent_forcings(self) -> None:
+        """Interpolate module forcings onto their combined time axis by default."""
+        self.timedep = xr.Dataset()
+        vars_by_name = get_var_by_name()
+        forcings = self.forcings()
+        names = [
+            name for name in forcings.series if vars_by_name[name].time_dependent_name
+        ]
+        if names:
+            runtime = self.retrieve_module(TimeModule).runtime
+            time_axis = resolve_time_axis(
+                (forcings.series[name] for name in names),
+                explicit=self.timesteps,
+                runtime=runtime,
+            )
+            if len(time_axis) < 3:
+                raise ValueError(
+                    "Time-dependent forcings require at least 3 time points "
+                    f"(including time=0) for interpolation; got {time_axis.tolist()}"
+                )
+            resampled = forcings.series_dataset(time_axis, names)
+            self.timedep = xr.Dataset(
+                {
+                    vars_by_name[name].time_dependent_name: resampled[
+                        name
+                    ].assign_attrs(
+                        var_attrs(
+                            vars_by_name[name],
+                            " (time-dependent)"
+                            if Z_DIM in resampled[name].dims
+                            else "",
+                        )
+                    )
+                    for name in names
+                }
+            )
+            if Z_DIM not in self.timedep.dims:
+                if self.grid is None:
+                    raise ValueError(
+                        "Time-dependent forcings require a simulation grid"
+                    )
+                self.timedep = self.timedep.assign_coords(
+                    {Z_DIM: np.asarray(self.grid.zt, dtype=float)}
+                )
+        for key, value in (
+            ("ltimedep", bool(names)),
+            ("ntimedep", self.timedep.sizes.get(TIME_DIM, 1) - 1),
+        ):
+            set_nml_section(
+                self.nml, self.nml_docs, "dales_simulation", "PHYSICS", key, value
+            )
 
     def forcings(self) -> ForcingSet:
         """Merged data provided by all modules; computed once and then reused."""
@@ -295,6 +551,9 @@ class dales_simulation:
             return self
         self.modules.append(module)
         self._forcings = None
+        # Imported lazily: grids imports moda.modular, which imports this module.
+        from moda.Geometry.grids import GridDales
+
         if isinstance(module, GridDales):
             self.grid = module
         return self
@@ -363,6 +622,7 @@ class dales_simulation:
         for module in self.modules:
             module.ensure_prepared()
             module.apply_namelist_from_fields()
+        self.prepare_time_dependent_forcings()
         # check core counts against namelist
         ncores_final, nprocx, nprocy = check_core_amounts(self.machine_conf, self.nml)
         self.machine_conf["job_conf"]["numcores"] = ncores_final
@@ -393,10 +653,17 @@ class dales_simulation:
 
     def write_module_files(self) -> None:
         """Call write_files on all registered modules."""
+        if self.exp_id is None:
+            raise ValueError("Experiment ID (exp_id) is not set.")
 
         for module in self.modules:
             module.write_files()
             module.write_files_done = True
+
+        if self.timedep.data_vars:
+            AtmosphereProfileWriter().write_forcings(
+                self.timedep, self.output_path / "input", self.exp_id
+            )
 
     def write_simulation_files(self) -> None:
         """Write namelist and required files to case directory."""
@@ -584,6 +851,8 @@ class dales_simulation:
             "case_name": getattr(self, "case_name", None),
             "modules": modules_yaml,
         }
+        if self.timesteps:
+            sim_dict["timesteps"] = [float(time) for time in self.timesteps]
 
         class NoAliasDumper(yaml.SafeDumper):
             def ignore_aliases(self, data: Any) -> bool:
@@ -614,7 +883,7 @@ class dales_simulation:
             raise ValueError(
                 "machine_conf is required to create a new dales_simulation"
             )
-        sim = dales_simulation(case_name, machine_conf)
+        sim = dales_simulation(case_name, machine_conf, timesteps=data.get("timesteps"))
 
         # Add modules
         for item in data.get("modules", []):

@@ -5,9 +5,9 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from MoDa.Geometry import GridDalesOpenBC
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.logging_wrapper import logwrap
+from moda.Geometry import GridDalesOpenBC
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.logging_wrapper import logwrap
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

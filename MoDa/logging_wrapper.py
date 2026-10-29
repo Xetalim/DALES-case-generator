@@ -10,7 +10,7 @@ from typing import ParamSpec, TypeVar
 
 import yaml
 
-from MoDa.helpers import package_resource_path
+from moda.helpers import package_resource_path
 
 P = ParamSpec("P")
 R = TypeVar("R")

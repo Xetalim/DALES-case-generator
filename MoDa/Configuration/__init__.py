@@ -3,7 +3,6 @@
 These modules configure namelist sections for a DALES simulation.
 """
 
-from .defaultnamelist import DefaultNamelistModule
 from .output_modules import (
     BulkMicrophysicsStatisticsOutputModule,
     CapeModule,
@@ -21,7 +20,7 @@ from .output_modules import (
     VirtualMeasurementOutputModule,
 )
 from .physics_modules import BulkMicrophysicsSettingsModule, TracerSettingsModule
-from .run_and_time import RunModule, TimeModule
+from .run_and_time import RunModule
 from .settings_modules import (
     GeneralPhysicsModule,
     LateralSpongeModule,

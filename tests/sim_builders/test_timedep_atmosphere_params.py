@@ -3,22 +3,18 @@ from __future__ import annotations
 import netCDF4
 import numpy as np
 
-from MoDa import dales_simulation
-from MoDa.Atmosphere import (
+from moda import DefaultNamelistModule, TimeModule, dales_simulation
+from moda.Atmosphere import (
     AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
     lin,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Geometry.grids import GridDales
-from MoDa.modular.time_dependent import (
-    TimedependentModule,
-)
-from MoDa.modular.time_dependent_scalars import TimeDependentScalar
-from MoDa.Surface.surface import ConstantSurfaceTemperatureModule
-from MoDa.vars import *
+from moda.Configuration.output_modules import EasyOutputModule
+from moda.Geometry.grids import GridDales
+from moda.modular.time_dependent_scalars import TimeDependentScalar
+from moda.Surface.surfacemodules import ConstantSurfaceTemperatureModule
+from moda.vars import *
 
 
 def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
@@ -42,7 +38,6 @@ def timedep_atmosphere_with_params_case(machine_conf: dict) -> dales_simulation:
     )
     sim.add(domain_info)
     timesteps = np.append(np.insert(np.linspace(0, 300, num=5), 1, 0.1), 720)
-    sim.add(TimedependentModule(timesteps=timesteps))
 
     atmo = AtmosphereModule()
     atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=2, ddz=1e-3)))

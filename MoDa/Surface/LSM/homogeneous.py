@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
 
-from MoDa.modular.namelist import nml_field
-from MoDa.module_registry import register_module
+from moda.Core.namelist import nml_field
+from moda.module_registry import register_module
 
 from .base import BaseLSMModule
 

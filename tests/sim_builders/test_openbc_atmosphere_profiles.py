@@ -3,19 +3,22 @@ from __future__ import annotations
 import netCDF4
 import numpy as np
 
-from MoDa import (
-    AtmosphereModule,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
-    Nest_in_AtmosphereProfiles,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile, TimedAtmosphereProfile
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.vars import *
+from moda.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    TimedAtmosphereProfile,
+    lin,
+)
+from moda.Configuration import EasyOutputModule
+from moda.LBC import Nest_in_AtmosphereProfiles
+from moda.Surface import ConstantSurfaceTemperatureModule
+from moda.vars import *
 
 
 def _build_openbc_atmo_sim(

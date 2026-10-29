@@ -17,7 +17,6 @@ __all__ = [
     "NoRadiationModule",
     "ParameterizedRadiationModule",
     "RRTMGRadiationModule",
-    "RadiationModule",
     "RteRrtmgpRadiationModule",
     "SurfaceLSMRadiationModule",
     "UserRadiationModule",

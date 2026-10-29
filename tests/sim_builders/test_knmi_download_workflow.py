@@ -6,19 +6,21 @@ from pathlib import Path
 
 import pytest
 
-from MoDa import (
-    AtmosphereModule,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
-    KNMIHarmonieForecastDownloadModule,
-    Nest_in_KNMI,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.vars import qt, thetal, tke, ua, va, wa
+from moda.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
+    lin,
+)
+from moda.LBC import KNMIHarmonieForecastDownloadModule, Nest_in_KNMI
+from moda.Surface import ConstantSurfaceTemperatureModule
+from moda.vars import qt, thetal, tke, ua, va, wa
 from tests.generic_testers import run_simulation_and_check_job
 
 

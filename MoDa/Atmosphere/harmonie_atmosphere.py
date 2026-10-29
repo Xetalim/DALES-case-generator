@@ -5,18 +5,18 @@ import dask.base
 import numpy as np
 import xarray as xr
 
-from MoDa.Atmosphere.external_forcing import ExternalForcingModule
-from MoDa.Atmosphere.les_input import LESInput
-from MoDa.LBC.nest_dales_in_HARMONIE import prep_harmonie
-from MoDa.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
+from moda.Atmosphere.external_forcing import ExternalForcingModule
+from moda.Atmosphere.les_input import LESInput
+from moda.LBC.nest_dales_in_HARMONIE import prep_harmonie
+from moda.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
     KNMIHarmonieForecastDownloadModule,
     resolve_knmi_harmonie_download_module,
 )
-from MoDa.LBC.nest_dales_in_HARMONIE.nest_dales_in_KNMI import (
+from moda.LBC.nest_dales_in_HARMONIE.nest_dales_in_KNMI import (
     KNMIPrepper,
 )
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.module_registry import register_module
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 

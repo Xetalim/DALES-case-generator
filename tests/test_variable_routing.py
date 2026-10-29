@@ -3,13 +3,13 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from MoDa import vars
-from MoDa.Atmosphere import (
+from moda import vars
+from moda.Atmosphere import (
     AtmosphereModule,
     lin,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile, TimedAtmosphereProfile
-from MoDa.modular.dales_simulation import dales_simulation
+from moda.Atmosphere.Profile import AtmosphericProfile, TimedAtmosphereProfile
+from moda.modular.dales_simulation import dales_simulation
 
 
 @pytest.mark.parametrize(

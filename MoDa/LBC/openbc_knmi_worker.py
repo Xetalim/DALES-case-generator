@@ -7,19 +7,19 @@ import dask
 import numpy as np
 import xarray as xr
 
-from MoDa.LBC.nest_dales_in_HARMONIE import (
+from moda.LBC.nest_dales_in_HARMONIE import (
     boundary as harmonie_boundary,
 )
-from MoDa.LBC.nest_dales_in_HARMONIE import (
+from moda.LBC.nest_dales_in_HARMONIE import (
     initfields,
     nest_dales_in_KNMI,
 )
-from MoDa.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
+from moda.LBC.nest_dales_in_HARMONIE.knmi_harmonie_download import (
     resolve_knmi_harmonie_download_module,
 )
-from MoDa.LBC.openbc import OpenBoundaryModule
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.module_registry import register_module
+from moda.LBC.openbc import OpenBoundaryModule
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 

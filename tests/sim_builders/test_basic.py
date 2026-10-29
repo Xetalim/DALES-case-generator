@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from MoDa.Atmosphere import (
+from moda import DefaultNamelistModule, TimeModule
+from moda.Atmosphere import (
     AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
     lin,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.defaultnamelist import DefaultNamelistModule
-from MoDa.Configuration.run_and_time import TimeModule
-from MoDa.Geometry.grids import GridDales
-from MoDa.modular import dales_simulation
-from MoDa.Surface.surface import ConstantSurfaceTemperatureModule
-from MoDa.vars import *
+from moda.Geometry.grids import GridDales
+from moda.modular import dales_simulation
+from moda.Surface.surfacemodules import ConstantSurfaceTemperatureModule
+from moda.vars import *
 
 
 def _build_basic_sim(machine_conf: dict) -> dales_simulation:

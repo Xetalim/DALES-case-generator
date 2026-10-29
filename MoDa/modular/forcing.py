@@ -6,7 +6,7 @@ Every simulation module can act as a provider by implementing
 :func:`collect_forcings` for a custom set of providers.
 
 All data are ``xr.DataArray`` objects keyed by variable name (see
-:mod:`MoDa.vars` for what each variable is used for):
+:mod:`moda.vars` for what each variable is used for):
 
 * atmospheric profiles have the dimension ``zt``,
 * soil profiles ``zs`` and radiation soundings ``lev`` (pressure),
@@ -22,12 +22,12 @@ from typing import TYPE_CHECKING
 
 import xarray as xr
 
-from MoDa.modular.time_dependent_scalars import resample_time
-from MoDa.vars import backrad_o3, backrad_q, backrad_T
+from moda.modular.time_dependent_scalars import resample_time
+from moda.vars import backrad_o3, backrad_q, backrad_T
 
 if TYPE_CHECKING:
-    from MoDa.modular.simulation_module import simulation_module
-    from MoDa.vars import VariableDefinition
+    from moda.modular.simulation_module import simulation_module
+    from moda.vars import VariableDefinition
 
 USER_FORCING_PRIORITY = 100
 EXTERNAL_FORCING_PRIORITY = 50

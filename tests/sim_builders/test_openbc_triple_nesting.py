@@ -5,18 +5,20 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from MoDa import (
-    AtmosphereModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
-    Nest_in_Dales,
-    NestingTopology,
     TimeModule,
     dales_simulation,
+    set_nml_section,
 )
-from MoDa.Atmosphere import lin
-from MoDa.Atmosphere.Profile import AtmosphericProfile, InterpolatedProfile
-from MoDa.Configuration.output_modules import (
+from moda.Atmosphere import (
+    AtmosphereModule,
+    AtmosphericProfile,
+    InterpolatedProfile,
+    lin,
+)
+from moda.Configuration import (
     CapeModule,
     CrossSectionOutputModule,
     FielddumpModule,
@@ -24,28 +26,16 @@ from MoDa.Configuration.output_modules import (
     RadfieldModule,
     StatsModule,
 )
-from MoDa.Geometry.geometry_modification import AllGeometry
-from MoDa.modular.simulation_module import set_nml_section
-from MoDa.Radiation.radiation import RadiationModule
-from MoDa.Surface.LSM import LandUseSet
-from MoDa.Surface.LSM.lsm_module import (
-    LSMModule,
-)
-from MoDa.Surface.LSM.lsm_sources import (
-    FromBofek,
-    FromLCZ,
-    FromTop10,
-)
-from MoDa.Surface.LSM.lu_modifications import LandUseModification
-from MoDa.Surface.LSM.modular_temps_moisture import (
+from moda.Geometry.masks import AllMask
+from moda.LBC import Nest_in_Dales, NestingTopology
+from moda.Radiation import RadiationModule
+from moda.Surface import LSM
+from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
     UniformSkinTemperature,
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
-from MoDa.Surface.LSM.SLuRB.slurb import (
-    SLURBModule,
-)
-from MoDa.vars import *
+from moda.vars import *
 from tests.helpers import run_command_with_report
 
 _GRID_SUPER = {
@@ -140,8 +130,10 @@ def _attach_common_physics(
     #     z0hav=0.0001,
     #     ps=100000.0,
     # )
-    lsm = LSMModule(
-        land_use_set=LandUseSet.IFS,
+    lsm = LSM.LSMModule(
+        include_slurb=True,
+        deep_soil_temperature=293,
+        land_use_set=LSM.LandUseSet.IFS,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -163,24 +155,24 @@ def _attach_common_physics(
         ),
         priority=600,
     )
-    lsm.add(LandUseModification(geometry=AllGeometry(), type="grs"), priority=0)
-    lsm.add(FromLCZ(), priority=100)
     lsm.add(
-        FromTop10(spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data"),
+        LSM.lsm_sources.LandUseModification(geometry=AllMask(), type="grs"),
+        priority=0,
+    )
+    lsm.add(LSM.lsm_sources.FromLCZ(), priority=100)
+    lsm.add(
+        LSM.lsm_sources.FromTop10(
+            spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data"
+        ),
         priority=300,
     )
     lsm.add(
-        FromBofek(spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data"),
+        LSM.lsm_sources.FromBofek(
+            spatial_data_path="/Users/andrevanginkel/Downloads/spatial_data"
+        ),
         priority=400,
     )
     sim.add(lsm)
-
-    slurb = SLURBModule(deep_soil_temperature=293)
-    # slurb += SLURBModification(
-    #     geometry=AllGeometry(),
-    #     vars=[SLURBVariableModification(varname="albedo_av", value=10)],
-    # )
-    sim.add(slurb)
 
     sim.add(
         RadiationModule(

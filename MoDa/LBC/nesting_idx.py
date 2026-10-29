@@ -4,7 +4,7 @@ from typing import Any, Optional
 import numpy as np
 import numpy.typing as npt
 
-from MoDa.Geometry import GridDales
+from moda.Geometry import GridDales
 
 
 @dataclass

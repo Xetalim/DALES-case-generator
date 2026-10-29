@@ -2,9 +2,9 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Literal, Self
 
-from MoDa.Geometry.geometry_modification import GeometricModification
-from MoDa.module_registry import register_module
-from MoDa.Surface.LSM.lsm_data import LandUseName
+from moda.Geometry.ModifierClass import GeometricModification
+from moda.module_registry import register_module
+from moda.Surface.LSM.lsm_data import LandUseName
 
 
 @register_module

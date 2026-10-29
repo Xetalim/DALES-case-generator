@@ -4,27 +4,27 @@ from dataclasses import Field, dataclass, field, fields, is_dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from MoDa.modular.forcing import (
-    USER_FORCING_PRIORITY,
-    ForcingSet,
-    var_attrs,
-)
-from MoDa.modular.namelist import (
+from moda.Core.namelist import (
     Namelist,
     NamelistDoc,
     get_namelist_spec,
 )
-from MoDa.modular.time_dependent_scalars import (
+from moda.modular.forcing import (
+    USER_FORCING_PRIORITY,
+    ForcingSet,
+    var_attrs,
+)
+from moda.modular.time_dependent_scalars import (
     Z_DIM,
     TimeDependentScalar,
     value_at,
 )
-from MoDa.vars import get_var_by_name
+from moda.vars import get_var_by_name
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
-    from MoDa.Geometry.grids import GridDales
-    from MoDa.modular.dales_simulation import (
+    from moda.Geometry.grids import GridDales
+    from moda.modular.dales_simulation import (
         dales_simulation,
     )
 
@@ -113,7 +113,7 @@ class simulation_module(ABC):
 
     def _attach_to_sim(self, sim: "dales_simulation") -> None:
         """Bind before invoking subclass attachment hooks."""
-        from MoDa.modular.dales_simulation import dales_simulation
+        from moda.modular.dales_simulation import dales_simulation
 
         if not isinstance(sim, dales_simulation):
             raise TypeError("sim must be a dales_simulation instance")

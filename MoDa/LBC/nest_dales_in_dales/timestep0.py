@@ -7,16 +7,16 @@ from typing import TYPE_CHECKING
 import numpy as np
 import xarray as xr
 
-from MoDa.Geometry.grids import GridDalesOpenBC
-from MoDa.LBC.nest_dales_in_dales.load_any_boundary_var import (
+from moda.Geometry.grids import GridDalesOpenBC
+from moda.LBC.nest_dales_in_dales.load_any_boundary_var import (
     get_boundary_dict,
     load_any_boundary_var,
 )
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.logging_wrapper import logwrap
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.logging_wrapper import logwrap
 
 if TYPE_CHECKING:
-    from MoDa.LBC.nesting_idx import NestingIndices
+    from moda.LBC.nesting_idx import NestingIndices
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -215,7 +215,7 @@ def boundaries_timestep0(
     # Get initial boundary fields from previous simulation, specifically,
     # the last time step in the output of the previous simulation
     else:
-        from MoDa.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
+        from moda.LBC.nest_dales_in_dales.get_all_dales_boundaries import (
             _prepare_boundary_variable,
             _select_boundary_files,
         )

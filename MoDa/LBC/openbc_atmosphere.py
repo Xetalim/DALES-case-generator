@@ -7,23 +7,23 @@ from datetime import UTC, datetime
 import numpy as np
 import xarray as xr
 
-from MoDa.Atmosphere import (
+from moda.Atmosphere import (
     InterpolatedProfile,
     TimedAtmosphereProfile,
     profiles_to_forcings,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile
-from MoDa.LBC.nest_dales_in_dales import boundary_fields_fine
-from MoDa.LBC.openbc import OpenBoundaryModule
-from MoDa.LBC.openboundary_config import OpenBoundaryConfig
-from MoDa.modular.time_dependent_scalars import (
+from moda.Atmosphere.Profile import AtmosphericProfile
+from moda.LBC.nest_dales_in_dales import boundary_fields_fine
+from moda.LBC.openbc import OpenBoundaryModule
+from moda.LBC.openboundary_config import OpenBoundaryConfig
+from moda.modular.time_dependent_scalars import (
     TIME_DIM,
     Z_DIM,
     resample_time,
     resolve_time_axis,
 )
-from MoDa.module_registry import register_module
-from MoDa.vars import ProfileVariable
+from moda.module_registry import register_module
+from moda.vars import ProfileVariable
 
 logger = logging.getLogger(__name__)
 

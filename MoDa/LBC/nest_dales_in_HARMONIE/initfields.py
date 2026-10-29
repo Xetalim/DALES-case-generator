@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import xarray as xr
 
-from MoDa.Geometry.grids import GridDalesOpenBC
-from MoDa.logging_wrapper import logwrap
+from moda.Geometry.grids import GridDalesOpenBC
+from moda.logging_wrapper import logwrap
 
 from .Transform import Transform
 
 if TYPE_CHECKING:
-    from MoDa.LBC.openboundary_config import OpenBoundaryConfig
+    from moda.LBC.openboundary_config import OpenBoundaryConfig
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)

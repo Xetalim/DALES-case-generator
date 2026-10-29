@@ -2,9 +2,9 @@ from dataclasses import FrozenInstanceError, dataclass, field, fields
 
 import pytest
 
-from MoDa.modular.dales_simulation import dales_simulation
-from MoDa.modular.namelist import NamelistSpec, get_namelist_spec, nml_field
-from MoDa.modular.simulation_module import simulation_module
+from moda.Core.namelist import NamelistSpec, get_namelist_spec, nml_field
+from moda.modular.dales_simulation import dales_simulation
+from moda.modular.simulation_module import simulation_module
 
 
 @dataclass

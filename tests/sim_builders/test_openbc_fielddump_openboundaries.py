@@ -2,20 +2,18 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from MoDa import (
-    AtmosphereModule,
-    ConstantSurfaceTemperatureModule,
+from moda import (
     DefaultNamelistModule,
     GridDales,
-    Nest_in_Dales,
-    NestingTopology,
     TimeModule,
     dales_simulation,
 )
-from MoDa.Atmosphere.Profile import AtmosphericProfile
-from MoDa.Configuration.output_modules import EasyOutputModule
-from MoDa.modular.simulation_module import set_nml_section
-from MoDa.vars import *
+from moda.Atmosphere import AtmosphereModule, AtmosphericProfile
+from moda.Configuration import EasyOutputModule
+from moda.LBC import Nest_in_Dales, NestingTopology
+from moda.modular.simulation_module import set_nml_section
+from moda.Surface import ConstantSurfaceTemperatureModule
+from moda.vars import *
 from tests.helpers import run_command_with_report
 from tests.sim_builders.test_openbc import (
     _assert_crosssection_matches_fielddump_scalar_slice_coord,

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import xarray as xr
 
-from MoDa.LBC.nest_dales_in_HARMONIE import nest_dales_in_KNMI as knmi
+from moda.LBC.nest_dales_in_HARMONIE import nest_dales_in_KNMI as knmi
 
 
 def test_grib_variables_keep_independent_height_coordinates(monkeypatch):

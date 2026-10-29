@@ -7,8 +7,8 @@ import rasterio
 import xarray as xr
 from rasterio.enums import Resampling
 
-from MoDa.Geometry import GridDales
-from MoDa.IO_helpers import ensure_sorted, get_reproject, raster_to_xarray
+from moda.Geometry import GridDales
+from moda.IO_helpers import ensure_sorted, get_reproject, raster_to_xarray
 
 logger = logging.getLogger(__name__)
 

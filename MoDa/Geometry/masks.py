@@ -1,13 +1,12 @@
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
 
-from MoDa.Geometry.grids import GridDales
-from MoDa.module_registry import register_module
+from moda.module_registry import register_module
 
 logger = logging.getLogger(__name__)
 logger.debug("Entered module: %s", __name__)
@@ -24,7 +23,7 @@ class GeometryModifier(Protocol):
 
 @register_module
 @dataclass
-class AllGeometry:
+class AllMask:
     """Select the full 2D horizontal domain."""
 
     def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
@@ -33,7 +32,7 @@ class AllGeometry:
 
 @register_module
 @dataclass
-class CircleRealGeometry:
+class CircleRealMask:
     """Circular mask in real-space coordinates (meters)."""
 
     x0: float
@@ -49,7 +48,7 @@ class CircleRealGeometry:
 
 @register_module
 @dataclass
-class RectangleRealGeometry:
+class RectangleRealMask:
     """Rectangular mask in real-space coordinates (meters)."""
 
     minx: float
@@ -68,7 +67,7 @@ class RectangleRealGeometry:
 
 @register_module
 @dataclass
-class RectangleIdxGeometry:
+class RectangleIdxMask:
     """Rectangular mask in index-space coordinates."""
 
     minx: int
@@ -87,7 +86,7 @@ class RectangleIdxGeometry:
 
 @register_module
 @dataclass
-class CircleIdxGeometry:
+class CircleIdxMask:
     """Circular mask in index-space coordinates."""
 
     idx0: int
@@ -102,7 +101,7 @@ class CircleIdxGeometry:
 
 @register_module
 @dataclass
-class MaskGeometry:
+class ExplicitArrayMask:
     """Explicit boolean mask geometry.
 
     The provided mask must have shape ``(jtot, itot)`` after conversion to a
@@ -115,7 +114,7 @@ class MaskGeometry:
         mask_arr = np.asarray(self.mask)
         if mask_arr.shape != modifier.meshx.shape:
             raise ValueError(
-                "MaskGeometry shape mismatch: "
+                "ExplicitArrayMask shape mismatch: "
                 f"expected {modifier.meshx.shape}, got {mask_arr.shape}"
             )
         return mask_arr.astype(bool)
@@ -123,7 +122,7 @@ class MaskGeometry:
 
 @register_module
 @dataclass
-class FuncGeometry:
+class FuncMask:
     """Explicit boolean function geometry.
 
     The provided function must return a boolean array with shape ``(jtot, itot)``
@@ -136,7 +135,7 @@ class FuncGeometry:
         mask_arr = np.asarray(self.func(modifier))
         if mask_arr.shape != modifier.meshx.shape:
             raise ValueError(
-                "FuncGeometry shape mismatch: "
+                "FuncMask shape mismatch: "
                 f"expected {modifier.meshx.shape}, got {mask_arr.shape}"
             )
         return mask_arr.astype(bool)
@@ -144,7 +143,7 @@ class FuncGeometry:
 
 @register_module
 @dataclass
-class CheckerboardIdxGeometry:
+class CheckerboardIdxMask:
     """Checkerboard mask in index-space coordinates.
 
     Cells are grouped in square blocks of size ``block`` (in grid cells).
@@ -158,9 +157,7 @@ class CheckerboardIdxGeometry:
 
     def to_mask(self, modifier: GeometryModifier) -> npt.NDArray[np.bool_]:
         if self.block <= 0:
-            raise ValueError(
-                f"CheckerboardIdxGeometry.block must be > 0, got {self.block}"
-            )
+            raise ValueError(f"CheckerboardIdxMask.block must be > 0, got {self.block}")
 
         parity: npt.NDArray[np.bool_] = (
             ((modifier.idxmesh - self.phase_x) // self.block)
@@ -171,87 +168,13 @@ class CheckerboardIdxGeometry:
         return ~parity
 
 
-GeometrySpec = (
-    AllGeometry
-    | CircleRealGeometry
-    | RectangleRealGeometry
-    | RectangleIdxGeometry
-    | CircleIdxGeometry
-    | MaskGeometry
-    | FuncGeometry
-    | CheckerboardIdxGeometry
+MaskSpec = (
+    AllMask
+    | CircleRealMask
+    | RectangleRealMask
+    | RectangleIdxMask
+    | CircleIdxMask
+    | ExplicitArrayMask
+    | FuncMask
+    | CheckerboardIdxMask
 )
-
-
-@dataclass
-class GeometricModification:
-    """Base class for modifications that target a typed horizontal geometry."""
-
-    geometry: GeometrySpec = field(default_factory=AllGeometry)
-
-
-# ModificationT = TypeVar(
-#     "ModificationT",
-#     bound=GeometricModification,
-# )
-
-
-class ModifierClass[ModificationT: GeometricModification]:
-    """
-    A class for generating and applying geometric modifications to DALES grid data.
-
-    This class provides utilities to create various geometric shapes (circles, rectangles)
-    in both real-space and index-space coordinates on a DALES grid, and to apply
-    modifications based on these geometries.
-
-    Attributes:
-        x (ndarray): X-coordinates of the grid.
-        y (ndarray): Y-coordinates of the grid.
-        meshx (ndarray): 2D mesh grid of X-coordinates.
-        meshy (ndarray): 2D mesh grid of Y-coordinates.
-        idxmesh (ndarray): 2D mesh grid of X-indices.
-        idymesh (ndarray): 2D mesh grid of Y-indices.
-
-    Args:
-        grid (GridDales): A GridDales object containing grid coordinate information.
-    """
-
-    x: npt.NDArray[np.floating[Any]]
-    y: npt.NDArray[np.floating[Any]]
-    meshx: npt.NDArray[np.floating[Any]]
-    meshy: npt.NDArray[np.floating[Any]]
-    idxmesh: npt.NDArray[np.integer[Any]]
-    idymesh: npt.NDArray[np.integer[Any]]
-    grid: GridDales
-
-    def __init__(self, grid: GridDales):
-        self.x = grid.xt
-        self.y = grid.yt
-        self.meshx, self.meshy = np.meshgrid(self.x, self.y)
-        self.idxmesh, self.idymesh = np.meshgrid(
-            np.arange(len(self.x)), np.arange(len(self.y))
-        )
-        self.grid = grid
-
-    def apply_modification(self, modification: ModificationT) -> None:
-        """Apply a typed modification object to this modifier."""
-
-        if not isinstance(modification, GeometricModification):
-            raise TypeError(
-                "Modification must inherit GeometricModification, got "
-                f"{type(modification)}"
-            )
-        geometry_obj = modification.geometry
-        if not hasattr(geometry_obj, "to_mask") or not callable(geometry_obj.to_mask):
-            raise TypeError(
-                f"geometry must implement to_mask(modifier), got {type(geometry_obj)}"
-            )
-        geometry = geometry_obj.to_mask(self)
-        self.do_modification(geometry, modification)
-
-    def do_modification(
-        self, geometry: npt.NDArray[np.bool_], modification: ModificationT
-    ) -> None:
-        raise NotImplementedError(
-            "Can't call do_modification of superclass, call the subclass instead"
-        )

@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Literal, overload
 import numpy as np
 from numpy.typing import ArrayLike
 
-from MoDa.modular.namelist import nml_field
-from MoDa.modular.simulation_module import simulation_module
-from MoDa.module_registry import register_module
+from moda.Core.namelist import nml_field
+from moda.modular.simulation_module import simulation_module
+from moda.module_registry import register_module
 
 if TYPE_CHECKING:
-    from MoDa.Geometry.grids import GridDales
+    from moda.Geometry.grids import GridDales
 
 
 def _normalize_horizontal_points(
