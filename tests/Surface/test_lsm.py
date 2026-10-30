@@ -126,11 +126,11 @@ def lsm_emission_ags_co2_case(machine_conf: dict) -> dales_simulation:
 
     if "co2" not in get_var_by_name():
         register_var(
-            VariableDefinition(
+            ProfileVariable(
                 name="co2",
                 long_name="Carbon Dioxide (CO2)",
                 unit="ppm",
-                can_be_time_dependent=True,
+                time_dependent_name="co2",
             )
         )
     co2_var = get_var_by_name()["co2"]

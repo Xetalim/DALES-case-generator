@@ -133,7 +133,7 @@ def _attach_common_physics(
     lsm = LSM.LSMModule(
         include_slurb=True,
         deep_soil_temperature=293,
-        land_use_set=LSM.LandUseSet.IFS,
+        land_use_set=LSM.LandUseSet.DEPAC,
         ps=100000,
         z0mav=0.0001,
         z0hav=0.0001,
@@ -156,7 +156,7 @@ def _attach_common_physics(
         priority=600,
     )
     lsm.add(
-        LSM.lsm_sources.LandUseModification(geometry=AllMask(), type="grs"),
+        LSM.lsm_sources.LandUseModification(mask=AllMask(), type="grs"),
         priority=0,
     )
     lsm.add(LSM.lsm_sources.FromLCZ(), priority=100)

@@ -1,12 +1,14 @@
 # Dales input case generator
 This repository contains the `moda` Python package, which generates complete DALES input cases (except for the DALES binary) using a composable Python API.
 
-Cases are defined in Python using the `dales_simulation` class and configuration modules (grid, atmosphere, surface/LSM, radiation, timing, etc.).
+<!-- Cases are defined in Python using the `dales_simulation` class and configuration modules (grid, atmosphere, surface/LSM, radiation, timing, etc.).
 Start with the [documentation guide](docs/index.rst). Build the HTML site with
-`sphinx-build -E -b html docs docs/_build/html`.
+`sphinx-build -E -b html docs docs/_build/html`. -->
 
-This tool requires Python >=3.13. Install the published package with:
+This tool requires Python >=3.13. Requirements are found in requirements.txt (although they might not be up to date...)
 
+<!-- Install the published package with: -->
+<!-- 
 ```shell
 python -m pip install dales-generator
 ```
@@ -15,30 +17,134 @@ For development, clone the repository and install it into your active environmen
 
 ```shell
 poetry install --with test
-```
+``` -->
 
-Case scripts can be run from any directory. Bundled job and input templates are read from the installed package, while logs are written under `logs/` in the current working directory.
+<!-- Case scripts can be run from any directory. Bundled job and input templates are read from the installed package, while logs are written under `logs/` in the current working directory. -->
 
 ## Usage
 1. Edit `machine_conf.yaml` to point to your DALES source and DALES binary. The `case_conf.BASE_OUTPUT_PATH` entry controls where generated cases are written. Tildes (~) do not work in this path (at least on my device).
 2. In Python, load `machine_conf.yaml`, construct a `dales_simulation`, add modules, and run the preprocessing pipeline, for example:
 
    ```python
+   import numpy as np
+   import pytest
    import yaml
+   from pyproj import CRS, Transformer
 
-   import moda
+   from moda import DefaultNamelistModule, TimeModule, dales_simulation
+   from moda.Atmosphere import (
+      AtmosphereModule,
+      AtmosphericProfile,
+      InterpolatedProfile,
+      lin,
+   )
+   from moda.Configuration.output_modules import (
+      ColumnStatisticsOutputModule,
+      VirtualMeasurementOutputModule,
+      TimestatModule,
+      StatsModule,
+      FielddumpModule,
+   )
+   from moda.Geometry.grids import GridDales
+   from moda.Geometry.masks import AllMask, RectangleIdxMask
+   from moda.IBM import FromAHN, FromGlobalDEM, IBMModifications, IBMPostProcessing
+   from moda.IBM import ibm_data_sources as ibm_module
+   from moda.IBM.ibm import IBMModification, IBMModule
+   from moda.modular.serialize_deserialize import _deserialize_dataclass, asdict_user_set
+   from moda.Radiation.radiation import RadiationModule
+   from moda.Surface.LSM import LandUseSet
+   from moda.Surface.LSM.lsm_module import LSMModule
+   from moda.Surface.LSM.lsm_sources.lu_modifications import LandUseModification
+   from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
+      UniformSkinTemperature,
+      UniformSoilMoisture,
+      UniformSoilTemperature,
+   )
+   from moda.Surface.surfacemodules import ConstantSurfaceTemperatureModule
+   from moda.vars import *
 
    with open("machine_conf.yaml") as f:
 	   machine_conf = yaml.safe_load(f)
 
-   sim = moda.dales_simulation("basic_case", machine_conf)
-   sim += moda.DefaultNamelistModule()
-   # ... add grid, atmosphere, surface/LSM, radiation, time modules ...
-   sim.sim_preprocessing_pipeline()
+    center_x, center_y = 85270.024211, 446047.945184
+    rd_crs = CRS.from_epsg(28992)
+    longitude, latitude = Transformer.from_crs(
+        rd_crs, "EPSG:4326", always_xy=True
+    ).transform(center_x, center_y)
+
+    sim = dales_simulation("IBM_delft", machine_conf)
+    sim.add(DefaultNamelistModule())
+    sim.add(
+        GridDales(
+            itot=128,
+            jtot=128,
+            kmax=64,
+            xsize=160.0,
+            ysize=160.0,
+            kmax_soil=4,
+            xlat=latitude,
+            xlon=longitude,
+            x0=center_x - 80.0,
+            y0=center_y - 80.0,
+            alpha=1.0,
+            dz0=5.0,
+            wkt=rd_crs.to_wkt(),
+        )
+    )
+
+    atmo = AtmosphereModule()
+    for variable, surface_value, gradient in [
+        (ua, 0.5, 1e-3),
+        (va, 0.0, 0.0),
+        (thetal, 293.15, 1e-2),
+        (qt, 0.0, 0.0),
+        (wa, 0.0, 0.0),
+    ]:
+        atmo.add(
+            AtmosphericProfile(
+                variable=variable,
+                shape=lin(surf_val=surface_value, ddz=gradient),
+            )
+        )
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
+    )
+    sim.add(atmo)
+    sim.add(TimeModule(xday=2, xtime=12.0, xyear=2023, runtime=60))
+    sim.add(RadiationModule(iradiation=2))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            ps=100000,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            albedoav=0.22,
+        )
+    )
+
+    ibm = IBMModule(thlibm=293.15, thlroof=293.15)
+    ibm.add(FromAHN(), priority=0)
+    sim.add(ibm)
+    # virtualmeasurement only works with lsm atm
+    # sim.add(
+    #     VirtualMeasurementOutputModule(
+    #         x=center_x,
+    #         y=center_y,
+    #         dtav=10,
+    #     )
+    # )
+    sim.add(StatsModule(dtav=10, timeav=10, enabled=True))
+    sim.add(ColumnStatisticsOutputModule(x=center_x, y=center_y))
+    sim.add(FielddumpModule(dtav=10))
+    sim.sim_preprocessing_pipeline() # generates the case
    ```
 
 This will create an output directory (based on the case name and machine configuration) containing a DALES namelist, `job.001`, and all required input files.
-
+<!-- 
 ### Public API
 
 Start with `import moda`. Core building blocks are available directly:
@@ -75,7 +181,7 @@ lsm = LSM.LSMModule(
 )
 lsm.add(
    LSM.LandUseModification(
-      geometry=moda.Geometry.AllMask(), type="grs"
+      mask=moda.Geometry.AllMask(), type="grs"
    ),
    priority=0,
 )
@@ -177,4 +283,4 @@ simulation; adding the same instance again does not repeat its attachment hook.
 
 ## Changelog:
  -Allowed RTE-RRTMGP runs to be done. Added machine_conf.yaml to prevent having to edit scripts to customise.
- -Added some SLURB model input files (not yet useful)
+ -Added some SLURB model input files (not yet useful) -->

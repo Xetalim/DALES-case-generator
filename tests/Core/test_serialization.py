@@ -16,6 +16,7 @@ from moda.vars import ua
 
 def test_ordinary_dataclass_filters_defaults_and_runtime_fields():
     """Serialization omits defaults and runtime-only fields but retains user-set values."""
+
     @dataclass
     class Configuration:
         value: int = 2
@@ -52,6 +53,7 @@ def test_time_dependent_surface_flux_roundtrips_from_quoted_annotation():
 
 def test_typed_container_recursively_constructs_dataclasses():
     """Deserializing a typed nested container recursively constructs its dataclass elements."""
+
     @dataclass
     class Configuration:
         value: int
@@ -64,6 +66,7 @@ def test_typed_container_recursively_constructs_dataclasses():
 
 def test_selected_union_constructor_errors_are_not_swallowed():
     """Errors from the selected union member constructor propagate to the caller."""
+
     @dataclass
     class Configuration:
         value: int
@@ -77,6 +80,7 @@ def test_selected_union_constructor_errors_are_not_swallowed():
 
 def test_runtime_fields_are_not_passed_to_constructor():
     """Serialized runtime fields are ignored when reconstructing init-disabled fields."""
+
     @dataclass
     class Configuration:
         value: int

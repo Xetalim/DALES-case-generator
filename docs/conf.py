@@ -50,6 +50,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "pydata_sphinx_theme"  # pylint: disable=C0103
 
+
 def _append_namelist_field_docs(what, obj, lines):
     """Append a "Namelist parameters" section for simulation modules.
 

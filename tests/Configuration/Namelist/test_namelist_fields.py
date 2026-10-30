@@ -31,6 +31,7 @@ def attached(module):
 
 def test_spec_and_dataclass_options():
     """nml_field stores typed metadata and forwards standard dataclass options."""
+
     @dataclass
     class Settings:
         values: list = nml_field(
@@ -67,6 +68,7 @@ def test_default_key_and_optional_value():
 
 def test_required_and_conflict():
     """Required fields must be set, and conflicting repeated assignments raise ValueError."""
+
     @dataclass
     class Required(NamelistModule):
         value: float | None = nml_field(
@@ -92,6 +94,7 @@ def test_required_and_conflict():
 )
 def test_multiple_targets(value, expected):
     """Multiple section/key targets broadcast scalars, arrays, or explicit mappings."""
+
     @dataclass
     class Multiple(NamelistModule):
         value: object = nml_field(section=["A", "B"], key=["x", "y"], default=None)
@@ -118,6 +121,7 @@ def test_single_target_array_is_not_split():
 )
 def test_obsolete_metadata_is_rejected(metadata):
     """Legacy namelist metadata is rejected unless declared through nml_field."""
+
     @dataclass
     class Invalid:
         value: int = field(default=1, metadata=metadata)

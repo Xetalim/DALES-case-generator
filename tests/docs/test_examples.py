@@ -11,9 +11,7 @@ from docs.examples.time_dependent_case import build_time_dependent_case
     [build_first_case, build_time_dependent_case],
     ids=["first-case", "time-dependent-case"],
 )
-def test_documented_case_generates_expected_files(
-    tmp_path: Path, build_case
-) -> None:
+def test_documented_case_generates_expected_files(tmp_path: Path, build_case) -> None:
     sim = build_case(tmp_path / "generated")
     assert (sim.output_path / "job.001").is_file()
     assert (sim.output_path / "input/namoptions.001").is_file()

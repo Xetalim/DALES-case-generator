@@ -75,6 +75,7 @@ def test_active_bindings_are_typed(module_name):
 )
 def test_docs_render_typed_bindings(section, key, targets):
     """Generated API documentation includes each typed field target and description."""
+
     @dataclass
     class Documented(NamelistModule):
         value: float = nml_field(
@@ -98,6 +99,7 @@ def test_docs_render_typed_bindings(section, key, targets):
 
 def test_docs_reject_legacy_metadata():
     """Documentation generation rejects dataclasses that still use legacy metadata."""
+
     @dataclass
     class Invalid(NamelistModule):
         value: float = field(default=1.0, metadata={"nml": "TEST"})

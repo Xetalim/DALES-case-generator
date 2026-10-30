@@ -14,6 +14,7 @@ from tests.sim_builders.test_basic import _build_basic_sim
 from tests.Emission.test_emission import emission_case
 from tests.IBM.test_ibm import (
     IBM_case,
+    IBM_delft_case,
     assert_ibm_files_written,
 )
 from tests.Atmosphere.test_knmi_download_workflow import knmi_download_workflow_case
@@ -79,6 +80,7 @@ from tests.Atmosphere.test_timedep_atmosphere_params import (
         ),
         pytest.param(sim_2_case, id="sim_2_case"),
         pytest.param(IBM_case, id="IBM_case"),
+        pytest.param(IBM_delft_case, id="IBM_delft_case"),
         pytest.param(simple_LSM_case, id="simple_LSM_case"),
         pytest.param(LSM_with_HARM_soil, id="LSM_with_HARM_soil"),
         pytest.param(SLURB_LCZ_case, id="SLURB_LCZ_case"),
@@ -109,6 +111,7 @@ def sim_builder(request) -> Callable[[dict], dales_simulation]:
         ),
         pytest.param(sim_2_case, id="sim_2_case"),
         pytest.param(IBM_case, id="IBM_case"),
+        pytest.param(IBM_delft_case, id="IBM_delft_case"),
         pytest.param(simple_LSM_case, id="simple_LSM_case"),
         pytest.param(LSM_with_HARM_soil, id="LSM_with_HARM_soil"),
         pytest.param(SLURB_LCZ_case, id="SLURB_LCZ_case"),

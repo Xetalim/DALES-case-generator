@@ -5,6 +5,7 @@ from unittest.mock import Mock, call
 import numpy as np
 import pytest
 import yaml
+from pyproj import CRS, Transformer
 
 from moda import DefaultNamelistModule, TimeModule, dales_simulation
 from moda.Atmosphere import (
@@ -13,18 +14,19 @@ from moda.Atmosphere import (
     InterpolatedProfile,
     lin,
 )
-from moda.Geometry.grids import GridDales
-from moda.Geometry.masks import (
-    AllMask,
-    RectangleIdxMask,
+from moda.Configuration.output_modules import (
+    ColumnStatisticsOutputModule,
+    VirtualMeasurementOutputModule,
+    TimestatModule,
+    StatsModule,
+    FielddumpModule,
 )
+from moda.Geometry.grids import GridDales
+from moda.Geometry.masks import AllMask, RectangleIdxMask
 from moda.IBM import FromAHN, FromGlobalDEM, IBMModifications, IBMPostProcessing
 from moda.IBM import ibm_data_sources as ibm_module
 from moda.IBM.ibm import IBMModification, IBMModule
-from moda.modular.serialize_deserialize import (
-    _deserialize_dataclass,
-    asdict_user_set,
-)
+from moda.modular.serialize_deserialize import _deserialize_dataclass, asdict_user_set
 from moda.Radiation.radiation import RadiationModule
 from moda.Surface.LSM import LandUseSet
 from moda.Surface.LSM.lsm_module import LSMModule
@@ -34,7 +36,87 @@ from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
     UniformSoilMoisture,
     UniformSoilTemperature,
 )
+from moda.Surface.surfacemodules import ConstantSurfaceTemperatureModule
 from moda.vars import *
+
+
+def IBM_delft_case(machine_conf: dict) -> dales_simulation:
+    """Construct an AHN-based Delft case with constant surface temperature."""
+    center_x, center_y = 85270.024211, 446047.945184
+    rd_crs = CRS.from_epsg(28992)
+    longitude, latitude = Transformer.from_crs(
+        rd_crs, "EPSG:4326", always_xy=True
+    ).transform(center_x, center_y)
+
+    sim = dales_simulation("IBM_delft", machine_conf)
+    sim.add(DefaultNamelistModule())
+    sim.add(
+        GridDales(
+            itot=128,
+            jtot=128,
+            kmax=64,
+            xsize=160.0,
+            ysize=160.0,
+            kmax_soil=4,
+            xlat=latitude,
+            xlon=longitude,
+            x0=center_x - 80.0,
+            y0=center_y - 80.0,
+            alpha=1.0,
+            dz0=5.0,
+            wkt=rd_crs.to_wkt(),
+        )
+    )
+
+    atmo = AtmosphereModule()
+    for variable, surface_value, gradient in [
+        (ua, 0.5, 1e-3),
+        (va, 0.0, 0.0),
+        (thetal, 293.15, 1e-2),
+        (qt, 0.0, 0.0),
+        (wa, 0.0, 0.0),
+    ]:
+        atmo.add(
+            AtmosphericProfile(
+                variable=variable,
+                shape=lin(surf_val=surface_value, ddz=gradient),
+            )
+        )
+    atmo.add(
+        InterpolatedProfile(
+            variable=tke,
+            z=[0, 4000, 5000],
+            points=[1, 1e-8, 1e-8],
+        )
+    )
+    sim.add(atmo)
+    sim.add(TimeModule(xday=2, xtime=12.0, xyear=2023, runtime=60))
+    sim.add(RadiationModule(iradiation=2))
+    sim.add(
+        ConstantSurfaceTemperatureModule(
+            thls=293.15,
+            ps=100000,
+            z0mav=0.0001,
+            z0hav=0.0001,
+            albedoav=0.22,
+        )
+    )
+
+    ibm = IBMModule(thlibm=293.15, thlroof=293.15)
+    ibm.add(FromAHN(), priority=0)
+    sim.add(ibm)
+    # virtualmeasurement only works with lsm atm
+    # sim.add(
+    #     VirtualMeasurementOutputModule(
+    #         x=center_x,
+    #         y=center_y,
+    #         dtav=10,
+    #     )
+    # )
+    sim.add(StatsModule(dtav=10, timeav=10, enabled=True))
+    sim.add(ColumnStatisticsOutputModule(x=center_x, y=center_y))
+    sim.add(FielddumpModule(dtav=10))
+    return sim
 
 
 def IBM_case(machine_conf: dict) -> dales_simulation:
@@ -332,6 +414,7 @@ def test_ibm_postprocessing_combines_sources_without_changing_previous_layers(
 
 def test_ibm_accepts_custom_source(ibm_sources):
     """A custom source implementing apply_source can set the IBM height field."""
+
     class CustomSource:
         def apply_source(self, context):
             context.bc_height[:] = 12
