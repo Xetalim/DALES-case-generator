@@ -7,6 +7,7 @@ from numpy.typing import NDArray
 from moda.Geometry import GridDales
 from moda.IO_helpers.raster import fix_lambert_offsets
 from moda.module_registry import register_module
+from .context import LSMSourceContext
 
 
 @register_module
@@ -19,6 +20,10 @@ class VaryingSkinTemperature:
     Init: provide values as a list or array-like object.
     """
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        context.writer.set_skin_temperature_array(self.skin_temperature, lu_type="all")
+        context.set_aquatic_skin_temperature(self.aquatic_skin_temperature)
+
 
 @register_module
 @dataclass
@@ -28,6 +33,9 @@ class VaryingSoilTemperature:
 
     Init: provide values as a list or array-like object.
     """
+
+    def apply_source(self, context: LSMSourceContext) -> None:
+        context.writer.soil.set_temperature(self.soil_temperature)
 
 
 @register_module
@@ -39,6 +47,9 @@ class VaryingSoilMoisture:
     Init: provide values as a list or array-like object.
     """
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        context.writer.soil.set_moisture(self.soil_moisture)
+
 
 @register_module
 @dataclass
@@ -46,6 +57,10 @@ class UniformSkinTemperature:
     skin_temperature: float
     aquatic_skin_temperature: float | None = None
     """Uniform skin temperature (K) across the horizontal domain."""
+
+    def apply_source(self, context: LSMSourceContext) -> None:
+        context.writer.set_skin_temperature(self.skin_temperature, lu_type="all")
+        context.set_aquatic_skin_temperature(self.aquatic_skin_temperature)
 
 
 @register_module
@@ -57,6 +72,9 @@ class UniformSoilTemperature:
     Init: provide a sequence of length kmax_soil containing temperature values.
     """
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        context.writer.soil.set_uniform_temperature(self.soil_temperature)
+
 
 @register_module
 @dataclass
@@ -66,6 +84,9 @@ class UniformSoilMoisture:
 
     Init: provide a sequence of length kmax_soil containing moisture values.
     """
+
+    def apply_source(self, context: LSMSourceContext) -> None:
+        context.writer.soil.set_uniform_moisture(self.soil_moisture)
 
 
 @register_module
@@ -115,6 +136,20 @@ class SoilTemperatureMoistureFromHarmonie:
             raise ValueError(
                 "harmonie_soil_file must be a NetCDF file with .nc extension"
             )
+
+    def apply_source(self, context: LSMSourceContext) -> None:
+        grid = context.module.grid
+        dz_soil = context.module.dz_soil
+        self.get_soil_temp_moisture_arrays(grid, dz_soil)
+        context.writer.soil.set_moisture(self.get_soil_moisture_array(grid, dz_soil))
+        context.writer.soil.set_temperature(
+            self.get_soil_temperature_array(grid, dz_soil)
+        )
+        if self.use_as_tskin:
+            context.writer.set_skin_temperature_array(
+                self.get_tskin_array(), lu_type="all"
+            )
+            context.set_aquatic_skin_temperature(self.aquatic_skin_temperature)
 
     def get_soil_temp_moisture_arrays(
         self, grid: GridDales, dz_soil: np.ndarray | list[float]

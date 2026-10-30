@@ -262,7 +262,7 @@ class TimeModule(simulation_module):
 
     Args:
         sim: Parent dales_simulation instance
-        xtime: Time within the day in seconds (0-86400)
+        xtime: Time within the day in hours (0-24)
         xday: Day of year (1-365/366)
         xyear: Year
         runtime: Total runtime in seconds

@@ -2,7 +2,8 @@
 This repository contains the `moda` Python package, which generates complete DALES input cases (except for the DALES binary) using a composable Python API.
 
 Cases are defined in Python using the `dales_simulation` class and configuration modules (grid, atmosphere, surface/LSM, radiation, timing, etc.).
-For the documentation, see [this](docs/_build/markdown/index.md)
+Start with the [documentation guide](docs/index.rst). Build the HTML site with
+`sphinx-build -E -b html docs docs/_build/html`.
 
 This tool requires Python >=3.13. Install the published package with:
 
@@ -118,23 +119,44 @@ from moda import IBM
 
 ibm = IBM.IBMModule(thlibm=293.15, thlroof=293.15)
 ibm.add(IBM.FromGlobalDEM("terrain.tif"), priority=0)
-ibm.add(IBM.FromAHN(), priority=100)
+ibm.add(IBM.IBMPostProcessing(IBM.FromAHN()), priority=100)
 ibm.add(IBM.IBMModification(height=2.0, mode="add"), priority=200)
 ```
 
 Higher priorities apply later; equal priorities preserve insertion order.
 Terrain sources overlay positive cells, retaining earlier heights in holes.
-Terrain processing settings belong to each source, not `IBMModule`. Use
-`FromAHN(zeroes_buffer=5, subtract_ahn_mode=True)` or
-`FromGlobalDEM("terrain.tif", zeroes_buffer=5, subtract_dem_mode=True)`;
-these defaults preserve the previous processing behavior. Sources can use
-different settings independently. The former module-level `ahn_zeroes_buffer`
-is now the source's `zeroes_buffer`.
+Terrain readers return heights relative to their minimum elevation, without
+mode subtraction or edge buffering. Wrap a source in
+`IBMPostProcessing(source, zeroes_buffer=5, subtract_dem_mode=True)` to apply
+the previous filtering behavior. The same wrapper accepts a list of sources:
+
+```python
+terrain = IBM.IBMPostProcessing(
+   [IBM.FromGlobalDEM("terrain.tif"), IBM.FromAHN()],
+   zeroes_buffer=5,
+   subtract_dem_mode=True,
+)
+ibm.add(terrain, priority=100)
+```
+
+Wrapped sources apply in insertion order to an isolated height field, which
+is normalized, optionally mode-subtracted, and buffered once for the whole
+group. Positive results overlay earlier layers; zeros preserve their heights.
+Wrappers can be nested and can also contain geometric sources. Move existing
+`zeroes_buffer` and `subtract_dem_mode` (or AHN's `subtract_ahn_mode`) options
+from terrain sources to this wrapper when updating Python or YAML cases.
 `IBMModification` and `IBMModifications` are sources too, supporting `replace`,
 `add`, and `subtract`. Pass a list to `add` to give multiple sources one priority.
 Use `add(source, priority=...)` instead of the former `from_ahn`,
 `from_global_dem`, and `ibm_modifications` constructor fields or module addition
 operators. Existing IBM YAML must likewise be regenerated with prioritized sources.
+
+Both IBM and LSM sources implement the structural `Source[Context]` protocol
+from `moda.modular.sources`: `apply_source(context) -> None`. Modules validate
+and sort entries, then call that method without dispatching on source types.
+IBM passes its `IBMCreatorClass`; LSM passes an `LSMSourceContext` containing
+the module and writer. Custom source classes can implement the same method;
+register serializable dataclasses with `register_module` for YAML round-trips.
 
 Time-dependent forcings are collected automatically by `moda.dales_simulation`.
 Each module supplies its own time points; preprocessing interpolates the series

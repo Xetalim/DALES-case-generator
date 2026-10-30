@@ -45,17 +45,39 @@ Repository = "https://github.com/Xetalim/DALES-case-generator.git"
 Issues = "https://github.com/Xetalim/DALES-case-generator/issues"
 
 [tool.poetry]
-packages = [{include = "modular_dales"}]
-include = [{path = "modular_dales/resources", format = ["sdist", "wheel"]}]
+packages = [{include = "moda"}]
+include = [{path = "moda/resources", format = ["sdist", "wheel"]}]
 
 [tool.poetry.group.test.dependencies]
 pytest = "9.0.2"
 
 [tool.coverage.run]
 include = [
-    "modular_dales/*",
+    "moda/*",
 	"tests/*",
 ]
 omit = [
 	"./*.py",
 ]
+[tool.mypy]
+untyped_calls_exclude = [
+    "dask.compute",
+    "dask.base.optimize",
+    "dask.base.compute",
+    "dask.base.optimize",
+    "dask.base",
+	"xarray.computation.computation.where",
+	"optimize",
+	"compute",
+	"where",
+	"xr.where",
+]
+
+[[tool.mypy.overrides]]
+module = ["ls2d", "f90nml", "earthkit", "earthkit.*"]
+ignore_missing_imports = true
+
+[tool.ruff.lint]
+# select = [...]  # See the Default Rules page for the full listing.
+ignore = ["RUF009"]
+exclude = ["moda/resources","tests"]

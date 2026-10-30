@@ -16,7 +16,8 @@ jupyter_tests/*
 .pytest_cache
 .mypy_cache
 docs/generated/
-
+docs/_build
+**/logs
 logs/app.log
 
 logs/errors.log

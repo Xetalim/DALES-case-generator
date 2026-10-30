@@ -10,9 +10,8 @@ import xarray as xr
 from moda.Atmosphere import (
     InterpolatedProfile,
     TimedAtmosphereProfile,
-    profiles_to_forcings,
 )
-from moda.Atmosphere.Profile import AtmosphericProfile
+from moda.Atmosphere.Profile import AtmosphericProfile, profiles_to_forcings
 from moda.LBC.nest_dales_in_dales import boundary_fields_fine
 from moda.LBC.openbc import OpenBoundaryModule
 from moda.LBC.openboundary_config import OpenBoundaryConfig

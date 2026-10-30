@@ -129,9 +129,10 @@ class simulation_module(ABC):
         """Apply dataclass field values to the namelist using field metadata.
 
         Namelist bindings are declared with ``nml_field`` / ``NamelistSpec``.
-        Other field metadata keys:
-            forcing_var: Variable whose t=0 value (from another module's time
-                series, e.g. LS2D) replaces a plain value of this field
+                Other field metadata keys include:
+
+                * ``forcing_var``: Variable whose t=0 value (from another module's time
+                    series, such as LS2D) replaces a plain value of this field.
         """
 
         for dataclass_field in fields(self):

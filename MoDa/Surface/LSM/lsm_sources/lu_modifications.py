@@ -5,6 +5,7 @@ from typing import Literal, Self
 from moda.Geometry.ModifierClass import GeometricModification
 from moda.module_registry import register_module
 from moda.Surface.LSM.lsm_data import LandUseName
+from .context import LSMSourceContext
 
 
 @register_module
@@ -19,6 +20,11 @@ class LandUseModification(GeometricModification):
     mode: Literal["replace", "add"] = field(default="replace")
     """How to apply fraction on selected cells: replace or add."""
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        context.writer.apply_modification(self)
+        context.writer.init_lutypes_ifs()
+        context.writer.recalculate_remaining_cover()
+
 
 @register_module
 @dataclass
@@ -28,6 +34,12 @@ class LandUseModifications:
     modifications: list[LandUseModification] = field(
         default_factory=list, metadata={"serialize": True}
     )
+
+    def apply_source(self, context: LSMSourceContext) -> None:
+        for modification in self.modifications:
+            context.writer.apply_modification(modification)
+        context.writer.init_lutypes_ifs()
+        context.writer.recalculate_remaining_cover()
 
     def add(self, modification: LandUseModification) -> Self:
         """Add a modification."""

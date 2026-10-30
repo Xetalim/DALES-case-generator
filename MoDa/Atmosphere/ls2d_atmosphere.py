@@ -3,15 +3,39 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import ls2d
+import numpy as np
+import xarray as xr
 
 from moda.Atmosphere.external_forcing import ExternalForcingModule
 from moda.Atmosphere.les_input import LESInput
 from moda.module_registry import register_module
+from moda.modular.time_dependent_scalars import SOIL_DIM, value_at
+from moda.vars import t_soil, theta_soil, thls, type_soil, z0h, z0m
+
+if TYPE_CHECKING:
+    from moda.Surface.LSM.lsm_sources.context import LSMSourceContext
 
 logger = logging.getLogger(__name__)
+
+
+def _soil_profile_on_levels(
+    profile: xr.DataArray, nz_soil: int, target_depths: np.ndarray | None
+) -> xr.DataArray:
+    """Interpolate a soil profile by depth or relative level index."""
+    n_source = profile.sizes[SOIL_DIM]
+    if n_source == nz_soil:
+        return profile
+    if n_source < 2:
+        return xr.DataArray(np.full(nz_soil, float(profile[0])), dims=(SOIL_DIM,))
+    if target_depths is not None and SOIL_DIM in profile.coords:
+        profile = profile.sortby(SOIL_DIM)
+        depths = profile[SOIL_DIM].values
+        return profile.interp({SOIL_DIM: np.clip(target_depths, depths[0], depths[-1])})
+    relative = profile.assign_coords({SOIL_DIM: np.linspace(0.0, 1.0, n_source)})
+    return relative.interp({SOIL_DIM: np.linspace(0.0, 1.0, nz_soil)})
 
 
 def retry_exponential(
@@ -80,6 +104,44 @@ class FromLS2D:
     """
 
     SUPPORTED_LAND_USE_SETS = frozenset({"basic", "build", "crop", "depac", "ifs"})
+
+    def apply_source(self, context: "LSMSourceContext") -> None:
+        module, writer = context.module, context.writer
+        forcings = module.sim.forcings()
+        soil = writer.soil
+        nz_soil, jtot, itot = soil.t_soil.shape
+        dz_soil = (
+            np.asarray(module.dz_soil, dtype=float)
+            if module.dz_soil is not None and len(module.dz_soil) == nz_soil
+            else None
+        )
+        target_depths = None if dz_soil is None else np.cumsum(dz_soil) - 0.5 * dz_soil
+        for name, target in (
+            (t_soil.name, soil.t_soil),
+            (theta_soil.name, soil.theta_soil),
+        ):
+            provided = forcings.initial.get(name)
+            if provided is not None:
+                profile = _soil_profile_on_levels(provided, nz_soil, target_depths)
+                target[:, :, :] = profile.values[:, np.newaxis, np.newaxis]
+        provided_type = forcings.initial.get(type_soil.name)
+        if provided_type is not None:
+            values = np.asarray(provided_type.values)
+            if values.shape == (jtot, itot):
+                soil.index_soil[:, :, :] = values.astype(int)[np.newaxis, :, :]
+            else:
+                soil.index_soil[:, :, :] = int(values.ravel()[0])
+        for name, attr in ((z0m.name, "z0mav"), (z0h.name, "z0hav")):
+            if name in forcings.initial:
+                setattr(module, attr, float(forcings.initial[name]))
+        skin = forcings.series.get(thls.name)
+        if skin is not None:
+            writer.set_skin_temperature(float(value_at(skin, 0.0)), lu_type="all")
+            context.set_aquatic_skin_temperature()
+        logger.info(
+            "LSM: applied provided soil profiles, soil index, roughness "
+            "and skin temperature where available"
+        )
 
 
 @register_module

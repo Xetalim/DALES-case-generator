@@ -13,6 +13,7 @@ from moda.Geometry.ModifierClass import GeometricModification, ModifierClass
 from moda.module_registry import register_module
 from moda.Surface.LSM.LCZ import get_from_lcz
 from moda.Surface.LSM.lsm_data import FloatArray
+from .context import LSMSourceContext
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,14 @@ class SlurbModification(GeometricModification):
     value: int | float
     dtype: Literal["float", "real", "int", "integer"] = "float"
     n_layers: int | None = None
+
+    requires_slurb = True
+
+    def apply_source(self, context: LSMSourceContext) -> None:
+        generator = context.module._init_slurb_generator()
+        if generator is None:
+            raise ValueError("SLURB modification sources require include_slurb=True")
+        generator.apply_modification(self)
 
     def to_numpy_dtype(self) -> type[int | float]:
         """Map supported dtype labels to numpy-compatible dtypes."""
@@ -44,6 +53,14 @@ class SlurbModifications:
     modifications: list[SlurbModification] = field(
         default_factory=list, metadata={"serialize": True}
     )
+
+    requires_slurb = True
+
+    def apply_source(self, context: LSMSourceContext) -> None:
+        if not context.module.include_slurb:
+            raise ValueError("SLURB modification sources require include_slurb=True")
+        for modification in self.modifications:
+            modification.apply_source(context)
 
     def add(self, modification: SlurbModification | list[SlurbModification]) -> Self:
         """Add one or more SLURB modifications."""

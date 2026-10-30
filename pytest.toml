@@ -3,7 +3,7 @@
 minversion = "9.0"
 addopts = [
     "--basetemp=/Users/andrevanginkel/Documents/40_Input_and_Runs/42_Dales_Cases/42.01_generated_cases/tests",
-    "--html=report.html"
+    #"--html=report.html"
 ]
 testpaths = [
     "tests",

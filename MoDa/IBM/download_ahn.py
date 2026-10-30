@@ -170,35 +170,8 @@ def get_ahn(grid: GridDales, out_file: str | Path) -> None:
     )
 
 
-def get_process_ahn(
-    grid: GridDales, zeroes_buffer: int = 5, subtract_ahn_mode: bool = True
-) -> xr.DataArray:
-    """
-    Process AHN (Actueel Hoogtebestand Nederland) data and prepare it for use.
-    Downloads AHN data for the specified grid, normalizes the height values,
-    optionally subtracts the mode value, applies zero buffers at the edges,
-    and returns a normalized xarray DataArray.
-    Parameters
-    ----------
-    grid : GridDales
-        The geographic grid defining the area for which to download AHN data.
-    zeroes_buffer : int, optional
-        Number of pixels from each edge to set to zero (default: 5).
-    subtract_ahn_mode : bool, optional
-        If True, subtract the mode (most frequent elevation value) from the dataset
-        and clip negative values to zero (default: True).
-    Returns
-    -------
-    xarray.DataArray
-        Processed elevation data with variable 'bc_height', normalized to start at
-        zero, with buffer zones set to zero and optionally mode-adjusted.
-    Notes
-    -----
-    - Downloads AHN data to a temporary directory
-    - Normalizes data by subtracting the minimum value
-    - Sets border regions to zero based on zeroes_buffer parameter
-    - Ensures data is floor-divided to integer heights
-    """
+def get_process_ahn(grid: GridDales) -> xr.DataArray:
+    """Load AHN heights relative to their minimum, without mode or edge filtering."""
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         path = Path(tmpdirname)
@@ -207,17 +180,5 @@ def get_process_ahn(
 
         ds = raster_to_xarray(ahn_file, "bc_height")
         ds = ensure_sorted(ds)
-        ds[:, :] = ds[:, :] - ds.min()
-        if subtract_ahn_mode:
-            a = np.round(np.ravel(ds.values)).astype(int)
-            counts = np.bincount(a)
-            mode = np.argmax(counts)
-            ds[:, :] = ds[:, :] - mode
-            ds[:, :] = np.where(ds[:, :] < 0, 0, ds[:, :])
-            ds[:, :] = np.floor(ds[:, :])
-        ds[:zeroes_buffer, :] = 0
-        ds[-zeroes_buffer:, :] = 0
-        ds[:, :zeroes_buffer] = 0
-        ds[:, -zeroes_buffer:] = 0
-        ds[:, :] = ds[:, :] - ds.min()
+        ds = ds.astype(float) - float(ds.min())
     return ds

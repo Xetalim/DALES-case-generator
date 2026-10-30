@@ -34,15 +34,13 @@ def _resolve_resampling(name: str) -> Resampling:
 def get_process_global_dem(
     grid: GridDales,
     dem_path: str | Path,
-    zeroes_buffer: int = 5,
-    subtract_dem_mode: bool = True,
     resampling_name: str = "bilinear",
 ) -> xr.DataArray:
-    """Reproject a user DEM onto the DALES grid and normalize it for IBM.
+    """Reproject a user DEM onto the DALES grid.
 
     The source raster is assumed to contain elevation above mean sea level in
-    its first band. After reprojection, the field is normalized to the local
-    minimum and optionally mode-subtracted to mimic AHN-based IBM processing.
+    its first band. Heights are relative to the minimum elevation. Use
+    IBMPostProcessing for mode subtraction and edge buffers.
     """
 
     dem_path = Path(dem_path).expanduser()
@@ -82,22 +80,5 @@ def get_process_global_dem(
     if nodata is not None:
         ds = ds.where(~np.isclose(ds, nodata), 0.0)
 
-    ds[:, :] = ds[:, :] - float(ds.min())
-    if subtract_dem_mode:
-        values = np.round(np.ravel(ds.values)).astype(int)
-        values = values[np.isfinite(values)]
-        if values.size > 0:
-            counts = np.bincount(values)
-            mode = np.argmax(counts)
-            ds[:, :] = ds[:, :] - mode
-            ds[:, :] = np.where(ds[:, :] < 0, 0, ds[:, :])
-            ds[:, :] = np.floor(ds[:, :])
-
-    if zeroes_buffer > 0:
-        ds[:zeroes_buffer, :] = 0
-        ds[-zeroes_buffer:, :] = 0
-        ds[:, :zeroes_buffer] = 0
-        ds[:, -zeroes_buffer:] = 0
-
-    ds[:, :] = ds[:, :] - float(ds.min())
+    ds = ds - float(ds.min())
     return ds

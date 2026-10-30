@@ -39,13 +39,15 @@ logger.debug("Entered module: %s", __name__)
 @dataclass
 class AtmosphereModule(simulation_module):
     """Main atmosphere module to add to the dales_simulation.
+
     Add physical profiles with an explicit destination:
-    ```python
-    atmo = AtmosphereModule()
-    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=0)))
-    atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=5, ddz=0)),
-             nudging=True)
-    ```
+
+    .. code-block:: python
+
+       atmo = AtmosphereModule()
+       atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=3, ddz=0)))
+       atmo.add(AtmosphericProfile(variable=ua, shape=lin(surf_val=5, ddz=0)),
+                nudging=True)
 
     User-configured profiles take precedence over profiles provided by other
     modules (e.g. :class:`LS2DAtmosphereModule`); missing variables are filled

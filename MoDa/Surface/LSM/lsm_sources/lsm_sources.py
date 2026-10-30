@@ -7,7 +7,8 @@ from typing import ClassVar
 import numpy as np
 import xarray as xr
 
-from moda.Atmosphere.ls2d_atmosphere import FromLS2D
+from moda.Atmosphere.ls2d_atmosphere import FromLS2D as FromLS2D
+from moda.modular.sources import Source
 from moda.module_registry import register_module
 from moda.Surface.LSM.lsm_data import (
     FloatArray,
@@ -16,16 +17,27 @@ from moda.Surface.LSM.lsm_data import (
     SoilFields,
 )
 from moda.Surface.LSM.lsm_sources.lu_modifications import (
-    LandUseModification,
-    LandUseModifications,
+    LandUseModification as LandUseModification,
+    LandUseModifications as LandUseModifications,
 )
 from moda.Surface.LSM.lsm_sources.modular_temps_moisture import (
-    LSMProfileSpec,
+    LSMProfileSpec as LSMProfileSpec,
 )
 from moda.Surface.LSM.lsm_sources.slurb_modifications import (
-    SlurbModification,
-    SlurbModifications,
+    SlurbModification as SlurbModification,
+    SlurbModifications as SlurbModifications,
 )
+from .context import LSMSourceContext
+from . import slurb_modifications
+from .top10_bofek_ags import apply_bofek_to_lsm_writer, apply_top10_to_lsm_writer
+
+
+def _validate_lcz_options(source: "FromLCZ | FromTop10") -> None:
+    if source.urban_natural_lcz_to_10 and source.urban_natural_lcz_to_natural_lsm:
+        raise ValueError(
+            f"{type(source).__name__} options urban_natural_lcz_to_10 and "
+            "urban_natural_lcz_to_natural_lsm are mutually exclusive"
+        )
 
 
 def distribute_fraction(
@@ -97,6 +109,37 @@ class FromLCZ:
     )
     """If true, pixels with urban IFS cover and LCZ 11-17 are remapped to natural IFS classes."""
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        from moda.Surface.LSM.LCZ import get_from_lcz
+
+        _validate_lcz_options(self)
+        grid = context.module.grid
+        if grid.crs is None:
+            raise ValueError("A valid projection is required for real-world LSM maps")
+        dataset = get_from_lcz.do_everything(
+            grid,
+            urban_natural_lcz_to_10=self.urban_natural_lcz_to_10,
+            urban_natural_lcz_to_natural_lsm=self.urban_natural_lcz_to_natural_lsm,
+        )
+        writer = context.writer
+        apply_lcz(writer.land_use, writer.soil, dataset)
+        writer.LCZ_ds = dataset
+        writer.init_lutypes_ifs()
+        writer.recalculate_remaining_cover()
+        generator = context.module._init_slurb_generator()
+        if generator is not None:
+            urban_cover = next(
+                (
+                    writer.land_use_fields[name].cover
+                    for name, state in writer.land_use.items()
+                    if state.definition.ifs_id == 20
+                ),
+                None,
+            )
+            slurb_modifications.apply_slurb_parameters_lcz(
+                dataset, generator, urban_cover
+            )
+
 
 @register_module
 @dataclass
@@ -135,6 +178,22 @@ class FromTop10:
     )
     """If true, urban Top10 pixels with LCZ 11-17 are remapped to natural IFS classes."""
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        _validate_lcz_options(self)
+        path = pathlib.Path(self.spatial_data_path) / self.top10_filename
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Top10 file not found: {path}. "
+                "Set FromTop10.spatial_data_path/top10_filename accordingly."
+            )
+        apply_top10_to_lsm_writer(
+            context.writer,
+            top10_path=path,
+            fill_north_sea=self.fill_north_sea,
+            urban_natural_lcz_to_10=self.urban_natural_lcz_to_10,
+            urban_natural_lcz_to_natural_lsm=self.urban_natural_lcz_to_natural_lsm,
+        )
+
 
 @register_module
 @dataclass
@@ -158,6 +217,23 @@ class FromBofek:
         default="BOFEK2012_profielen_versie2_1.csv", metadata={"serialize": True}
     )
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        map_path = pathlib.Path(self.spatial_data_path) / self.bofek_filename
+        csv_path = pathlib.Path(self.spatial_data_path) / self.bofek_profile_csv
+        if not map_path.exists():
+            raise FileNotFoundError(
+                f"BOFEK map file not found: {map_path}. "
+                "Set FromBofek.spatial_data_path/bofek_filename accordingly."
+            )
+        if not csv_path.exists():
+            raise FileNotFoundError(
+                f"BOFEK profile table not found: {csv_path}. "
+                "Set FromBofek.spatial_data_path/bofek_profile_csv accordingly."
+            )
+        apply_bofek_to_lsm_writer(
+            context.writer, bofek_nc_path=map_path, bofek_csv_path=csv_path
+        )
+
 
 @register_module
 @dataclass
@@ -165,10 +241,12 @@ class FromNetCDF:
     """Use a user-supplied NetCDF file as land-surface data source.
 
     The file must contain:
-      FRAC_WATER, FRAC_SEA  – water/ocean fractions
-      FRAC_NATURE           – natural land fraction (sub-typed via ESA WorldCover)
-      FRAC_TOWN             – urban fraction (drives SLuRB)
-      D_Z0_town, D_BLD, D_BLD_HEIG, WALL_O_HOR  – optional SLuRB morphology
+        * ``FRAC_WATER``, ``FRAC_SEA``: water and ocean fractions.
+        * ``FRAC_NATURE``: natural land fraction, subtyped using ESA WorldCover.
+        * ``FRAC_TOWN``: urban fraction used by SLUrb.
+        * ``D_Z0_town``, ``D_BLD``, ``D_BLD_HEIG``, ``WALL_O_HOR``: optional SLUrb
+            morphology.
+
     This source supports the IFS and DEPAC land-use sets.
     """
 
@@ -180,19 +258,23 @@ class FromNetCDF:
     esa_cache_dir: str | None = field(default=None, metadata={"serialize": True})
     """Optional directory for caching the ESA WorldCover reprojected tile."""
 
+    def apply_source(self, context: LSMSourceContext) -> None:
+        from moda.Surface.LSM.LCZ.from_netcdf import load_from_netcdf
 
-LSMSourceSpec = (
-    FromLCZ
-    | FromTop10
-    | FromBofek
-    | FromNetCDF
-    | FromLS2D
-    | LSMProfileSpec
-    | LandUseModification
-    | LandUseModifications
-    | SlurbModification
-    | SlurbModifications
-)
+        cache = (
+            pathlib.Path(self.esa_cache_dir) if self.esa_cache_dir is not None else None
+        )
+        dataset = load_from_netcdf(self.path, context.module.grid, esa_cache_dir=cache)
+        writer = context.writer
+        apply_from_netcdf(writer.land_use, writer.soil, dataset)
+        writer.init_lutypes_ifs()
+        writer.recalculate_remaining_cover()
+        generator = context.module._init_slurb_generator()
+        if generator is not None:
+            slurb_modifications.apply_from_netcdf(dataset, generator)
+
+
+LSMSourceSpec = Source[LSMSourceContext]
 
 
 @register_module
@@ -212,7 +294,7 @@ class _PrioritizedSource:
 
     def validate(self) -> None:
         """Reject unsupported providers and non-integer priorities at runtime."""
-        if not isinstance(self.source, LSMSourceSpec):
+        if not isinstance(self.source, Source):
             raise TypeError(f"Unsupported LSM source type: {type(self.source)}")
         if not isinstance(self.priority, int):
             raise TypeError("Source priority must be an integer")

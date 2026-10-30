@@ -6,6 +6,7 @@ from .ibm_data_sources import (
     FromGlobalDEM,
     IBMModification,
     IBMModifications,
+    IBMPostProcessing,
     IBMSourceSpec,
 )
 
@@ -14,6 +15,7 @@ __all__ = [
     "FromGlobalDEM",
     "IBMModification",
     "IBMModifications",
+    "IBMPostProcessing",
     "IBMModule",
     "IBMSourceSpec",
 ]

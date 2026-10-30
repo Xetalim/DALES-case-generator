@@ -3,7 +3,6 @@
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import netCDF4
 import numpy as np
@@ -14,18 +13,12 @@ from moda.Geometry import (
 )
 from moda.Geometry.ModifierClass import ModifierClass
 from moda.IBM.ibm_data_sources import (
-    FromAHN,
-    FromGlobalDEM,
     IBMModification,
-    IBMModifications,
     IBMSourceSpec,
     _PrioritizedIBMSource,
 )
 from moda.modular.simulation_module import simulation_module
 from moda.module_registry import register_module
-
-from .download_ahn import get_process_ahn
-from .global_dem import get_process_global_dem
 
 logger = logging.getLogger(__name__)
 
@@ -238,37 +231,8 @@ class IBMModule(simulation_module):
         """Return whether any terrain source was configured."""
 
         return any(
-            isinstance(entry.source, (FromAHN, FromGlobalDEM)) for entry in self.sources
+            getattr(entry.source, "has_terrain_source", False) for entry in self.sources
         )
-
-    def _apply_terrain_source(self, source: FromAHN | FromGlobalDEM) -> None:
-        """Overlay positive terrain heights onto the current field."""
-        if self.ibm_generator is None:
-            raise RuntimeError("IBM generator has not been initialized")
-        if isinstance(source, FromGlobalDEM):
-            dem_path = Path(source.dem_path).expanduser()
-            terrain = get_process_global_dem(
-                self.grid,
-                dem_path=dem_path,
-                zeroes_buffer=source.zeroes_buffer,
-                subtract_dem_mode=source.subtract_dem_mode,
-                resampling_name=source.resampling,
-            )
-        else:
-            terrain = get_process_ahn(
-                self.grid,
-                zeroes_buffer=source.zeroes_buffer,
-                subtract_ahn_mode=source.subtract_ahn_mode,
-            )
-        values = np.asarray(terrain, dtype=float)
-        heights = self.ibm_generator.bc_height
-        if values.shape != heights.shape:
-            raise ValueError(
-                "IBM terrain source shape mismatch: "
-                f"{type(source).__name__} has shape {values.shape}, "
-                f"expected {heights.shape}"
-            )
-        heights[:] = np.where(values > 0.0, values, heights)
 
     def _apply_sources(self) -> None:
         """Apply terrain and geometry from lowest to highest priority."""
@@ -276,17 +240,7 @@ class IBMModule(simulation_module):
             raise RuntimeError("IBM generator has not been initialized")
         self._validate_sources()
         for entry in sorted(self.sources, key=lambda source: source.priority):
-            source = entry.source
-            if isinstance(source, (FromAHN, FromGlobalDEM)):
-                self._apply_terrain_source(source)
-            else:
-                modifications = (
-                    source.modifications
-                    if isinstance(source, IBMModifications)
-                    else [source]
-                )
-                for modification in modifications:
-                    self.ibm_generator.apply_modification(modification)
+            entry.source.apply_source(self.ibm_generator)
 
     def prepare_calculation(self) -> None:
         """Set up IBM geometry and update namelist."""
@@ -301,24 +255,9 @@ class IBMModule(simulation_module):
 
         self._validate_sources()
         for entry in self.sources:
-            source = entry.source
-            if isinstance(source, FromGlobalDEM):
-                dem_path = Path(source.dem_path).expanduser()
-                if not dem_path.exists():
-                    raise FileNotFoundError(f"Global DEM file not found: {dem_path}")
-            modifications = (
-                source.modifications
-                if isinstance(source, IBMModifications)
-                else [source]
-                if isinstance(source, IBMModification)
-                else []
-            )
-            for modification in modifications:
-                mode = str(modification.mode).strip().lower()
-                if mode not in {"replace", "add", "subtract"}:
-                    raise ValueError(
-                        "IBMModification.mode must be one of: replace, add, subtract"
-                    )
+            check = getattr(entry.source, "check_settings", None)
+            if check is not None:
+                check()
 
         if self.thlibm is None:
             raise ValueError("IBMModule.thlibm is mandatory and must be provided")
